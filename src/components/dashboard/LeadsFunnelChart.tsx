@@ -82,7 +82,7 @@ export default function LeadsFunnelChart() {
 
   return (
     <Card className="border-0 shadow-xl overflow-hidden">
-      <CardHeader className="gradient-premium p-6 text-white">
+      <CardHeader className="bg-nexcrm-blue p-6 text-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">

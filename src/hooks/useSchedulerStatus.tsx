@@ -13,7 +13,7 @@ export const useSchedulerStatus = () => {
   return useQuery({
     queryKey: ['scheduler-status'],
     queryFn: async (): Promise<SchedulerStats> => {
-      const { data, error } = await supabase.rpc('get_scheduler_stats');
+      const { data, error } = await supabase.rpc('get_scheduler_stats' as any);
       
       if (error) {
         console.error('Error fetching scheduler stats:', error);

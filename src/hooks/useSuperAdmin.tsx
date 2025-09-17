@@ -65,7 +65,7 @@ export function useSuperAdmin() {
       
       console.log('Checking super admin status for user:', user.id);
       
-      const { data, error } = await supabase.rpc('is_super_admin', {
+      const { data, error } = await supabase.rpc('is_super_admin' as any, {
         user_uuid: user.id
       });
       
@@ -158,7 +158,7 @@ export function useSuperAdmin() {
 
       // Buscar uso atual de cada workspace
       const usagePromises = allWorkspaces.map(async (workspace) => {
-        const { data, error } = await supabase.rpc('get_workspace_usage', {
+        const { data, error } = await supabase.rpc('get_workspace_usage' as any, {
           workspace_uuid: workspace.id
         });
         

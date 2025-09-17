@@ -2551,9 +2551,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_member_to_workspace: {
+        Args: { p_role?: string; p_user_email: string; p_workspace_id: string }
+        Returns: Json
+      }
+      get_scheduler_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_workspace_stats: {
         Args: { p_workspace_id: string }
         Returns: Json
+      }
+      get_workspace_usage: {
+        Args: { p_workspace_id: string }
+        Returns: Json
+      }
+      is_super_admin: {
+        Args: { user_id: string }
+        Returns: boolean
       }
       reset_workspace: {
         Args: { p_workspace_id: string }

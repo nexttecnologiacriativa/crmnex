@@ -79,10 +79,9 @@ export default function InviteTeamMember({ currentWorkspace, onMemberInvited }: 
         console.log(`[InviteMember] Adding user ${userToAdd.id} to workspace using database function...`);
         
         // Usar a função de database para adicionar o membro
-        const { data, error: functionError } = await supabase.rpc('add_member_to_workspace' as any, {
+        const { data, error: functionError } = await supabase.rpc('add_member_to_workspace', {
           p_workspace_id: currentWorkspace.id,
           p_user_email: userToAdd.email,
-          p_user_id: userToAdd.id,
           p_role: inviteRole
         });
 

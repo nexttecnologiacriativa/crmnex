@@ -34,8 +34,8 @@ export default function AutomationDashboard() {
       <div className="flex-none border-b bg-gradient-to-r from-blue-50 to-indigo-50 p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <Bot className="h-8 w-8 text-blue-600" />
+            <h1 className="text-3xl font-bold text-nexcrm-green flex items-center gap-3">
+              <Bot className="h-8 w-8 text-nexcrm-blue" />
               Automação WhatsApp
             </h1>
             <p className="text-gray-600 mt-2">

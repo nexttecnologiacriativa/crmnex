@@ -185,7 +185,7 @@ export default function Outbound() {
       <div className="p-6 space-y-6" key="outbound-main">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold gradient-text">Outbound</h1>
+            <h1 className="text-3xl font-bold text-nexcrm-green">Outbound</h1>
             <p className="text-muted-foreground mt-1">
               Encontre e conecte-se com empresas potenciais
             </p>
@@ -211,8 +211,8 @@ export default function Outbound() {
 
         {/* Search Section */}
         <Card className="border-0 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50">
-            <CardTitle className="text-premium-blue">Buscar Empresas</CardTitle>
+          <CardHeader className="bg-gradient-to-r from-nexcrm-blue/10 to-nexcrm-green/10">
+            <CardTitle className="text-nexcrm-blue">Buscar Empresas</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

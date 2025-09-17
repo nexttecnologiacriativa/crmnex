@@ -152,11 +152,11 @@ export default function LeadsFunnelChart() {
             {/* Summary Stats */}
             <div className="grid grid-cols-2 gap-4 mb-8">
               <div className="text-center p-4 bg-gradient-to-r from-purple-50/50 to-blue-50/50 rounded-xl border border-purple-100">
-                <p className="text-2xl font-bold text-premium-purple">{totalLeads}</p>
+                <p className="text-2xl font-bold text-nexcrm-blue">{totalLeads}</p>
                 <p className="text-sm text-muted-foreground">Total de Leads</p>
               </div>
               <div className="text-center p-4 bg-gradient-to-r from-blue-50/50 to-purple-50/50 rounded-xl border border-blue-100">
-                <p className="text-2xl font-bold text-premium-blue">
+                <p className="text-2xl font-bold text-nexcrm-green">
                   {new Intl.NumberFormat('pt-BR', {
                     style: 'currency',
                     currency: 'BRL'

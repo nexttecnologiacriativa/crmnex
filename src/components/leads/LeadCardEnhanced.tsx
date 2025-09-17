@@ -114,7 +114,7 @@ export default function LeadCardEnhanced({ lead }: LeadCardEnhancedProps) {
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h3 className="font-semibold text-lg text-gray-900 group-hover:text-premium-purple transition-colors">
+              <h3 className="font-semibold text-lg text-gray-900 group-hover:text-nexcrm-green transition-colors">
                 {getLeadDisplayName(lead)}
               </h3>
               {lead.position && (
@@ -144,14 +144,14 @@ export default function LeadCardEnhanced({ lead }: LeadCardEnhancedProps) {
           <div className="space-y-2">
             {lead.email && (
               <div className="flex items-center text-sm text-gray-600">
-                <Mail className="h-4 w-4 mr-2 text-premium-purple" />
+                <Mail className="h-4 w-4 mr-2 text-nexcrm-blue" />
                 <span className="truncate">{lead.email}</span>
               </div>
             )}
             
             {lead.phone && (
               <div className="flex items-center text-sm text-gray-600">
-                <Phone className="h-4 w-4 mr-2 text-premium-blue" />
+                <Phone className="h-4 w-4 mr-2 text-nexcrm-green" />
                 <span>{lead.phone}</span>
               </div>
             )}

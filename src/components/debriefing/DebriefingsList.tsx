@@ -174,7 +174,7 @@ export const DebriefingsList = ({ debriefings, isLoading, onView }: DebriefingsL
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-semibold text-premium-purple">
+                    <div className="text-sm font-semibold text-nexcrm-green">
                       {cpl > 0 ? formatCurrency(cpl) : '-'}
                     </div>
                   </td>
@@ -261,7 +261,7 @@ export const DebriefingsList = ({ debriefings, isLoading, onView }: DebriefingsL
                 {/* Responsável */}
                 {debriefing.responsible && (
                   <div className="flex items-center text-sm text-muted-foreground bg-muted/30 rounded-lg px-3 py-2">
-                    <User className="h-4 w-4 mr-2 text-premium-purple" />
+                    <User className="h-4 w-4 mr-2 text-nexcrm-blue" />
                     <span className="font-medium">{debriefing.responsible}</span>
                   </div>
                 )}
@@ -280,7 +280,7 @@ export const DebriefingsList = ({ debriefings, isLoading, onView }: DebriefingsL
                   {cpl > 0 && (
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium text-muted-foreground">CPL:</span>
-                      <span className="font-bold text-premium-purple text-base">
+                      <span className="font-bold text-nexcrm-green text-base">
                         {formatCurrency(cpl)}
                       </span>
                     </div>

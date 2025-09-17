@@ -281,9 +281,9 @@ const DebriefingView = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200">
+          <Card className="bg-gradient-to-br from-nexcrm-green/10 to-nexcrm-blue/10 border-nexcrm-green/20">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-purple-700">
+              <CardTitle className="flex items-center gap-2 text-nexcrm-green">
                 <Users className="h-5 w-5" />
                 Dados da Página
               </CardTitle>

@@ -11,7 +11,7 @@ export default function Reports() {
   return (
     <DashboardLayout>
       <div className="p-6">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-6">
+        <h1 className="text-3xl font-bold text-nexcrm-green mb-6">
           Relatórios e Analytics
         </h1>
 

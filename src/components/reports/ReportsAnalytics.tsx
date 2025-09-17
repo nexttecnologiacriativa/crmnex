@@ -359,8 +359,8 @@ export default function ReportsAnalytics() {
 
       {/* Filtros */}
       <Card className="border-0 shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50">
-          <CardTitle className="text-premium-purple">Filtros</CardTitle>
+        <CardHeader className="bg-gradient-to-r from-nexcrm-blue/10 to-nexcrm-green/10">
+          <CardTitle className="text-nexcrm-blue">Filtros</CardTitle>
         </CardHeader>
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end mb-4">
@@ -571,8 +571,8 @@ export default function ReportsAnalytics() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Leads por Status */}
         <Card className="border-0 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50">
-            <CardTitle className="text-premium-purple flex items-center gap-2">
+          <CardHeader className="bg-gradient-to-r from-nexcrm-green/10 to-nexcrm-blue/10">
+            <CardTitle className="text-nexcrm-green flex items-center gap-2">
               <BarChart className="h-5 w-5" />
               Leads por Status
             </CardTitle>
@@ -594,8 +594,8 @@ export default function ReportsAnalytics() {
 
         {/* Performance por Origem */}
         <Card className="border-0 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50">
-            <CardTitle className="text-premium-blue flex items-center gap-2 font-normal text-base">
+          <CardHeader className="bg-gradient-to-r from-nexcrm-green/10 to-nexcrm-blue/10">
+            <CardTitle className="text-nexcrm-green flex items-center gap-2 font-normal text-base">
               <TrendingUp className="h-5 w-5" />
               Performance por Origem
             </CardTitle>
@@ -687,7 +687,7 @@ export default function ReportsAnalytics() {
         <Card className="col-span-full h-[500px]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-premium-purple" />
+              <TrendingUp className="h-5 w-5 text-nexcrm-blue" />
               Receita Diária (Últimos 30 dias)
             </CardTitle>
           </CardHeader>
@@ -729,7 +729,7 @@ export default function ReportsAnalytics() {
       <Card className="col-span-full">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-premium-purple" />
+            <Target className="h-5 w-5 text-nexcrm-green" />
             Análise de UTMs
           </CardTitle>
         </CardHeader>

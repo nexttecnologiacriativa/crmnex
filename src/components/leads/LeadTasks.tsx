@@ -67,7 +67,7 @@ export default function LeadTasks({ leadId, leadName }: LeadTasksProps) {
       <Card className="border-0 shadow-lg">
         <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-premium-blue flex items-center gap-2">
+            <CardTitle className="text-nexcrm-green flex items-center gap-2">
               <CheckSquare className="h-4 w-4" />
               Tarefas
             </CardTitle>
@@ -109,7 +109,7 @@ export default function LeadTasks({ leadId, leadName }: LeadTasksProps) {
     <Card className="border-0 shadow-lg">
       <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-premium-blue flex items-center gap-2">
+          <CardTitle className="text-nexcrm-green flex items-center gap-2">
             <CheckSquare className="h-4 w-4" />
             Tarefas ({leadTasks.length})
           </CardTitle>

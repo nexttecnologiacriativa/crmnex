@@ -24,7 +24,7 @@ export default function Settings() {
       <div className="min-h-screen p-6">
         <div className="w-full space-y-6">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-bold text-nexcrm-green">
               Configurações
             </h1>
             <p className="text-gray-600 mt-2">

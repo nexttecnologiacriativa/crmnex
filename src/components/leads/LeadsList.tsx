@@ -125,7 +125,7 @@ export default function LeadsList() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+        <h1 className="text-3xl font-bold text-nexcrm-green">
           Leads
         </h1>
         <div className="flex items-center gap-2">

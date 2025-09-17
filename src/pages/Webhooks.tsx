@@ -10,7 +10,7 @@ export default function Webhooks() {
       <div className="p-6">
         <Tabs defaultValue="manager" className="space-y-6">
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-bold text-nexcrm-green">
               Webhooks
             </h1>
             <TabsList className="bg-white shadow-sm border">

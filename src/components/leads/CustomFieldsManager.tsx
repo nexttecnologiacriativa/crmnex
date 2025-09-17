@@ -74,7 +74,7 @@ export default function CustomFieldsManager({ currentUserRole }: CustomFieldsMan
     <Card className="border-0 shadow-lg">
       <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-premium-purple">Campos Personalizados</CardTitle>
+          <CardTitle className="text-nexcrm-green">Campos Personalizados</CardTitle>
           {isAllowedToEdit && (
             <Button
               onClick={() => setIsCreating(true)}

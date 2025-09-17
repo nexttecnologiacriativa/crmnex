@@ -127,7 +127,7 @@ export default function LeadDetailPage() {
                 Voltar
               </Button>
               <div className="flex-1">
-                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                <h1 className="text-2xl md:text-3xl font-bold text-nexcrm-green">
                   {getLeadDisplayName(lead)}
                 </h1>
                 {lead.company && (
@@ -191,29 +191,29 @@ export default function LeadDetailPage() {
             {/* Lead Information */}
             <div className="lg:col-span-2 space-y-6">
               <Card className="border-0 shadow-lg">
-                <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50">
-                  <CardTitle className="text-premium-purple">Informações do Lead</CardTitle>
+                <CardHeader className="bg-gradient-to-r from-nexcrm-blue/10 to-nexcrm-green/10">
+                  <CardTitle className="text-nexcrm-blue">Informações do Lead</CardTitle>
                 </CardHeader>
                 <CardContent className="p-6 space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-3">
                       {lead.email && (
                         <div className="flex items-center gap-3">
-                          <Mail className="h-4 w-4 text-premium-purple" />
+                          <Mail className="h-4 w-4 text-nexcrm-blue" />
                           <span className="text-sm">{lead.email}</span>
                         </div>
                       )}
                       
                       {lead.phone && (
                         <div className="flex items-center gap-3">
-                          <Phone className="h-4 w-4 text-premium-blue" />
+                          <Phone className="h-4 w-4 text-nexcrm-green" />
                           <span className="text-sm">{lead.phone}</span>
                         </div>
                       )}
                       
                       {lead.company && (
                         <div className="flex items-center gap-3">
-                          <Building className="h-4 w-4 text-premium-purple" />
+                          <Building className="h-4 w-4 text-nexcrm-blue" />
                           <span className="text-sm">{lead.company}</span>
                         </div>
                       )}
@@ -298,8 +298,8 @@ export default function LeadDetailPage() {
 
               {/* Activities History */}
               <Card className="border-0 shadow-lg">
-                <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50">
-                  <CardTitle className="text-premium-blue">Histórico de Atividades</CardTitle>
+                <CardHeader className="bg-gradient-to-r from-nexcrm-green/10 to-nexcrm-blue/10">
+                  <CardTitle className="text-nexcrm-green">Histórico de Atividades</CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
                   <div className="space-y-4 max-h-96 overflow-y-auto">
@@ -341,8 +341,8 @@ export default function LeadDetailPage() {
             {/* Quick Actions */}
             <div className="space-y-6">
               <Card className="border-0 shadow-lg">
-                <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50">
-                  <CardTitle className="text-premium-purple">Nova Anotação</CardTitle>
+                <CardHeader className="bg-gradient-to-r from-nexcrm-green/10 to-nexcrm-blue/10">
+                  <CardTitle className="text-nexcrm-green">Nova Anotação</CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
                   <div className="space-y-4">
@@ -365,8 +365,8 @@ export default function LeadDetailPage() {
 
               {lead.notes && (
                 <Card className="border-0 shadow-lg">
-                  <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50">
-                    <CardTitle className="text-premium-blue">Observações</CardTitle>
+                  <CardHeader className="bg-gradient-to-r from-nexcrm-blue/10 to-nexcrm-green/10">
+                    <CardTitle className="text-nexcrm-blue">Observações</CardTitle>
                   </CardHeader>
                   <CardContent className="p-6">
                     <p className="text-sm text-gray-600">{lead.notes}</p>

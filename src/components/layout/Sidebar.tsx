@@ -73,7 +73,7 @@ export default function AppSidebar() {
 
   return (
     <Sidebar 
-      className="bg-sidebar border-r border-sidebar-border shadow-xl"
+      className="bg-sidebar border-r border-sidebar-border"
       collapsible="icon"
     >
         <SidebarHeader className="border-b border-gray-200 bg-gray-50 transition-all duration-300">
@@ -98,14 +98,12 @@ export default function AppSidebar() {
                     className={cn(
                       'group relative h-11 px-4 text-sidebar-foreground/70 hover:text-sidebar-foreground',
                       'transition-all duration-300 ease-out rounded-xl',
-                      'hover:bg-sidebar-accent/40 hover:shadow-md hover:shadow-accent/20',
+                      'hover:bg-sidebar-accent/40',
                       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
                       isActive && [
                         'bg-sidebar-accent/50 text-sidebar-foreground',
-                        'shadow-lg shadow-accent/30',
                         'before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2',
-                        'before:w-1 before:h-6 before:bg-accent before:rounded-r-full',
-                        'before:shadow-md before:shadow-accent/50'
+                        'before:w-1 before:h-6 before:bg-accent before:rounded-r-full'
                       ]
                     )}
                     tooltip={item.name}
@@ -123,7 +121,7 @@ export default function AppSidebar() {
                       {item.name}
                     </span>
                     {isActive && (
-                      <div className="absolute right-3 w-2 h-2 bg-accent rounded-full shadow-lg shadow-accent/50 animate-pulse" />
+                      <div className="absolute right-3 w-2 h-2 bg-accent rounded-full animate-pulse" />
                     )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -139,7 +137,7 @@ export default function AppSidebar() {
             className={cn(
               "w-full justify-start h-11 px-4 text-sidebar-foreground/70 hover:text-sidebar-foreground",
               "hover:bg-destructive/10 hover:text-destructive",
-              "hover:shadow-md hover:shadow-destructive/20 rounded-xl",
+              "rounded-xl",
               "transition-all duration-300 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2"
             )}
             tooltip="Sair"

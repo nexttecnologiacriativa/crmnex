@@ -13,7 +13,7 @@ import {
 
 const Dashboard = () => {
   return (
-    <section className="py-20 bg-gradient-to-br from-slate-50 to-blue-50">
+    <section className="py-20 bg-gradient-to-br from-nexcrm-blue/5 via-white to-nexcrm-green/5">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
@@ -33,13 +33,13 @@ const Dashboard = () => {
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Total de Leads</p>
                     <p className="text-3xl font-bold text-gray-800">1,247</p>
-                    <p className="text-sm text-green-600 flex items-center mt-1">
+                    <p className="text-sm text-nexcrm-green flex items-center mt-1">
                       <TrendingUp className="h-4 w-4 mr-1" />
                       +12.5% este mês
                     </p>
                   </div>
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Users className="h-6 w-6 text-blue-600" />
+                  <div className="w-12 h-12 bg-nexcrm-blue/10 rounded-lg flex items-center justify-center">
+                    <Users className="h-6 w-6 text-nexcrm-blue" />
                   </div>
                 </div>
               </CardContent>
@@ -51,13 +51,13 @@ const Dashboard = () => {
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Conversões</p>
                     <p className="text-3xl font-bold text-gray-800">187</p>
-                    <p className="text-sm text-green-600 flex items-center mt-1">
+                    <p className="text-sm text-nexcrm-green flex items-center mt-1">
                       <TrendingUp className="h-4 w-4 mr-1" />
                       +8.3% este mês
                     </p>
                   </div>
-                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                    <Target className="h-6 w-6 text-green-600" />
+                  <div className="w-12 h-12 bg-nexcrm-green/10 rounded-lg flex items-center justify-center">
+                    <Target className="h-6 w-6 text-nexcrm-green" />
                   </div>
                 </div>
               </CardContent>
@@ -69,13 +69,13 @@ const Dashboard = () => {
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Receita</p>
                     <p className="text-3xl font-bold text-gray-800">R$ 284k</p>
-                    <p className="text-sm text-green-600 flex items-center mt-1">
+                    <p className="text-sm text-nexcrm-green flex items-center mt-1">
                       <TrendingUp className="h-4 w-4 mr-1" />
                       +15.2% este mês
                     </p>
                   </div>
-                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <DollarSign className="h-6 w-6 text-purple-600" />
+                  <div className="w-12 h-12 bg-nexcrm-blue/10 rounded-lg flex items-center justify-center">
+                    <DollarSign className="h-6 w-6 text-nexcrm-blue" />
                   </div>
                 </div>
               </CardContent>
@@ -87,13 +87,13 @@ const Dashboard = () => {
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Taxa de Conversão</p>
                     <p className="text-3xl font-bold text-gray-800">15.0%</p>
-                    <p className="text-sm text-green-600 flex items-center mt-1">
+                    <p className="text-sm text-nexcrm-green flex items-center mt-1">
                       <TrendingUp className="h-4 w-4 mr-1" />
                       +2.1% este mês
                     </p>
                   </div>
-                  <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                    <BarChart3 className="h-6 w-6 text-orange-600" />
+                  <div className="w-12 h-12 bg-nexcrm-green/10 rounded-lg flex items-center justify-center">
+                    <BarChart3 className="h-6 w-6 text-nexcrm-green" />
                   </div>
                 </div>
               </CardContent>
@@ -105,7 +105,7 @@ const Dashboard = () => {
             <Card className="border-0 shadow-lg">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5 text-blue-600" />
+                  <Target className="h-5 w-5 text-nexcrm-blue" />
                   Performance por Origem (UTM)
                 </CardTitle>
               </CardHeader>
@@ -114,7 +114,7 @@ const Dashboard = () => {
                   <div>
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm font-medium">Facebook Ads</span>
-                      <Badge className="bg-blue-100 text-blue-700">426 leads</Badge>
+                      <Badge className="bg-nexcrm-blue/10 text-nexcrm-blue">426 leads</Badge>
                     </div>
                     <Progress value={85} className="h-2" />
                     <p className="text-xs text-gray-500 mt-1">Taxa de conversão: 18.2%</p>
@@ -123,7 +123,7 @@ const Dashboard = () => {
                   <div>
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm font-medium">Google Ads</span>
-                      <Badge className="bg-green-100 text-green-700">312 leads</Badge>
+                      <Badge className="bg-nexcrm-green/10 text-nexcrm-green">312 leads</Badge>
                     </div>
                     <Progress value={65} className="h-2" />
                     <p className="text-xs text-gray-500 mt-1">Taxa de conversão: 22.1%</p>
@@ -132,7 +132,7 @@ const Dashboard = () => {
                   <div>
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm font-medium">Instagram</span>
-                      <Badge className="bg-purple-100 text-purple-700">198 leads</Badge>
+                      <Badge className="bg-nexcrm-blue/10 text-nexcrm-blue">198 leads</Badge>
                     </div>
                     <Progress value={45} className="h-2" />
                     <p className="text-xs text-gray-500 mt-1">Taxa de conversão: 12.8%</p>
@@ -141,7 +141,7 @@ const Dashboard = () => {
                   <div>
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm font-medium">Email Marketing</span>
-                      <Badge className="bg-orange-100 text-orange-700">156 leads</Badge>
+                      <Badge className="bg-nexcrm-green/10 text-nexcrm-green">156 leads</Badge>
                     </div>
                     <Progress value={35} className="h-2" />
                     <p className="text-xs text-gray-500 mt-1">Taxa de conversão: 28.4%</p>
@@ -153,14 +153,14 @@ const Dashboard = () => {
             <Card className="border-0 shadow-lg">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-purple-600" />
+                  <Calendar className="h-5 w-5 text-nexcrm-green" />
                   Atividades Recentes
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                    <div className="w-2 h-2 bg-nexcrm-green rounded-full mt-2"></div>
                     <div>
                       <p className="text-sm font-medium">Lead convertido</p>
                       <p className="text-xs text-gray-500">João Silva - Facebook Ads • R$ 2.500</p>
@@ -169,7 +169,7 @@ const Dashboard = () => {
                   </div>
                   
                   <div className="flex items-start gap-3">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                    <div className="w-2 h-2 bg-nexcrm-blue rounded-full mt-2"></div>
                     <div>
                       <p className="text-sm font-medium">Novo lead capturado</p>
                       <p className="text-xs text-gray-500">Maria Costa - Google Ads • utm_campaign=search-keywords</p>
@@ -187,7 +187,7 @@ const Dashboard = () => {
                   </div>
                   
                   <div className="flex items-start gap-3">
-                    <div className="w-2 h-2 bg-purple-500 rounded-full mt-2"></div>
+                    <div className="w-2 h-2 bg-nexcrm-green/70 rounded-full mt-2"></div>
                     <div>
                       <p className="text-sm font-medium">Webhook recebido</p>
                       <p className="text-xs text-gray-500">Elementor Form - Landing Page "Curso de Marketing"</p>

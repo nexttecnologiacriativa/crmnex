@@ -38,7 +38,7 @@ export default function DashboardOverview() {
       title: 'Total de Leads',
       value: (leadsCount ?? leads.length),
       icon: Users,
-      gradient: 'from-purple-500 to-purple-600',
+      gradient: 'from-nexcrm-blue to-nexcrm-blue/80',
     },
     {
       title: 'Leads este mês',
@@ -48,19 +48,19 @@ export default function DashboardOverview() {
         return leadDate.getMonth() === now.getMonth() && leadDate.getFullYear() === now.getFullYear();
       }).length,
       icon: TrendingUp,
-      gradient: 'from-blue-500 to-blue-600',
+      gradient: 'from-nexcrm-green to-nexcrm-green/80',
     },
     {
       title: 'Tarefas Pendentes',
       value: pendingTasks.length,
       icon: CheckSquare,
-      gradient: 'from-orange-500 to-orange-600',
+      gradient: 'from-nexcrm-blue/80 to-nexcrm-blue/60',
     },
     {
       title: 'Total de Tarefas',
       value: tasks.length,
       icon: Activity,
-      gradient: 'from-green-500 to-green-600',
+      gradient: 'from-nexcrm-green/80 to-nexcrm-green/60',
     },
   ];
 
@@ -71,7 +71,7 @@ export default function DashboardOverview() {
   })).filter(item => item.value > 0);
 
   // Cores para o gráfico de pizza
-  const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7c7c', '#8dd1e1', '#d084d0'];
+  const COLORS = ['hsl(var(--nexcrm-blue))', 'hsl(var(--nexcrm-green))', '#64748b', '#94a3b8', '#cbd5e1', '#e2e8f0'];
 
   // Dados para o gráfico de tarefas por status
   const taskStatusData = [
@@ -141,16 +141,16 @@ export default function DashboardOverview() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
         {/* Recent Leads */}
         <Card className="border-0 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50 p-4 md:p-6">
+          <CardHeader className="bg-gradient-to-r from-nexcrm-blue/10 to-nexcrm-green/10 p-4 md:p-6">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base md:text-lg font-semibold text-premium-purple">
+              <CardTitle className="text-base md:text-lg font-semibold text-nexcrm-blue">
                 Últimos 5 Leads
               </CardTitle>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate('/leads')}
-                className="text-purple-600 hover:text-purple-700"
+                className="text-nexcrm-green hover:text-nexcrm-green/80"
               >
                 <ExternalLink className="h-4 w-4 mr-1" />
                 <span className="hidden sm:inline">Ver todos</span>
@@ -187,16 +187,16 @@ export default function DashboardOverview() {
 
         {/* Recent Tasks */}
         <Card className="border-0 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 md:p-6">
+          <CardHeader className="bg-gradient-to-r from-nexcrm-green/10 to-nexcrm-blue/10 p-4 md:p-6">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base md:text-lg font-semibold text-premium-blue">
+              <CardTitle className="text-base md:text-lg font-semibold text-nexcrm-green">
                 Últimas 5 Tarefas
               </CardTitle>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate('/tasks')}
-                className="text-blue-600 hover:text-blue-700"
+                className="text-nexcrm-blue hover:text-nexcrm-blue/80"
               >
                 <ExternalLink className="h-4 w-4 mr-1" />
                 <span className="hidden sm:inline">Ver todos</span>
@@ -213,7 +213,7 @@ export default function DashboardOverview() {
                         <p className="font-medium text-sm md:text-base truncate">{task.title}</p>
                         <p className="text-xs md:text-sm text-gray-600 truncate">{task.description}</p>
                         {task.leads && (
-                          <p className="text-xs text-blue-600 mt-1 truncate">
+                          <p className="text-xs text-nexcrm-blue mt-1 truncate">
                             Lead: {task.leads.name}
                           </p>
                         )}
@@ -235,7 +235,7 @@ export default function DashboardOverview() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-blue-600"
+                          className="text-nexcrm-green"
                           onClick={() => handleViewTask(task)}
                         >
                           <Eye className="h-4 w-4" />
@@ -258,7 +258,7 @@ export default function DashboardOverview() {
         <Card className="border-0 shadow-lg">
           <CardHeader className="p-4 md:p-6">
             <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-              <PieChart className="h-4 w-4 md:h-5 md:w-5 text-purple-600" />
+              <PieChart className="h-4 w-4 md:h-5 md:w-5 text-nexcrm-blue" />
               <span className="truncate">Leads por Origem (UTM Source)</span>
             </CardTitle>
           </CardHeader>
@@ -296,7 +296,7 @@ export default function DashboardOverview() {
         <Card className="border-0 shadow-lg">
           <CardHeader className="p-4 md:p-6">
             <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-              <Calendar className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
+              <Calendar className="h-4 w-4 md:h-5 md:w-5 text-nexcrm-green" />
               <span className="truncate">Tarefas por Status</span>
             </CardTitle>
           </CardHeader>
@@ -315,7 +315,7 @@ export default function DashboardOverview() {
                   />
                   <YAxis tick={{ fontSize: 12 }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="count" fill="#8884d8" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="count" fill="hsl(var(--nexcrm-green))" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </ChartContainer>

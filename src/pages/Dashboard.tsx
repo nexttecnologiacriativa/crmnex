@@ -14,8 +14,8 @@ export default function Dashboard() {
 
   // SEO
   useEffect(() => {
-    document.title = 'Dashboard CRM – Leads e Tarefas';
-    const desc = 'Visão geral do CRM com total de leads, tarefas e UTMs.';
+    document.title = 'Dashboard NexCRM – Leads e Tarefas';
+    const desc = 'Visão geral do NexCRM com total de leads, tarefas e UTMs.';
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) {
       meta = document.createElement('meta');

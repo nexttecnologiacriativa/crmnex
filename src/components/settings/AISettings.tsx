@@ -7,8 +7,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useWorkspaceSettings, useUpdateWorkspaceSettings } from '@/hooks/useWorkspaceSettings';
 import { usePipelines } from '@/hooks/usePipeline';
 import { useWorkspace } from '@/hooks/useWorkspace';
-import { Eye, EyeOff, Brain, Sparkles, Filter } from 'lucide-react';
+import { Eye, EyeOff, Brain, Sparkles, Filter, TestTube } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AISettingsProps {
   currentUserRole?: string;
@@ -22,6 +23,7 @@ export default function AISettings({ currentUserRole }: AISettingsProps) {
   const [showApiKey, setShowApiKey] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [selectedPipelines, setSelectedPipelines] = useState<string[]>([]);
+  const [isTesting, setIsTesting] = useState(false);
 
   const isDisabled = currentUserRole !== 'admin' && currentUserRole !== 'manager';
 
@@ -64,6 +66,54 @@ export default function AISettings({ currentUserRole }: AISettingsProps) {
       openai_api_key: null,
       ai_insights_pipeline_ids: null
     });
+  };
+
+  const handleTestConnection = async () => {
+    if (!apiKey.trim()) {
+      toast({
+        title: "Erro",
+        description: "Por favor, salve a API key primeiro",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsTesting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('test-openai');
+      
+      if (error) {
+        console.error('Test function error:', error);
+        toast({
+          title: "Erro no Teste",
+          description: `Falha ao testar conexão: ${error.message}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data.success) {
+        toast({
+          title: "Teste Bem-sucedido!",
+          description: "Conexão com OpenAI funcionando corretamente",
+        });
+      } else {
+        toast({
+          title: "Erro na Conexão",
+          description: data.error || "Erro desconhecido ao conectar com OpenAI",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      console.error('Test connection error:', err);
+      toast({
+        title: "Erro no Teste",
+        description: "Falha ao executar teste de conexão",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   return (
@@ -181,13 +231,24 @@ export default function AISettings({ currentUserRole }: AISettingsProps) {
                 {isPending ? 'Salvando...' : 'Salvar Configurações'}
               </Button>
               {settings?.openai_api_key && (
-                <Button
-                  variant="outline"
-                  onClick={handleClear}
-                  disabled={isPending}
-                >
-                  Remover API Key
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={handleTestConnection}
+                    disabled={isTesting || isPending}
+                    className="border-green-500 text-green-600 hover:bg-green-50"
+                  >
+                    <TestTube className="h-4 w-4 mr-2" />
+                    {isTesting ? 'Testando...' : 'Testar Conexão'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleClear}
+                    disabled={isPending}
+                  >
+                    Remover API Key
+                  </Button>
+                </>
               )}
             </div>
           )}

@@ -114,6 +114,7 @@ serve(async (req) => {
       .single();
 
     if (!settings?.openai_api_key) {
+      console.error('OpenAI API key not found in workspace settings');
       return new Response(JSON.stringify({
         error: 'OpenAI API key not configured',
         message: 'Configure sua API key da OpenAI nas configurações para receber insights de IA.'
@@ -123,7 +124,20 @@ serve(async (req) => {
       });
     }
 
-    console.log('OpenAI API key found');
+    // Validate API key format
+    if (!settings.openai_api_key.startsWith('sk-')) {
+      console.error('Invalid OpenAI API key format');
+      return new Response(JSON.stringify({
+        error: 'Invalid OpenAI API key format',
+        message: 'A API key da OpenAI deve começar com "sk-". Verifique se a chave foi configurada corretamente.'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log('OpenAI API key found, length:', settings.openai_api_key.length);
+    console.log('Selected pipelines:', settings.ai_insights_pipeline_ids);
 
     // Calculate date range - focus on last 30 days for insights
     const endDate = new Date();
@@ -328,65 +342,90 @@ ${Object.entries(metrics.stageDistribution).map(([stage, count]) => `- ${stage}:
 Forneça análise focada nos últimos 30 dias com comparação ao período anterior e oportunidades de melhoria.
 `;
 
-    console.log('Calling OpenAI API...');
+    console.log('Calling OpenAI API with key ending in...', settings.openai_api_key.slice(-10));
 
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${settings.openai_api_key}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: `Você é um analista de CRM especializado. Analise os dados fornecidos e gere insights valiosos em português brasileiro focados nos últimos 30 dias.
-            
-            Estruture sua resposta EXATAMENTE neste formato, usando estes títulos:
-            
-            Insights sobre Performance de Leads e Conversão
-            Análise da performance dos últimos 30 dias, taxas de conversão e tendências comparando com o período anterior. Use dados específicos.
-            
-            Recomendações Acionáveis
-            Sugestões práticas e específicas que podem ser implementadas imediatamente para melhorar os resultados.
-            
-            Alerta ou Oportunidade Identificada
-            Alertas sobre leads parados, oportunidades de melhoria ou pontos de atenção importantes baseados nos dados recentes.
-            
-            IMPORTANTE:
-            - NÃO use markdown (**, *__, ###, ---, |)
-            - NÃO use numeração (1., 2., 3.)
-            - NÃO use símbolos especiais ou formatação
-            - Use apenas os títulos especificados
-            - Seja conciso e direto
-            - Use dados específicos dos metrics fornecidos
-            - Foque nos últimos 30 dias e comparação com período anterior`
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        max_tokens: 1000,
-        temperature: 0.7,
-      }),
-    });
+    try {
+      const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${settings.openai_api_key}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: `Você é um analista de CRM especializado. Analise os dados fornecidos e gere insights valiosos em português brasileiro focados nos últimos 30 dias.
+              
+              Estruture sua resposta EXATAMENTE neste formato, usando estes títulos:
+              
+              Insights sobre Performance de Leads e Conversão
+              Análise da performance dos últimos 30 dias, taxas de conversão e tendências comparando com o período anterior. Use dados específicos.
+              
+              Recomendações Acionáveis
+              Sugestões práticas e específicas que podem ser implementadas imediatamente para melhorar os resultados.
+              
+              Alerta ou Oportunidade Identificada
+              Alertas sobre leads parados, oportunidades de melhoria ou pontos de atenção importantes baseados nos dados recentes.
+              
+              IMPORTANTE:
+              - NÃO use markdown (**, *__, ###, ---, |)
+              - NÃO use numeração (1., 2., 3.)
+              - NÃO use símbolos especiais ou formatação
+              - Use apenas os títulos especificados
+              - Seja conciso e direto
+              - Use dados específicos dos metrics fornecidos
+              - Foque nos últimos 30 dias e comparação com período anterior`
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 1000,
+          temperature: 0.7,
+        }),
+      });
 
-    if (!openaiResponse.ok) {
-      const error = await openaiResponse.text();
-      console.error('OpenAI API error:', error);
+      if (!openaiResponse.ok) {
+        const error = await openaiResponse.text();
+        console.error('OpenAI API error status:', openaiResponse.status);
+        console.error('OpenAI API error details:', error);
+        return new Response(JSON.stringify({
+          error: 'Failed to generate insights',
+          details: `OpenAI API error (${openaiResponse.status}): ${error}`,
+          statusCode: openaiResponse.status
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const openaiData = await openaiResponse.json();
+      console.log('OpenAI response received successfully');
+      
+      if (!openaiData.choices || !openaiData.choices[0] || !openaiData.choices[0].message) {
+        console.error('Invalid OpenAI response structure:', openaiData);
+        return new Response(JSON.stringify({
+          error: 'Invalid response from AI service'
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const insights = openaiData.choices[0].message.content;
+    } catch (openaiError) {
+      console.error('OpenAI API fetch error:', openaiError);
       return new Response(JSON.stringify({
-        error: 'Failed to generate insights',
-        details: error
+        error: 'Failed to connect to AI service',
+        details: openaiError.message
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    const openaiData = await openaiResponse.json();
-    const insights = openaiData.choices[0].message.content;
 
     console.log('Insights generated successfully');
 
@@ -425,10 +464,16 @@ Forneça análise focada nos últimos 30 dias com comparação ao período anter
     });
 
   } catch (error) {
-    console.error('Error in crm-ai-insights function:', error);
+    console.error('Critical error in crm-ai-insights function:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    
     return new Response(JSON.stringify({
       error: 'Internal server error',
-      message: error.message
+      message: error.message,
+      type: error.name || 'Unknown',
+      details: `Function crashed: ${error.message}`
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

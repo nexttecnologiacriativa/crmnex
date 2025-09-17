@@ -33,7 +33,7 @@ export default function Settings() {
           </div>
 
           <Tabs defaultValue="profile" className="w-full">
-            <TabsList className="grid w-full grid-cols-10 bg-white shadow-sm border">
+            <TabsList className="grid w-full grid-cols-9 bg-white shadow-sm border">
               <TabsTrigger 
                 value="profile"
                 className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-blue-600 data-[state=active]:text-white"
@@ -83,12 +83,6 @@ export default function Settings() {
                 WhatsApp WEB
               </TabsTrigger>
               <TabsTrigger 
-                value="integrations"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-blue-600 data-[state=active]:text-white"
-              >
-                Integrações
-              </TabsTrigger>
-              <TabsTrigger 
                 value="ai"
                 className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-blue-600 data-[state=active]:text-white"
               >
@@ -129,11 +123,6 @@ export default function Settings() {
               <WhatsAppEvolutionSettings currentUserRole={currentUserRole} />
             </TabsContent>
 
-            <TabsContent value="integrations" className="mt-6 space-y-6">
-              <N8nWebhookSettings />
-              <N8nProcessor />
-              <IntegrationsSettings currentUserRole={currentUserRole} />
-            </TabsContent>
 
             <TabsContent value="ai" className="mt-6">
               <AISettings currentUserRole={currentUserRole} />

@@ -79,9 +79,13 @@ export default function SignUpForm({ onToggleMode }: SignUpFormProps) {
 
       <Card className="w-full max-w-md relative bg-card/80 backdrop-blur-xl border border-border shadow-2xl">
         <CardHeader className="text-center pb-8">
-          <CardTitle className="text-4xl font-bold text-foreground drop-shadow-lg">
-            Criar Conta no NexCRM
-          </CardTitle>
+          <div className="flex justify-center mb-4">
+            <img 
+              src="/nexcrm-logo.png" 
+              alt="NexCRM" 
+              className="h-16 w-auto"
+            />
+          </div>
         </CardHeader>
 
         <CardContent className="space-y-6">

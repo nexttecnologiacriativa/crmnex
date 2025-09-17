@@ -2551,6 +2551,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      reset_workspace: {
+        Args: { p_workspace_id: string }
+        Returns: undefined
+      }
+      setup_default_workspace_data: {
+        Args: { p_workspace_id: string }
+        Returns: undefined
+      }
       user_has_workspace_access: {
         Args: { workspace_uuid: string }
         Returns: boolean

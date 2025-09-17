@@ -76,7 +76,7 @@ export default function AppSidebar() {
       className="bg-sidebar border-r border-sidebar-border shadow-2xl"
       collapsible="icon"
     >
-        <SidebarHeader className="border-b border-sidebar-border/50 bg-sidebar-accent/20">
+        <SidebarHeader className="border-b border-gray-200 bg-white">
           <div className="flex h-16 items-center justify-center px-4">
             <img 
               src="/nexcrm-logo.png" 

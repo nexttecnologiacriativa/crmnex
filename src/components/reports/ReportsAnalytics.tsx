@@ -295,7 +295,7 @@ export default function ReportsAnalytics() {
   });
   if (!analyticsData) {
     return <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-premium-purple"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-nexcrm-blue"></div>
       </div>;
   }
   const formatCurrency = (value: number) => {

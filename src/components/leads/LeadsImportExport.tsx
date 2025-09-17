@@ -475,7 +475,7 @@ export default function LeadsImportExport({ leads }: LeadsImportExportProps) {
 
               {isProcessing && (
                 <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-premium-purple mx-auto"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-nexcrm-blue mx-auto"></div>
                   <p className="text-sm text-gray-600 mt-2">Processando arquivo...</p>
                 </div>
               )}

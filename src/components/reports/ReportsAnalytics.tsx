@@ -13,7 +13,7 @@ import { usePipelines } from '@/hooks/usePipeline';
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-const COLORS = ['#8b5cf6', '#3b82f6', '#f59e0b', '#ef4444', '#10b981', '#ec4899'];
+const COLORS = ['hsl(var(--nexcrm-blue))', 'hsl(var(--nexcrm-green))', '#64748b', '#94a3b8', '#cbd5e1', '#e2e8f0'];
 export default function ReportsAnalytics() {
   const {
     workspace
@@ -486,82 +486,82 @@ export default function ReportsAnalytics() {
 
       {/* KPIs Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-xl transition-shadow">
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-nexcrm-blue/20 to-nexcrm-blue/30 hover:shadow-xl transition-shadow">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-purple-600 truncate">Total de Leads</p>
-                <p className="text-2xl font-bold text-purple-900 truncate">{analyticsData.totalLeads}</p>
+                <p className="text-xs font-medium text-nexcrm-blue truncate">Total de Leads</p>
+                <p className="text-2xl font-bold text-nexcrm-blue truncate">{analyticsData.totalLeads}</p>
               </div>
-              <Users className="h-6 w-6 text-purple-600 flex-shrink-0 ml-2" />
+              <Users className="h-6 w-6 text-nexcrm-blue flex-shrink-0 ml-2" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100 hover:shadow-xl transition-shadow">
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-nexcrm-green/20 to-nexcrm-green/30 hover:shadow-xl transition-shadow">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-green-600 truncate">Receita Total</p>
-                <p className="text-2xl font-bold text-green-900 truncate">
+                <p className="text-xs font-medium text-nexcrm-green truncate">Receita Total</p>
+                <p className="text-2xl font-bold text-nexcrm-green truncate">
                   {formatCurrency(analyticsData.totalValue)}
                 </p>
               </div>
-              <DollarSign className="h-6 w-6 text-green-600 flex-shrink-0 ml-2" />
+              <DollarSign className="h-6 w-6 text-nexcrm-green flex-shrink-0 ml-2" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-xl transition-shadow">
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-nexcrm-blue/15 to-nexcrm-blue/25 hover:shadow-xl transition-shadow">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-blue-600 truncate">Ticket Médio</p>
-                <p className="text-2xl font-bold text-blue-900 truncate">
+                <p className="text-xs font-medium text-nexcrm-blue truncate">Ticket Médio</p>
+                <p className="text-2xl font-bold text-nexcrm-blue truncate">
                   {formatCurrency(analyticsData.averageTicket || 0)}
                 </p>
               </div>
-              <Banknote className="h-6 w-6 text-blue-600 flex-shrink-0 ml-2" />
+              <Banknote className="h-6 w-6 text-nexcrm-blue flex-shrink-0 ml-2" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-teal-50 to-teal-100 hover:shadow-xl transition-shadow">
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-nexcrm-green/15 to-nexcrm-green/25 hover:shadow-xl transition-shadow">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-teal-600 truncate">Conversões</p>
-                <p className="text-2xl font-bold text-teal-900 truncate">{analyticsData.wonLeads}</p>
+                <p className="text-xs font-medium text-nexcrm-green truncate">Conversões</p>
+                <p className="text-2xl font-bold text-nexcrm-green truncate">{analyticsData.wonLeads}</p>
               </div>
-              <Target className="h-6 w-6 text-teal-600 flex-shrink-0 ml-2" />
+              <Target className="h-6 w-6 text-nexcrm-green flex-shrink-0 ml-2" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-50 to-orange-100 hover:shadow-xl transition-shadow">
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-nexcrm-blue/10 to-nexcrm-blue/20 hover:shadow-xl transition-shadow">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-orange-600 truncate">Taxa de Conversão</p>
-                <p className="text-2xl font-bold text-orange-900 truncate">
+                <p className="text-xs font-medium text-nexcrm-blue truncate">Taxa de Conversão</p>
+                <p className="text-2xl font-bold text-nexcrm-blue truncate">
                   {analyticsData.conversionRate.toFixed(1)}%
                 </p>
               </div>
-              <TrendingUp className="h-6 w-6 text-orange-600 flex-shrink-0 ml-2" />
+              <TrendingUp className="h-6 w-6 text-nexcrm-blue flex-shrink-0 ml-2" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-yellow-50 to-yellow-100 hover:shadow-xl transition-shadow">
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-nexcrm-green/10 to-nexcrm-green/20 hover:shadow-xl transition-shadow">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-yellow-600 truncate">Dinheiro na Mesa</p>
-                <p className="text-2xl font-bold text-yellow-900 truncate">
+                <p className="text-xs font-medium text-nexcrm-green truncate">Dinheiro na Mesa</p>
+                <p className="text-2xl font-bold text-nexcrm-green truncate">
                   {formatCurrency(analyticsData.moneyOnTable)}
                 </p>
               </div>
-              <Banknote className="h-6 w-6 text-yellow-600 flex-shrink-0 ml-2" />
+              <Banknote className="h-6 w-6 text-nexcrm-green flex-shrink-0 ml-2" />
             </div>
           </CardContent>
         </Card>
@@ -580,7 +580,7 @@ export default function ReportsAnalytics() {
           <CardContent className="p-6">
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
-                <Pie data={analyticsData.statusData} cx="50%" cy="50%" labelLine={false} outerRadius={100} fill="#8884d8" dataKey="value" label={({
+                <Pie data={analyticsData.statusData} cx="50%" cy="50%" labelLine={false} outerRadius={100} fill="hsl(var(--nexcrm-blue))" dataKey="value" label={({
                 name,
                 percent
               }) => `${name}: ${(percent * 100).toFixed(0)}%`}>
@@ -621,8 +621,8 @@ export default function ReportsAnalytics() {
                     return null;
                 }
               }} />
-                <Bar dataKey="leads" fill="#8b5cf6" />
-                <Bar dataKey="conversions" fill="#10b981" />
+                <Bar dataKey="leads" fill="hsl(var(--nexcrm-blue))" />
+                <Bar dataKey="conversions" fill="hsl(var(--nexcrm-green))" />
               </RechartsBarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -630,8 +630,8 @@ export default function ReportsAnalytics() {
 
         {/* Leads por Mês */}
         <Card className="border-0 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-green-50 to-blue-50">
-            <CardTitle className="text-green-600 flex items-center gap-2">
+          <CardHeader className="bg-gradient-to-r from-nexcrm-green/10 to-nexcrm-blue/10">
+            <CardTitle className="text-nexcrm-green flex items-center gap-2">
               <CalendarIcon className="h-5 w-5" />
               Leads por Mês
             </CardTitle>
@@ -643,8 +643,8 @@ export default function ReportsAnalytics() {
                 <XAxis dataKey="month" />
                 <YAxis />
                 <Tooltip />
-                <Line type="monotone" dataKey="leads" stroke="#10b981" strokeWidth={3} dot={{
-                fill: '#10b981',
+                <Line type="monotone" dataKey="leads" stroke="hsl(var(--nexcrm-green))" strokeWidth={3} dot={{
+                fill: 'hsl(var(--nexcrm-green))',
                 strokeWidth: 2,
                 r: 4
               }} />
@@ -655,8 +655,8 @@ export default function ReportsAnalytics() {
 
         {/* Receita por Mês */}
         <Card className="border-0 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-yellow-50 to-orange-50">
-            <CardTitle className="text-orange-600 flex items-center gap-2">
+          <CardHeader className="bg-gradient-to-r from-nexcrm-blue/10 to-nexcrm-green/10">
+            <CardTitle className="text-nexcrm-blue flex items-center gap-2">
               <DollarSign className="h-5 w-5" />
               Receita por Mês
             </CardTitle>
@@ -673,8 +673,8 @@ export default function ReportsAnalytics() {
                 }
                 return null;
               }} />
-                <Line type="monotone" dataKey="value" stroke="#f59e0b" strokeWidth={3} dot={{
-                fill: '#f59e0b',
+                <Line type="monotone" dataKey="value" stroke="hsl(var(--nexcrm-blue))" strokeWidth={3} dot={{
+                fill: 'hsl(var(--nexcrm-blue))',
                 strokeWidth: 2,
                 r: 4
               }} />
@@ -713,10 +713,10 @@ export default function ReportsAnalytics() {
                   <Line 
                     type="monotone" 
                     dataKey="revenue" 
-                    stroke="#8b5cf6" 
+                    stroke="hsl(var(--nexcrm-green))" 
                     strokeWidth={3}
-                    dot={{ fill: "#8b5cf6", strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, stroke: "#8b5cf6", strokeWidth: 2 }}
+                    dot={{ fill: "hsl(var(--nexcrm-green))", strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, stroke: "hsl(var(--nexcrm-green))", strokeWidth: 2 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -767,7 +767,7 @@ export default function ReportsAnalytics() {
                       formatter={(value) => [value, 'Leads']}
                       labelFormatter={(label) => `${selectedUtmType.replace('utm_', '').toUpperCase()}: ${label}`}
                     />
-                    <Bar dataKey="value" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="value" fill="hsl(var(--nexcrm-green))" radius={[4, 4, 0, 0]} />
                   </RechartsBarChart>
                 </ResponsiveContainer>
               </div>
@@ -803,7 +803,7 @@ export default function ReportsAnalytics() {
                           <td className="px-4 py-3">
                             <span 
                               className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                isHighPerforming ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+                                isHighPerforming ? "bg-nexcrm-green/20 text-nexcrm-green" : "bg-gray-100 text-gray-800"
                               }`}
                             >
                               {isHighPerforming ? "Alto Volume" : "Baixo Volume"}

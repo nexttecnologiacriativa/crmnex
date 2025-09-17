@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_status: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          suspended_at: string | null
+          suspended_by: string | null
+          suspension_reason: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspension_reason?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspension_reason?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_status_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       activities: {
         Row: {
           created_at: string | null
@@ -62,6 +103,41 @@ export type Database = {
           },
           {
             foreignKeyName: "activities_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_insights_cache: {
+        Row: {
+          created_at: string
+          expires_at: string
+          generated_at: string
+          id: string
+          insights_data: Json
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          generated_at?: string
+          id?: string
+          insights_data: Json
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          generated_at?: string
+          id?: string
+          insights_data?: Json
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_insights_cache_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -374,6 +450,405 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "custom_fields_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      debriefing_ads: {
+        Row: {
+          ad_name: string
+          ad_type: string
+          campaign_objective: string
+          cpc: number | null
+          cpm: number | null
+          created_at: string | null
+          creative_file_url: string | null
+          ctr: number | null
+          debriefing_id: string
+          id: string
+          leads_generated: number | null
+          observations: string | null
+          performance_rating: number | null
+          platform: string
+          sales_generated: number | null
+          total_spent: number | null
+          view_link: string | null
+        }
+        Insert: {
+          ad_name: string
+          ad_type: string
+          campaign_objective: string
+          cpc?: number | null
+          cpm?: number | null
+          created_at?: string | null
+          creative_file_url?: string | null
+          ctr?: number | null
+          debriefing_id: string
+          id?: string
+          leads_generated?: number | null
+          observations?: string | null
+          performance_rating?: number | null
+          platform: string
+          sales_generated?: number | null
+          total_spent?: number | null
+          view_link?: string | null
+        }
+        Update: {
+          ad_name?: string
+          ad_type?: string
+          campaign_objective?: string
+          cpc?: number | null
+          cpm?: number | null
+          created_at?: string | null
+          creative_file_url?: string | null
+          ctr?: number | null
+          debriefing_id?: string
+          id?: string
+          leads_generated?: number | null
+          observations?: string | null
+          performance_rating?: number | null
+          platform?: string
+          sales_generated?: number | null
+          total_spent?: number | null
+          view_link?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debriefing_ads_debriefing_id_fkey"
+            columns: ["debriefing_id"]
+            isOneToOne: false
+            referencedRelation: "debriefings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      debriefing_checkouts: {
+        Row: {
+          abandonment_rate: number | null
+          checkout_abandonments: number | null
+          checkout_starts: number | null
+          checkout_url: string | null
+          completed_purchases: number | null
+          conversion_rate: number | null
+          created_at: string
+          debriefing_id: string
+          id: string
+          name: string
+          platform: string | null
+          product_id: string | null
+          total_views: number | null
+          updated_at: string
+        }
+        Insert: {
+          abandonment_rate?: number | null
+          checkout_abandonments?: number | null
+          checkout_starts?: number | null
+          checkout_url?: string | null
+          completed_purchases?: number | null
+          conversion_rate?: number | null
+          created_at?: string
+          debriefing_id: string
+          id?: string
+          name: string
+          platform?: string | null
+          product_id?: string | null
+          total_views?: number | null
+          updated_at?: string
+        }
+        Update: {
+          abandonment_rate?: number | null
+          checkout_abandonments?: number | null
+          checkout_starts?: number | null
+          checkout_url?: string | null
+          completed_purchases?: number | null
+          conversion_rate?: number | null
+          created_at?: string
+          debriefing_id?: string
+          id?: string
+          name?: string
+          platform?: string | null
+          product_id?: string | null
+          total_views?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debriefing_checkouts_debriefing_id_fkey"
+            columns: ["debriefing_id"]
+            isOneToOne: false
+            referencedRelation: "debriefings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "debriefing_checkouts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      debriefing_pages: {
+        Row: {
+          avg_time_on_page: number | null
+          conversion_rate: number | null
+          conversions: number | null
+          created_at: string
+          cta_clicks: number | null
+          debriefing_id: string
+          id: string
+          name: string
+          page_url: string | null
+          predominant_device: string | null
+          predominant_traffic_source: string | null
+          total_views: number | null
+          unique_visitors: number | null
+        }
+        Insert: {
+          avg_time_on_page?: number | null
+          conversion_rate?: number | null
+          conversions?: number | null
+          created_at?: string
+          cta_clicks?: number | null
+          debriefing_id: string
+          id?: string
+          name: string
+          page_url?: string | null
+          predominant_device?: string | null
+          predominant_traffic_source?: string | null
+          total_views?: number | null
+          unique_visitors?: number | null
+        }
+        Update: {
+          avg_time_on_page?: number | null
+          conversion_rate?: number | null
+          conversions?: number | null
+          created_at?: string
+          cta_clicks?: number | null
+          debriefing_id?: string
+          id?: string
+          name?: string
+          page_url?: string | null
+          predominant_device?: string | null
+          predominant_traffic_source?: string | null
+          total_views?: number | null
+          unique_visitors?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debriefing_pages_debriefing_id_fkey"
+            columns: ["debriefing_id"]
+            isOneToOne: false
+            referencedRelation: "debriefings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      debriefing_products: {
+        Row: {
+          created_at: string
+          debriefing_id: string
+          id: string
+          product_id: string
+          quantity_sold: number
+          total_revenue: number | null
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          debriefing_id: string
+          id?: string
+          product_id: string
+          quantity_sold?: number
+          total_revenue?: number | null
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          debriefing_id?: string
+          id?: string
+          product_id?: string
+          quantity_sold?: number
+          total_revenue?: number | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debriefing_products_debriefing_id_fkey"
+            columns: ["debriefing_id"]
+            isOneToOne: false
+            referencedRelation: "debriefings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "debriefing_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      debriefing_settings: {
+        Row: {
+          created_at: string
+          fixed_cost: number | null
+          id: string
+          tax_percentage: number | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          fixed_cost?: number | null
+          id?: string
+          tax_percentage?: number | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          fixed_cost?: number | null
+          id?: string
+          tax_percentage?: number | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debriefing_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      debriefings: {
+        Row: {
+          abandonment_reasons: string | null
+          avg_time_on_page: number | null
+          campaign_type: string
+          checkout_abandonments: number | null
+          checkout_platform: string | null
+          checkout_starts: number | null
+          checkout_views: number | null
+          completed_purchases: number | null
+          conversions: number | null
+          created_at: string | null
+          created_by: string
+          cta_clicks: number | null
+          end_date: string | null
+          gross_revenue: number | null
+          id: string
+          leads_captured: number | null
+          net_revenue: number | null
+          net_revenue_calculated: number | null
+          net_revenue_with_costs: number | null
+          next_steps: string | null
+          page_url: string | null
+          predominant_device: string | null
+          predominant_traffic_source: string | null
+          project_name: string
+          responsible: string | null
+          sales_made: number | null
+          start_date: string | null
+          total_investment: number | null
+          total_views: number | null
+          unique_visitors: number | null
+          updated_at: string | null
+          what_could_improve: string | null
+          what_happened: string | null
+          what_worked: string | null
+          workspace_id: string
+        }
+        Insert: {
+          abandonment_reasons?: string | null
+          avg_time_on_page?: number | null
+          campaign_type: string
+          checkout_abandonments?: number | null
+          checkout_platform?: string | null
+          checkout_starts?: number | null
+          checkout_views?: number | null
+          completed_purchases?: number | null
+          conversions?: number | null
+          created_at?: string | null
+          created_by: string
+          cta_clicks?: number | null
+          end_date?: string | null
+          gross_revenue?: number | null
+          id?: string
+          leads_captured?: number | null
+          net_revenue?: number | null
+          net_revenue_calculated?: number | null
+          net_revenue_with_costs?: number | null
+          next_steps?: string | null
+          page_url?: string | null
+          predominant_device?: string | null
+          predominant_traffic_source?: string | null
+          project_name: string
+          responsible?: string | null
+          sales_made?: number | null
+          start_date?: string | null
+          total_investment?: number | null
+          total_views?: number | null
+          unique_visitors?: number | null
+          updated_at?: string | null
+          what_could_improve?: string | null
+          what_happened?: string | null
+          what_worked?: string | null
+          workspace_id: string
+        }
+        Update: {
+          abandonment_reasons?: string | null
+          avg_time_on_page?: number | null
+          campaign_type?: string
+          checkout_abandonments?: number | null
+          checkout_platform?: string | null
+          checkout_starts?: number | null
+          checkout_views?: number | null
+          completed_purchases?: number | null
+          conversions?: number | null
+          created_at?: string | null
+          created_by?: string
+          cta_clicks?: number | null
+          end_date?: string | null
+          gross_revenue?: number | null
+          id?: string
+          leads_captured?: number | null
+          net_revenue?: number | null
+          net_revenue_calculated?: number | null
+          net_revenue_with_costs?: number | null
+          next_steps?: string | null
+          page_url?: string | null
+          predominant_device?: string | null
+          predominant_traffic_source?: string | null
+          project_name?: string
+          responsible?: string | null
+          sales_made?: number | null
+          start_date?: string | null
+          total_investment?: number | null
+          total_views?: number | null
+          unique_visitors?: number | null
+          updated_at?: string | null
+          what_could_improve?: string | null
+          what_happened?: string | null
+          what_worked?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debriefings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "debriefings_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -1508,6 +1983,442 @@ export type Database = {
             foreignKeyName: "webhooks_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_conversations: {
+        Row: {
+          contact_name: string | null
+          created_at: string
+          id: string
+          instance_id: string | null
+          is_read: boolean | null
+          last_message_at: string | null
+          lead_id: string | null
+          message_count: number | null
+          phone_number: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          contact_name?: string | null
+          created_at?: string
+          id?: string
+          instance_id?: string | null
+          is_read?: boolean | null
+          last_message_at?: string | null
+          lead_id?: string | null
+          message_count?: number | null
+          phone_number: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          contact_name?: string | null
+          created_at?: string
+          id?: string
+          instance_id?: string | null
+          is_read?: boolean | null
+          last_message_at?: string | null
+          lead_id?: string | null
+          message_count?: number | null
+          phone_number?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_conversations_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_conversations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_evolution_configs: {
+        Row: {
+          api_url: string
+          created_at: string | null
+          global_api_key: string
+          id: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          api_url?: string
+          created_at?: string | null
+          global_api_key: string
+          id?: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          api_url?: string
+          created_at?: string | null
+          global_api_key?: string
+          id?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_evolution_configs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_instances: {
+        Row: {
+          created_at: string
+          id: string
+          instance_key: string
+          instance_name: string
+          last_seen: string | null
+          phone_number: string | null
+          qr_code: string | null
+          status: string
+          updated_at: string
+          webhook_url: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          instance_key: string
+          instance_name: string
+          last_seen?: string | null
+          phone_number?: string | null
+          qr_code?: string | null
+          status?: string
+          updated_at?: string
+          webhook_url?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          instance_key?: string
+          instance_name?: string
+          last_seen?: string | null
+          phone_number?: string | null
+          qr_code?: string | null
+          status?: string
+          updated_at?: string
+          webhook_url?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_instances_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_messages: {
+        Row: {
+          attachment_name: string | null
+          conversation_id: string | null
+          created_at: string
+          encrypted_media_url: string | null
+          id: string
+          is_from_lead: boolean
+          media_type: string | null
+          media_url: string | null
+          message_id: string | null
+          message_text: string
+          message_type: string
+          permanent_audio_url: string | null
+          sent_by: string | null
+          status: string | null
+          timestamp: string | null
+          whatsapp_media_id: string | null
+        }
+        Insert: {
+          attachment_name?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          encrypted_media_url?: string | null
+          id?: string
+          is_from_lead?: boolean
+          media_type?: string | null
+          media_url?: string | null
+          message_id?: string | null
+          message_text: string
+          message_type?: string
+          permanent_audio_url?: string | null
+          sent_by?: string | null
+          status?: string | null
+          timestamp?: string | null
+          whatsapp_media_id?: string | null
+        }
+        Update: {
+          attachment_name?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          encrypted_media_url?: string | null
+          id?: string
+          is_from_lead?: boolean
+          media_type?: string | null
+          media_url?: string | null
+          message_id?: string | null
+          message_text?: string
+          message_type?: string
+          permanent_audio_url?: string | null
+          sent_by?: string | null
+          status?: string | null
+          timestamp?: string | null
+          whatsapp_media_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_official_configs: {
+        Row: {
+          access_token: string | null
+          app_secret: string | null
+          business_account_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          phone_number_id: string | null
+          updated_at: string
+          webhook_verify_token: string | null
+          workspace_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          app_secret?: string | null
+          business_account_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          phone_number_id?: string | null
+          updated_at?: string
+          webhook_verify_token?: string | null
+          workspace_id: string
+        }
+        Update: {
+          access_token?: string | null
+          app_secret?: string | null
+          business_account_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          phone_number_id?: string | null
+          updated_at?: string
+          webhook_verify_token?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_official_configs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_sync_status: {
+        Row: {
+          created_at: string | null
+          errors: Json | null
+          id: string
+          instance_name: string
+          last_sync_at: string
+          processed_conversations: number | null
+          sync_options: Json | null
+          total_conversations: number | null
+          total_messages: number | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          errors?: Json | null
+          id?: string
+          instance_name: string
+          last_sync_at?: string
+          processed_conversations?: number | null
+          sync_options?: Json | null
+          total_conversations?: number | null
+          total_messages?: number | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          errors?: Json | null
+          id?: string
+          instance_name?: string
+          last_sync_at?: string
+          processed_conversations?: number | null
+          sync_options?: Json | null
+          total_conversations?: number | null
+          total_messages?: number | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_sync_status_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_templates: {
+        Row: {
+          category: string | null
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          workspace_id: string
+        }
+        Insert: {
+          category?: string | null
+          content: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          workspace_id: string
+        }
+        Update: {
+          category?: string | null
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_templates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_webhook_messages: {
+        Row: {
+          created_at: string | null
+          custom_fields: Json | null
+          from_me: boolean
+          id: string
+          message_type: string
+          push_name: string | null
+          raw: Json
+          text: string | null
+          thread_id: string
+          timestamp: number
+        }
+        Insert: {
+          created_at?: string | null
+          custom_fields?: Json | null
+          from_me?: boolean
+          id?: string
+          message_type: string
+          push_name?: string | null
+          raw: Json
+          text?: string | null
+          thread_id: string
+          timestamp: number
+        }
+        Update: {
+          created_at?: string | null
+          custom_fields?: Json | null
+          from_me?: boolean
+          id?: string
+          message_type?: string
+          push_name?: string | null
+          raw?: Json
+          text?: string | null
+          thread_id?: string
+          timestamp?: number
+        }
+        Relationships: []
+      }
+      workspace_limits: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          max_jobs: number | null
+          max_leads: number | null
+          max_tasks: number | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          max_jobs?: number | null
+          max_leads?: number | null
+          max_tasks?: number | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          max_jobs?: number | null
+          max_leads?: number | null
+          max_tasks?: number | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_limits_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },

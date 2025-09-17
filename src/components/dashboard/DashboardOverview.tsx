@@ -112,14 +112,14 @@ export default function DashboardOverview() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {stats.map((stat, index) => (
           <Card key={index} className="border-0 shadow-lg overflow-hidden">
-            <CardContent className="p-0">
-              <div className={`bg-gradient-to-r ${stat.gradient} p-4 md:p-6 text-white`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs md:text-sm font-medium text-white/80">{stat.title}</p>
-                    <p className="text-2xl md:text-3xl font-bold">{stat.value}</p>
-                  </div>
-                  <stat.icon className="h-6 w-6 md:h-8 md:w-8 text-white/80" />
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
+                  <p className="text-3xl font-bold text-foreground">{stat.value}</p>
+                </div>
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br ${stat.gradient}`}>
+                  <stat.icon className="h-6 w-6 text-white" />
                 </div>
               </div>
             </CardContent>

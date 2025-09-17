@@ -2551,6 +2551,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_workspace_stats: {
+        Args: { p_workspace_id: string }
+        Returns: Json
+      }
       reset_workspace: {
         Args: { p_workspace_id: string }
         Returns: undefined

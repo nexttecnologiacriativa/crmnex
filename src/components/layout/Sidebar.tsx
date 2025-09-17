@@ -73,21 +73,21 @@ export default function AppSidebar() {
 
   return (
     <Sidebar 
-      className="bg-sidebar border-r border-sidebar-border shadow-2xl"
+      className="bg-sidebar border-r border-sidebar-border shadow-xl"
       collapsible="icon"
     >
-        <SidebarHeader className="border-b border-gray-200 bg-gray-50">
+        <SidebarHeader className="border-b border-gray-200 bg-gray-50 transition-all duration-300">
           <div className="flex h-16 items-center justify-center px-4">
             <img 
               src="/nexcrm-logo.png" 
               alt="NexCRM Logo" 
-              className="h-8 transition-all duration-300 group-data-[collapsible=icon]:h-6" 
+              className="h-8 w-auto transition-all duration-300 ease-in-out group-data-[collapsible=icon]:h-6"
             />
           </div>
         </SidebarHeader>
 
-        <SidebarContent className="px-3 py-4">
-          <SidebarMenu className="space-y-1">
+        <SidebarContent className="px-2 py-6">
+          <SidebarMenu className="space-y-2">
             {navigation.map((item) => {
               const isActive = location.pathname === item.href;
               return (
@@ -96,30 +96,34 @@ export default function AppSidebar() {
                     onClick={() => handleNavigation(item.href)}
                     isActive={isActive}
                     className={cn(
-                      'group relative h-10 px-3 text-sidebar-foreground/80 hover:text-sidebar-foreground transition-all duration-300 rounded-lg',
-                      'hover:bg-sidebar-accent/30',
-                      'hover:shadow-lg hover:shadow-accent/25',
+                      'group relative h-11 px-4 text-sidebar-foreground/70 hover:text-sidebar-foreground',
+                      'transition-all duration-300 ease-out rounded-xl',
+                      'hover:bg-sidebar-accent/40 hover:shadow-md hover:shadow-accent/20',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
                       isActive && [
-                        'bg-sidebar-accent/40',
-                        'text-sidebar-foreground shadow-lg shadow-accent/30',
-                        'border border-sidebar-accent/50',
-                        'backdrop-blur-sm'
+                        'bg-sidebar-accent/50 text-sidebar-foreground',
+                        'shadow-lg shadow-accent/30',
+                        'before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2',
+                        'before:w-1 before:h-6 before:bg-accent before:rounded-r-full',
+                        'before:shadow-md before:shadow-accent/50'
                       ]
                     )}
                     tooltip={item.name}
                   >
                     <item.icon className={cn(
-                      "h-4 w-4 transition-all duration-300 flex-shrink-0",
-                      isActive ? "text-accent" : "text-sidebar-foreground/70 group-hover:text-accent"
+                      "h-5 w-5 transition-all duration-300 flex-shrink-0",
+                      "group-hover:scale-110",
+                      isActive ? "text-accent" : "text-sidebar-foreground/60 group-hover:text-accent"
                     )} />
                     <span className={cn(
-                      "font-medium transition-all duration-300 text-sm",
-                      isActive ? "text-sidebar-foreground" : "group-hover:text-sidebar-foreground"
+                      "font-medium transition-all duration-300 text-sm ml-3",
+                      "group-hover:translate-x-1",
+                      isActive ? "text-sidebar-foreground font-semibold" : "group-hover:text-sidebar-foreground"
                     )}>
                       {item.name}
                     </span>
                     {isActive && (
-                      <div className="absolute right-2 w-1.5 h-1.5 bg-accent rounded-full shadow-lg shadow-accent/50" />
+                      <div className="absolute right-3 w-2 h-2 bg-accent rounded-full shadow-lg shadow-accent/50 animate-pulse" />
                     )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -128,20 +132,20 @@ export default function AppSidebar() {
           </SidebarMenu>
         </SidebarContent>
 
-        <SidebarFooter className="px-3 pb-4">
-          <SidebarSeparator className="bg-sidebar-border mb-3" />
+        <SidebarFooter className="px-2 pb-6">
+          <SidebarSeparator className="bg-sidebar-border mb-4 opacity-50" />
           <SidebarMenuButton
             onClick={handleSignOut}
             className={cn(
-              "w-full justify-start h-10 px-3 text-sidebar-foreground/80 hover:text-sidebar-foreground",
-              "hover:bg-destructive/20",
-              "hover:shadow-lg hover:shadow-destructive/25 rounded-lg",
-              "transition-all duration-300 group"
+              "w-full justify-start h-11 px-4 text-sidebar-foreground/70 hover:text-sidebar-foreground",
+              "hover:bg-destructive/10 hover:text-destructive",
+              "hover:shadow-md hover:shadow-destructive/20 rounded-xl",
+              "transition-all duration-300 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2"
             )}
             tooltip="Sair"
           >
-            <LogOut className="h-4 w-4 flex-shrink-0 transition-all duration-300 group-hover:text-destructive" />
-            <span className="font-medium text-sm">Sair</span>
+            <LogOut className="h-5 w-5 flex-shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:text-destructive" />
+            <span className="font-medium text-sm ml-3 group-hover:translate-x-1 transition-transform duration-300">Sair</span>
           </SidebarMenuButton>
         </SidebarFooter>
       </Sidebar>

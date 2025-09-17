@@ -152,120 +152,158 @@ export function useEnsureDefaultWorkspace() {
   const ensurePipelineExists = async (workspaceId: string) => {
     console.log('Checking for default pipeline in workspace:', workspaceId);
     
-    const { data: existingPipelines } = await supabase
-      .from('pipelines')
-      .select('id')
-      .eq('workspace_id', workspaceId)
-      .limit(1);
-
-    if (existingPipelines && existingPipelines.length > 0) {
-      console.log('Pipeline already exists for workspace:', workspaceId);
+    // Usar uma chave única para evitar execuções simultâneas
+    const lockKey = `pipeline_creation_${workspaceId}`;
+    const existingLock = sessionStorage.getItem(lockKey);
+    
+    if (existingLock && Date.now() - parseInt(existingLock) < 5000) {
+      console.log('Pipeline creation already in progress for workspace:', workspaceId);
       return;
     }
-
-    console.log('Creating default pipeline for workspace:', workspaceId);
     
-    const { data: pipelineData, error: pipelineError } = await supabase
-      .from('pipelines')
-      .insert({
-        workspace_id: workspaceId,
-        name: 'Pipeline de Vendas',
-        description: 'Pipeline padrão para gestão de leads',
-        is_default: true,
-      })
-      .select()
-      .single();
+    // Definir lock por 5 segundos
+    sessionStorage.setItem(lockKey, Date.now().toString());
+    
+    try {
+      const { data: existingPipelines } = await supabase
+        .from('pipelines')
+        .select('id')
+        .eq('workspace_id', workspaceId)
+        .limit(1);
 
-    if (pipelineError) {
-      console.error('Error creating pipeline:', pipelineError);
-      throw pipelineError;
+      if (existingPipelines && existingPipelines.length > 0) {
+        console.log('Pipeline already exists for workspace:', workspaceId);
+        return;
+      }
+
+      console.log('Creating default pipeline for workspace:', workspaceId);
+      
+      const { data: pipelineData, error: pipelineError } = await supabase
+        .from('pipelines')
+        .insert({
+          workspace_id: workspaceId,
+          name: 'Pipeline de Vendas',
+          description: 'Pipeline padrão para gestão de leads',
+          is_default: true,
+        })
+        .select()
+        .single();
+
+      if (pipelineError) {
+        console.error('Error creating pipeline:', pipelineError);
+        throw pipelineError;
+      }
+
+      console.log('Pipeline created:', pipelineData.id);
+
+      const stages = [
+        { name: 'Novo Lead', color: '#3b82f6', position: 0 },
+        { name: 'Contato Inicial', color: '#8b5cf6', position: 1 },
+        { name: 'Qualificado', color: '#06b6d4', position: 2 },
+        { name: 'Proposta', color: '#f59e0b', position: 3 },
+        { name: 'Negociação', color: '#ef4444', position: 4 },
+        { name: 'Fechado', color: '#10b981', position: 5 },
+      ];
+
+      const stageInserts = stages.map(stage => ({
+        pipeline_id: pipelineData.id,
+        ...stage,
+      }));
+
+      const { error: stagesError } = await supabase
+        .from('pipeline_stages')
+        .insert(stageInserts);
+
+      if (stagesError) {
+        console.error('Error creating pipeline stages:', stagesError);
+        throw stagesError;
+      }
+
+      console.log('Pipeline stages created successfully');
+    } finally {
+      // Remover lock após execução
+      sessionStorage.removeItem(lockKey);
     }
-
-    console.log('Pipeline created:', pipelineData.id);
-
-    const stages = [
-      { name: 'Novo Lead', color: '#3b82f6', position: 0 },
-      { name: 'Contato Inicial', color: '#8b5cf6', position: 1 },
-      { name: 'Qualificado', color: '#06b6d4', position: 2 },
-      { name: 'Proposta', color: '#f59e0b', position: 3 },
-      { name: 'Negociação', color: '#ef4444', position: 4 },
-      { name: 'Fechado', color: '#10b981', position: 5 },
-    ];
-
-    const stageInserts = stages.map(stage => ({
-      pipeline_id: pipelineData.id,
-      ...stage,
-    }));
-
-    const { error: stagesError } = await supabase
-      .from('pipeline_stages')
-      .insert(stageInserts);
-
-    if (stagesError) {
-      console.error('Error creating pipeline stages:', stagesError);
-      throw stagesError;
-    }
-
-    console.log('Pipeline stages created successfully');
   };
 
   const ensureJobBoardExists = async (workspaceId: string) => {
     console.log('Checking for default job board in workspace:', workspaceId);
     
-    // Verificação mais robusta para evitar duplicação
-    const { data: existingBoards, error: checkError } = await supabase
-      .from('job_boards')
-      .select('id, name')
-      .eq('workspace_id', workspaceId);
-
-    if (checkError) {
-      console.error('Error checking existing job boards:', checkError);
-      return;
-    }
-
-    if (existingBoards && existingBoards.length > 0) {
-      console.log('Job board already exists for workspace:', workspaceId, existingBoards.length, 'boards found');
-      return;
-    }
-
-    console.log('Creating default job board for workspace:', workspaceId);
+    // Usar uma chave única para evitar execuções simultâneas
+    const lockKey = `job_board_creation_${workspaceId}`;
+    const existingLock = sessionStorage.getItem(lockKey);
     
-    const { data: boardData, error: boardError } = await supabase
-      .from('job_boards')
-      .insert({
-        workspace_id: workspaceId,
-        name: 'Board Padrão',
-        description: 'Board padrão para jobs',
-        color: '#3b82f6',
-        is_default: false,
-      })
-      .select()
-      .single();
-
-    if (boardError) {
-      console.error('Error creating job board:', boardError);
-      throw boardError;
+    if (existingLock && Date.now() - parseInt(existingLock) < 5000) {
+      console.log('Job board creation already in progress for workspace:', workspaceId);
+      return;
     }
+    
+    // Definir lock por 5 segundos
+    sessionStorage.setItem(lockKey, Date.now().toString());
+    
+    try {
+      // Verificação mais robusta para evitar duplicação
+      const { data: existingBoards, error: checkError } = await supabase
+        .from('job_boards')
+        .select('id, name')
+        .eq('workspace_id', workspaceId);
 
-    console.log('Job board created:', boardData.id);
+      if (checkError) {
+        console.error('Error checking existing job boards:', checkError);
+        return;
+      }
+
+      if (existingBoards && existingBoards.length > 0) {
+        console.log('Job board already exists for workspace:', workspaceId, existingBoards.length, 'boards found');
+        return;
+      }
+
+      console.log('Creating default job board for workspace:', workspaceId);
+      
+      const { data: boardData, error: boardError } = await supabase
+        .from('job_boards')
+        .insert({
+          workspace_id: workspaceId,
+          name: 'Board Padrão',
+          description: 'Board padrão para jobs',
+          color: '#3b82f6',
+          is_default: false,
+        })
+        .select()
+        .single();
+
+      if (boardError) {
+        console.error('Error creating job board:', boardError);
+        throw boardError;
+      }
+
+      console.log('Job board created:', boardData.id);
+    } finally {
+      // Remover lock após execução
+      sessionStorage.removeItem(lockKey);
+    }
   };
 
-  // Auto-executar a função de verificação quando necessário
+  // Auto-executar a função de verificação quando necessário - com debounce
   useEffect(() => {
-    if (!isLoading && user && !workspace) {
-      console.log('No workspace found, creating default workspace');
-      createWorkspaceMutation.mutate();
-    } else if (!isLoading && user && workspace) {
-      console.log('Workspace exists, ensuring pipeline and job board exist');
-      Promise.all([
-        ensurePipelineExists(workspace.id),
-        ensureJobBoardExists(workspace.id),
-        ensureWorkspaceMember(workspace.id)
-      ]).catch(error => {
-        console.error('Failed to ensure workspace resources:', error);
-      });
-    }
-  }, [isLoading, user, workspace]);
+    const timeoutId = setTimeout(() => {
+      if (!isLoading && user && !workspace) {
+        console.log('No workspace found, creating default workspace');
+        createWorkspaceMutation.mutate();
+      } else if (!isLoading && user && workspace && !createWorkspaceMutation.isPending) {
+        console.log('Workspace exists, ensuring pipeline and job board exist');
+        Promise.all([
+          ensurePipelineExists(workspace.id),
+          ensureJobBoardExists(workspace.id),
+          ensureWorkspaceMember(workspace.id)
+        ]).catch(error => {
+          console.error('Failed to ensure workspace resources:', error);
+        });
+      }
+    }, 100); // Pequeno delay para evitar execuções múltiplas rápidas
+
+    return () => clearTimeout(timeoutId);
+  }, [isLoading, user, workspace?.id]); // Adicionado workspace.id para evitar re-execuções desnecessárias
 
   const ensureWorkspace = async () => {
     if (!isLoading && user) {

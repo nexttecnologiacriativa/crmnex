@@ -69,6 +69,280 @@ export type Database = {
           },
         ]
       }
+      automation_executions: {
+        Row: {
+          executed_at: string | null
+          flow_id: string
+          id: string
+          lead_id: string
+          workspace_id: string
+        }
+        Insert: {
+          executed_at?: string | null
+          flow_id: string
+          id?: string
+          lead_id: string
+          workspace_id: string
+        }
+        Update: {
+          executed_at?: string | null
+          flow_id?: string
+          id?: string
+          lead_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_executions_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "automation_flows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_executions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_executions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_flows: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          execution_count: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          send_once_per_lead: boolean | null
+          steps: Json | null
+          success_rate: number | null
+          trigger_config: Json | null
+          trigger_type: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          execution_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          send_once_per_lead?: boolean | null
+          steps?: Json | null
+          success_rate?: number | null
+          trigger_config?: Json | null
+          trigger_type: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          execution_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          send_once_per_lead?: boolean | null
+          steps?: Json | null
+          success_rate?: number | null
+          trigger_config?: Json | null
+          trigger_type?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_flows_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_logs: {
+        Row: {
+          error_message: string | null
+          executed_at: string | null
+          flow_id: string
+          id: string
+          lead_id: string
+          message_sent: string | null
+          status: string
+          step_name: string | null
+          workspace_id: string
+        }
+        Insert: {
+          error_message?: string | null
+          executed_at?: string | null
+          flow_id: string
+          id?: string
+          lead_id: string
+          message_sent?: string | null
+          status: string
+          step_name?: string | null
+          workspace_id: string
+        }
+        Update: {
+          error_message?: string | null
+          executed_at?: string | null
+          flow_id?: string
+          id?: string
+          lead_id?: string
+          message_sent?: string | null
+          status?: string
+          step_name?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_logs_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "automation_flows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_logs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_logs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_queue: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          id: string
+          lead_id: string | null
+          processed_at: string | null
+          status: string | null
+          trigger_data: Json | null
+          trigger_type: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          lead_id?: string | null
+          processed_at?: string | null
+          status?: string | null
+          trigger_data?: Json | null
+          trigger_type: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          lead_id?: string | null
+          processed_at?: string | null
+          status?: string | null
+          trigger_data?: Json | null
+          trigger_type?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_queue_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_queue_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_recipients: {
+        Row: {
+          campaign_id: string
+          contact_name: string | null
+          created_at: string
+          delivered_at: string | null
+          error_message: string | null
+          failed_at: string | null
+          id: string
+          lead_id: string | null
+          message_id: string | null
+          phone_number: string
+          read_at: string | null
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          campaign_id: string
+          contact_name?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          lead_id?: string | null
+          message_id?: string | null
+          phone_number: string
+          read_at?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          campaign_id?: string
+          contact_name?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          lead_id?: string | null
+          message_id?: string | null
+          phone_number?: string
+          read_at?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_recipients_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_recipients_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custom_fields: {
         Row: {
           created_at: string
@@ -635,6 +909,178 @@ export type Database = {
           },
         ]
       }
+      marketing_campaign_recipients: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          delivered_at: string | null
+          error_message: string | null
+          failed_at: string | null
+          id: string
+          lead_id: string | null
+          phone_number: string
+          read_at: string | null
+          sent_at: string | null
+          status: string
+          template_used: string | null
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          lead_id?: string | null
+          phone_number: string
+          read_at?: string | null
+          sent_at?: string | null
+          status?: string
+          template_used?: string | null
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          lead_id?: string | null
+          phone_number?: string
+          read_at?: string | null
+          sent_at?: string | null
+          status?: string
+          template_used?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_campaign_recipients_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_campaign_recipients_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_campaigns: {
+        Row: {
+          api_type: string
+          created_at: string
+          custom_numbers: Json | null
+          id: string
+          leads_count: number | null
+          message_interval_minutes: number | null
+          message_preview: string | null
+          multiple_templates: Json | null
+          name: string
+          recipient_type: string
+          scheduled_at: string | null
+          segments: Json | null
+          sent_at: string | null
+          status: string
+          template_id: string | null
+          template_name: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          api_type?: string
+          created_at?: string
+          custom_numbers?: Json | null
+          id?: string
+          leads_count?: number | null
+          message_interval_minutes?: number | null
+          message_preview?: string | null
+          multiple_templates?: Json | null
+          name: string
+          recipient_type?: string
+          scheduled_at?: string | null
+          segments?: Json | null
+          sent_at?: string | null
+          status?: string
+          template_id?: string | null
+          template_name?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          api_type?: string
+          created_at?: string
+          custom_numbers?: Json | null
+          id?: string
+          leads_count?: number | null
+          message_interval_minutes?: number | null
+          message_preview?: string | null
+          multiple_templates?: Json | null
+          name?: string
+          recipient_type?: string
+          scheduled_at?: string | null
+          segments?: Json | null
+          sent_at?: string | null
+          status?: string
+          template_id?: string | null
+          template_name?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_campaigns_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_settings: {
+        Row: {
+          created_at: string
+          default_api_type: string
+          evolution_message_interval: number
+          id: string
+          max_messages_per_minute: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          default_api_type?: string
+          evolution_message_interval?: number
+          id?: string
+          max_messages_per_minute?: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          default_api_type?: string
+          evolution_message_interval?: number
+          id?: string
+          max_messages_per_minute?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       n8n_webhooks: {
         Row: {
           created_at: string
@@ -887,6 +1333,45 @@ export type Database = {
             | Database["public"]["Enums"]["super_admin_role"]
             | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      scheduler_logs: {
+        Row: {
+          campaigns_failed: number | null
+          campaigns_found: number | null
+          campaigns_processed: number | null
+          campaigns_successful: number | null
+          created_at: string | null
+          details: Json | null
+          error_message: string | null
+          execution_duration_ms: number | null
+          execution_time: string | null
+          id: string
+        }
+        Insert: {
+          campaigns_failed?: number | null
+          campaigns_found?: number | null
+          campaigns_processed?: number | null
+          campaigns_successful?: number | null
+          created_at?: string | null
+          details?: Json | null
+          error_message?: string | null
+          execution_duration_ms?: number | null
+          execution_time?: string | null
+          id?: string
+        }
+        Update: {
+          campaigns_failed?: number | null
+          campaigns_found?: number | null
+          campaigns_processed?: number | null
+          campaigns_successful?: number | null
+          created_at?: string | null
+          details?: Json | null
+          error_message?: string | null
+          execution_duration_ms?: number | null
+          execution_time?: string | null
+          id?: string
         }
         Relationships: []
       }

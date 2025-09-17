@@ -344,8 +344,12 @@ Forneça análise focada nos últimos 30 dias com comparação ao período anter
 
     console.log('Calling OpenAI API with key ending in...', settings.openai_api_key.slice(-10));
 
+    let openaiResponse;
+    let openaiData;
+    
     try {
-      const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      console.log('Making request to OpenAI API...');
+      openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${settings.openai_api_key}`,
@@ -388,13 +392,15 @@ Forneça análise focada nos últimos 30 dias com comparação ao período anter
         }),
       });
 
+      console.log('OpenAI API response status:', openaiResponse.status);
+      
       if (!openaiResponse.ok) {
-        const error = await openaiResponse.text();
+        const errorText = await openaiResponse.text();
         console.error('OpenAI API error status:', openaiResponse.status);
-        console.error('OpenAI API error details:', error);
+        console.error('OpenAI API error details:', errorText);
         return new Response(JSON.stringify({
           error: 'Failed to generate insights',
-          details: `OpenAI API error (${openaiResponse.status}): ${error}`,
+          details: `OpenAI API error (${openaiResponse.status}): ${errorText}`,
           statusCode: openaiResponse.status
         }), {
           status: 500,
@@ -402,13 +408,15 @@ Forneça análise focada nos últimos 30 dias com comparação ao período anter
         });
       }
 
-      const openaiData = await openaiResponse.json();
-      console.log('OpenAI response received successfully');
+      console.log('Parsing OpenAI response...');
+      openaiData = await openaiResponse.json();
+      console.log('OpenAI response parsed successfully');
       
       if (!openaiData.choices || !openaiData.choices[0] || !openaiData.choices[0].message) {
-        console.error('Invalid OpenAI response structure:', openaiData);
+        console.error('Invalid OpenAI response structure:', JSON.stringify(openaiData));
         return new Response(JSON.stringify({
-          error: 'Invalid response from AI service'
+          error: 'Invalid response from AI service',
+          details: 'OpenAI response structure is invalid'
         }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -416,6 +424,43 @@ Forneça análise focada nos últimos 30 dias com comparação ao período anter
       }
 
       const insights = openaiData.choices[0].message.content;
+      
+      console.log('Insights generated successfully');
+
+      const responseData = {
+        insights,
+        metrics: {
+          leads: metrics.leads.current,
+          leadsGrowth: metrics.leads.growth,
+          opportunities: metrics.conversion.totalOpportunities,
+          conversionRate: metrics.conversion.conversionRate,
+          closedDeals: metrics.conversion.closedDeals,
+          closedValue: metrics.revenue.totalClosedValue,
+          negotiationLeads: metrics.negotiation.leadsInNegotiation,
+          avgNegotiationDays: metrics.negotiation.avgDaysInNegotiation,
+          stuckLeads: metrics.negotiation.stuckLeads
+        },
+        lastUpdated: new Date().toISOString()
+      };
+
+      // Cache the insights for 6 hours
+      const { error: cacheInsertError } = await serviceClient
+        .from('ai_insights_cache')
+        .insert({
+          workspace_id: workspaceId,
+          insights_data: responseData,
+          expires_at: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString() // 6 hours from now
+        });
+      if (cacheInsertError) {
+        console.error('Error caching insights:', cacheInsertError);
+      } else {
+        console.log('Insights cached successfully');
+      }
+
+      return new Response(JSON.stringify(responseData), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+
     } catch (openaiError) {
       console.error('OpenAI API fetch error:', openaiError);
       return new Response(JSON.stringify({
@@ -426,42 +471,6 @@ Forneça análise focada nos últimos 30 dias com comparação ao período anter
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    console.log('Insights generated successfully');
-
-    const responseData = {
-      insights,
-      metrics: {
-        leads: metrics.leads.current,
-        leadsGrowth: metrics.leads.growth,
-        opportunities: metrics.conversion.totalOpportunities,
-        conversionRate: metrics.conversion.conversionRate,
-        closedDeals: metrics.conversion.closedDeals,
-        closedValue: metrics.revenue.totalClosedValue,
-        negotiationLeads: metrics.negotiation.leadsInNegotiation,
-        avgNegotiationDays: metrics.negotiation.avgDaysInNegotiation,
-        stuckLeads: metrics.negotiation.stuckLeads
-      },
-      lastUpdated: new Date().toISOString()
-    };
-
-    // Cache the insights for 6 hours
-    const { error: cacheInsertError } = await serviceClient
-      .from('ai_insights_cache')
-      .insert({
-        workspace_id: workspaceId,
-        insights_data: responseData,
-        expires_at: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString() // 6 hours from now
-      });
-    if (cacheInsertError) {
-      console.error('Error caching insights:', cacheInsertError);
-    } else {
-      console.log('Insights cached successfully');
-    }
-
-    return new Response(JSON.stringify(responseData), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
 
   } catch (error) {
     console.error('Critical error in crm-ai-insights function:', error);

@@ -73,14 +73,14 @@ export default function AppSidebar() {
 
   return (
     <Sidebar 
-      className="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 border-r border-purple-500/20 shadow-2xl"
+      className="bg-sidebar border-r border-sidebar-border shadow-2xl"
       collapsible="icon"
     >
-        <SidebarHeader className="border-b border-purple-500/30 bg-gradient-to-r from-purple-500/10 to-transparent">
+        <SidebarHeader className="border-b border-sidebar-border/50 bg-sidebar-accent/20">
           <div className="flex h-16 items-center justify-center px-4">
             <img 
-              src="/lovable-uploads/4091be8d-e1f4-45e9-b8f6-d31a101b2ed1.png" 
-              alt="Glav Logo" 
+              src="/nexcrm-logo.png" 
+              alt="NexCRM Logo" 
               className="h-8 transition-all duration-300 group-data-[collapsible=icon]:h-6" 
             />
           </div>
@@ -96,13 +96,13 @@ export default function AppSidebar() {
                     onClick={() => handleNavigation(item.href)}
                     isActive={isActive}
                     className={cn(
-                      'group relative h-10 px-3 text-purple-100/80 hover:text-white transition-all duration-300 rounded-lg',
-                      'hover:bg-gradient-to-r hover:from-purple-600/20 hover:to-purple-700/20',
-                      'hover:shadow-lg hover:shadow-purple-600/25',
+                      'group relative h-10 px-3 text-sidebar-foreground/80 hover:text-sidebar-foreground transition-all duration-300 rounded-lg',
+                      'hover:bg-sidebar-accent/30',
+                      'hover:shadow-lg hover:shadow-accent/25',
                       isActive && [
-                        'bg-gradient-to-r from-purple-600/30 to-purple-700/30',
-                        'text-white shadow-lg shadow-purple-600/30',
-                        'border border-purple-500/30',
+                        'bg-sidebar-accent/40',
+                        'text-sidebar-foreground shadow-lg shadow-accent/30',
+                        'border border-sidebar-accent/50',
                         'backdrop-blur-sm'
                       ]
                     )}
@@ -110,16 +110,16 @@ export default function AppSidebar() {
                   >
                     <item.icon className={cn(
                       "h-4 w-4 transition-all duration-300 flex-shrink-0",
-                      isActive ? "text-purple-200" : "text-purple-300/70 group-hover:text-purple-200"
+                      isActive ? "text-accent" : "text-sidebar-foreground/70 group-hover:text-accent"
                     )} />
                     <span className={cn(
                       "font-medium transition-all duration-300 text-sm",
-                      isActive ? "text-white" : "group-hover:text-white"
+                      isActive ? "text-sidebar-foreground" : "group-hover:text-sidebar-foreground"
                     )}>
                       {item.name}
                     </span>
                     {isActive && (
-                      <div className="absolute right-2 w-1.5 h-1.5 bg-purple-400 rounded-full shadow-lg shadow-purple-400/50" />
+                      <div className="absolute right-2 w-1.5 h-1.5 bg-accent rounded-full shadow-lg shadow-accent/50" />
                     )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -129,18 +129,18 @@ export default function AppSidebar() {
         </SidebarContent>
 
         <SidebarFooter className="px-3 pb-4">
-          <SidebarSeparator className="bg-purple-500/30 mb-3" />
+          <SidebarSeparator className="bg-sidebar-border mb-3" />
           <SidebarMenuButton
             onClick={handleSignOut}
             className={cn(
-              "w-full justify-start h-10 px-3 text-purple-100/80 hover:text-white",
-              "hover:bg-gradient-to-r hover:from-red-500/20 hover:to-red-600/20",
-              "hover:shadow-lg hover:shadow-red-500/25 rounded-lg",
+              "w-full justify-start h-10 px-3 text-sidebar-foreground/80 hover:text-sidebar-foreground",
+              "hover:bg-destructive/20",
+              "hover:shadow-lg hover:shadow-destructive/25 rounded-lg",
               "transition-all duration-300 group"
             )}
             tooltip="Sair"
           >
-            <LogOut className="h-4 w-4 flex-shrink-0 transition-all duration-300 group-hover:text-red-300" />
+            <LogOut className="h-4 w-4 flex-shrink-0 transition-all duration-300 group-hover:text-destructive" />
             <span className="font-medium text-sm">Sair</span>
           </SidebarMenuButton>
         </SidebarFooter>

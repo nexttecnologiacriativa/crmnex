@@ -42,10 +42,10 @@ const TargetAudience = () => {
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
-            Quem deve usar o Glan?
+            Quem deve usar o NexCRM?
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            O Glan nasceu para ser o CRM que o marketing digital sempre pediu: simples, visual, conectado e com rastreamento de resultados de ponta a ponta.
+            O NexCRM nasceu para ser o CRM que o marketing digital sempre pediu: simples, visual, conectado e com rastreamento de resultados de ponta a ponta.
           </p>
         </div>
         

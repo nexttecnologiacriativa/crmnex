@@ -16,8 +16,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 259 100% 65%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 209 100% 22%;
+    --primary-foreground: 0 0% 100%;
 
     --secondary: 220 14.3% 95.9%;
     --secondary-foreground: 220.9 39.3% 11%;
@@ -25,73 +25,73 @@
     --muted: 220 14.3% 95.9%;
     --muted-foreground: 220 8.9% 46.1%;
 
-    --accent: 220 14.3% 95.9%;
-    --accent-foreground: 220.9 39.3% 11%;
+    --accent: 87 57% 51%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 259 100% 65%;
+    --ring: 209 100% 22%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 259 100% 65%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-background: 209 100% 22%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 87 57% 51%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 259 84% 70%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 259 84% 75%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 209 80% 30%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 209 80% 25%;
+    --sidebar-ring: 87 57% 51%;
 
-    --premium-purple: 259 100% 65%;
-    --premium-blue: 224.3 76.3% 48%;
-    --premium-gradient: linear-gradient(135deg, hsl(259 100% 65%) 0%, hsl(224.3 76.3% 48%) 100%);
+    --nexcrm-blue: 209 100% 22%;
+    --nexcrm-green: 87 57% 51%;
+    --nexcrm-gradient: linear-gradient(135deg, hsl(209 100% 22%) 0%, hsl(87 57% 51%) 100%);
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 209 100% 15%;
+    --foreground: 0 0% 100%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 209 100% 18%;
+    --card-foreground: 0 0% 100%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 209 100% 18%;
+    --popover-foreground: 0 0% 100%;
 
-    --primary: 259 100% 65%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 87 57% 51%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 209 50% 25%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 209 50% 25%;
+    --muted-foreground: 0 0% 70%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 87 57% 51%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 259 100% 65%;
+    --border: 209 50% 25%;
+    --input: 209 50% 25%;
+    --ring: 87 57% 51%;
 
-    --sidebar-background: 222.2 84% 4.9%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 259 100% 65%;
+    --sidebar-background: 209 100% 15%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 87 57% 51%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217.2 32.6% 17.5%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217.2 32.6% 17.5%;
-    --sidebar-ring: 259 100% 65%;
+    --sidebar-accent: 209 50% 25%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 209 50% 25%;
+    --sidebar-ring: 87 57% 51%;
 
-    --premium-purple: 259 100% 65%;
-    --premium-blue: 224.3 76.3% 48%;
-    --premium-gradient: linear-gradient(135deg, hsl(259 100% 65%) 0%, hsl(224.3 76.3% 48%) 100%);
+    --nexcrm-blue: 209 100% 22%;
+    --nexcrm-green: 87 57% 51%;
+    --nexcrm-gradient: linear-gradient(135deg, hsl(209 100% 22%) 0%, hsl(87 57% 51%) 100%);
   }
 }
 
@@ -106,24 +106,24 @@
 }
 
 @layer utilities {
-  .gradient-premium {
-    background: var(--premium-gradient);
+  .gradient-nexcrm {
+    background: var(--nexcrm-gradient);
   }
   
-  .text-premium-purple {
-    color: hsl(var(--premium-purple));
+  .text-nexcrm-blue {
+    color: hsl(var(--nexcrm-blue));
   }
   
-  .text-premium-blue {
-    color: hsl(var(--premium-blue));
+  .text-nexcrm-green {
+    color: hsl(var(--nexcrm-green));
   }
   
-  .bg-premium-purple {
-    background-color: hsl(var(--premium-purple));
+  .bg-nexcrm-blue {
+    background-color: hsl(var(--nexcrm-blue));
   }
   
-  .bg-premium-blue {
-    background-color: hsl(var(--premium-blue));
+  .bg-nexcrm-green {
+    background-color: hsl(var(--nexcrm-green));
   }
 
   /* Glass effect utilities */

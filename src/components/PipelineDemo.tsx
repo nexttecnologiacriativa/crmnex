@@ -51,7 +51,7 @@ const PipelineDemo = () => {
             Pipeline Inteligente em Ação
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Visualize como o Glav organiza seus leads com rastreamento completo de UTMs e origem de tráfego
+            Visualize como o NextCRM organiza seus leads com rastreamento completo de UTMs e origem de tráfego
           </p>
         </div>
         

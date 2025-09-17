@@ -50,7 +50,7 @@ export default function AccountSuspendedMessage({
             <Button 
               variant="outline" 
               className="w-full"
-              onClick={() => window.location.href = 'mailto:suporte@glav.com.br'}
+              onClick={() => window.location.href = 'mailto:suporte@nextcrm.com.br'}
             >
               <Mail className="h-4 w-4 mr-2" />
               Entrar em Contato

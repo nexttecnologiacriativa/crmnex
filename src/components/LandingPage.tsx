@@ -9,7 +9,7 @@ const LandingPage = () => {
     window.location.href = '/auth';
   };
   const handleCTAClick = () => {
-    const message = encodeURIComponent("Quero saber mais sobre o Glav");
+    const message = encodeURIComponent("Quero saber mais sobre o NextCRM");
     window.open(`https://wa.me/5512974012534?text=${message}`, '_blank');
   };
   const features = [{
@@ -44,7 +44,7 @@ const LandingPage = () => {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <img src="/lovable-uploads/10da2fd3-a456-45e5-b211-452502c616f7.png" alt="Glav Logo" className="h-10" />
+              <img src="/nexcrm-logo.png" alt="NextCRM Logo" className="h-10" />
               
             </div>
             
@@ -118,7 +118,7 @@ const LandingPage = () => {
               <Star className="h-4 w-4 text-yellow-500 fill-current" />
               <Star className="h-4 w-4 text-yellow-500 fill-current" />
               <Star className="h-4 w-4 text-yellow-500 fill-current" />
-              <span className="ml-2">+500 empresas confiam no Glav</span>
+              <span className="ml-2">+500 empresas confiam no NextCRM</span>
             </div>
           </div>
         </div>
@@ -156,7 +156,7 @@ const LandingPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">
-                Por que escolher o Glav?
+                Por que escolher o NextCRM?
               </h2>
               <p className="text-xl text-muted-foreground mb-8">
                 Mais de 500 empresas já aumentaram suas vendas usando nossa plataforma. 
@@ -206,7 +206,7 @@ const LandingPage = () => {
             Pronto para revolucionar suas vendas?
           </h2>
           <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
-            Junte-se a mais de 500 empresas que já estão vendendo mais com o Glav. 
+            Junte-se a mais de 500 empresas que já estão vendendo mais com o NextCRM. 
             Comece hoje mesmo e veja a diferença em 7 dias.
           </p>
           
@@ -231,7 +231,7 @@ const LandingPage = () => {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="flex items-center gap-3 mb-4 md:mb-0">
-              <img src="/lovable-uploads/10da2fd3-a456-45e5-b211-452502c616f7.png" alt="Glav Logo" className="h-10" />
+              <img src="/nexcrm-logo.png" alt="NextCRM Logo" className="h-10" />
               
             </div>
             
@@ -240,7 +240,7 @@ const LandingPage = () => {
                 O CRM feito para negócios digitais que querem vender mais
               </p>
               <p className="text-sm text-muted-foreground">
-                🔗 <span className="text-primary font-medium">www.glav.com.br</span>
+                🔗 <span className="text-primary font-medium">www.nextcrm.com.br</span>
               </p>
             </div>
           </div>

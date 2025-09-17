@@ -16,13 +16,13 @@ export default function Webhooks() {
             <TabsList className="bg-white shadow-sm border">
               <TabsTrigger 
                 value="manager"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-blue-600 data-[state=active]:text-white"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-nexcrm-blue data-[state=active]:to-nexcrm-green data-[state=active]:text-white"
               >
                 Gerenciar
               </TabsTrigger>
               <TabsTrigger 
                 value="instructions"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-blue-600 data-[state=active]:text-white"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-nexcrm-blue data-[state=active]:to-nexcrm-green data-[state=active]:text-white"
               >
                 Como Usar
               </TabsTrigger>

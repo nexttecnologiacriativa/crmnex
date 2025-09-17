@@ -19,7 +19,7 @@ const signUpSchema = z.object({
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Senhas não coincidem",
   path: ["confirmPassword"],
-}).refine((data) => data.invitationCode === 'EUSOUGLAV', {
+}).refine((data) => data.invitationCode === 'EUSOUNEXTCRM', {
   message: 'Código de convite inválido',
   path: ['invitationCode'],
 });

@@ -74,7 +74,7 @@ export default function InstanceCreator({ onSuccess, onCancel }: InstanceCreator
     
     // Usar configuração padrão se não houver configuração personalizada
     const apiKey = config?.global_api_key || 'B6D711FCDE4D4FD5936544120E713976';
-    const apiUrl = config?.api_url || 'https://api.glav.com.br';
+    const apiUrl = config?.api_url || 'https://api.nextcrm.com.br';
 
     setIsCreating(true);
     setCreationStep('creating');

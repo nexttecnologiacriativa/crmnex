@@ -61,7 +61,9 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				'nexcrm-blue': 'hsl(var(--nexcrm-blue))',
+				'nexcrm-green': 'hsl(var(--nexcrm-green))'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',

@@ -126,6 +126,14 @@
     background-color: hsl(var(--nexcrm-green));
   }
 
+  .border-nexcrm-blue {
+    border-color: hsl(var(--nexcrm-blue));
+  }
+  
+  .border-nexcrm-green {
+    border-color: hsl(var(--nexcrm-green));
+  }
+
   /* Glass effect utilities */
   .glass-card {
     background: rgba(255, 255, 255, 0.7);

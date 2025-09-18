@@ -27,7 +27,7 @@ export default function WhatsAppImage({ mediaUrl, alt, className = "" }: WhatsAp
   const finalUrl = mediaUrl?.includes('supabase.co') 
     ? mediaUrl 
     : (mediaUrl?.includes('lookaside.fbsbx.com') || mediaUrl?.includes('scontent.'))
-      ? `https://rxpaaskbhbdirlxaavsm.supabase.co/functions/v1/whatsapp-media-proxy?url=${encodeURIComponent(mediaUrl)}`
+      ? `https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/whatsapp-media-proxy?url=${encodeURIComponent(mediaUrl)}`
       : mediaUrl;
 
   console.log('🔄 URL final para imagem:', { original: mediaUrl, final: finalUrl });

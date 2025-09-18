@@ -168,7 +168,7 @@ export default function WebhookManager({ instanceName, workspaceId, apiUrl, apiK
         <div className="text-sm text-muted-foreground">
           <p><strong>Webhook URL:</strong></p>
           <p className="break-all font-mono text-xs">
-            https://rxpaaskbhbdirlxaavsm.supabase.co/functions/v1/whatsapp-webhook
+            https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/whatsapp-webhook
           </p>
         </div>
       </CardContent>

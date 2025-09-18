@@ -26,7 +26,7 @@ export default function WebhooksManager() {
 
   const handleCopyUrl = async (webhookId: string) => {
     // Gerar URL com workspace_id para garantir que funcione
-    const webhookUrl = `https://rxpaaskbhbdirlxaavsm.supabase.co/functions/v1/webhook-receiver?workspace_id=${currentWorkspace?.id}&webhook_id=${webhookId}`;
+    const webhookUrl = `https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/webhook-receiver?workspace_id=${currentWorkspace?.id}&webhook_id=${webhookId}`;
     await navigator.clipboard.writeText(webhookUrl);
     setCopiedId(webhookId);
     setTimeout(() => setCopiedId(null), 2000);
@@ -78,7 +78,7 @@ export default function WebhooksManager() {
         <div className="grid gap-4">
           {webhooks.map((webhook) => {
             // Gerar URL correta com workspace_id
-            const webhookUrl = `https://rxpaaskbhbdirlxaavsm.supabase.co/functions/v1/webhook-receiver?workspace_id=${currentWorkspace?.id}&webhook_id=${webhook.id}`;
+            const webhookUrl = `https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/webhook-receiver?workspace_id=${currentWorkspace?.id}&webhook_id=${webhook.id}`;
             
             return (
               <Card key={webhook.id}>

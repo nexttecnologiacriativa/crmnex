@@ -58,7 +58,7 @@ export function useCreatePlatformIntegration() {
     mutationFn: async (integrationData: CreatePlatformIntegrationData) => {
       // Gerar URL do webhook
       const integrationId = crypto.randomUUID();
-      const webhookUrl = `https://rxpaaskbhbdirlxaavsm.supabase.co/functions/v1/platform-webhook-receiver?integration_id=${integrationId}`;
+      const webhookUrl = `https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/platform-webhook-receiver?integration_id=${integrationId}`;
       
       const { data, error } = await supabase
         .from('platform_integrations')

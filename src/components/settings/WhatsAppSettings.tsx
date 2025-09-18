@@ -33,7 +33,7 @@ interface WhatsAppSettingsProps {
 }
 
 // URL do webhook
-const WEBHOOK_URL = 'https://rxpaaskbhbdirlxaavsm.supabase.co/functions/v1/whatsapp-official-webhook';
+const WEBHOOK_URL = 'https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/whatsapp-official-webhook';
 
 // Token de verificação NUMÉRICO
 const WEBHOOK_VERIFY_TOKEN = '123456789';

@@ -7,7 +7,7 @@ export default function AudioTestComponent() {
   const [testUrls] = useState([
     {
       name: 'Permanent URL Test',
-      permanentUrl: 'https://rxpaaskbhbdirlxaavsm.supabase.co/storage/v1/object/public/whatsapp-audio/3908375f-3b6b-4c64-be2b-9dd2cdc99396/audio/1755030955614_6f64343e-fee6-4228-b696-5eff19c821a5.ogg',
+      permanentUrl: 'https://mqotdnvwyjhyiqzbefpm.supabase.co/storage/v1/object/public/whatsapp-audio/3908375f-3b6b-4c64-be2b-9dd2cdc99396/audio/1755030955614_6f64343e-fee6-4228-b696-5eff19c821a5.ogg',
       audioUrl: null,
     },
     {
@@ -18,7 +18,7 @@ export default function AudioTestComponent() {
   ]);
 
   const testStorageAccess = async () => {
-    const testUrl = 'https://rxpaaskbhbdirlxaavsm.supabase.co/storage/v1/object/public/whatsapp-audio/3908375f-3b6b-4c64-be2b-9dd2cdc99396/audio/1755030955614_6f64343e-fee6-4228-b696-5eff19c821a5.ogg';
+    const testUrl = 'https://mqotdnvwyjhyiqzbefpm.supabase.co/storage/v1/object/public/whatsapp-audio/3908375f-3b6b-4c64-be2b-9dd2cdc99396/audio/1755030955614_6f64343e-fee6-4228-b696-5eff19c821a5.ogg';
     
     try {
       const response = await fetch(testUrl, { method: 'HEAD' });

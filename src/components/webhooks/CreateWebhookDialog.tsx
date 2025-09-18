@@ -45,7 +45,7 @@ export default function CreateWebhookDialog({ open, onOpenChange, workspaceId }:
     const webhook = await createWebhook.mutateAsync({
       workspace_id: workspaceId,
       name: data.name,
-      url: `https://rxpaaskbhbdirlxaavsm.supabase.co/functions/v1/webhook-receiver`,
+      url: `https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/webhook-receiver`,
       secret: generateSecret(),
       is_active: true,
       pipeline_id: data.pipeline_id || null,
@@ -57,7 +57,7 @@ export default function CreateWebhookDialog({ open, onOpenChange, workspaceId }:
 
   const handleCopyUrl = async () => {
     if (createdWebhook) {
-      const webhookUrl = `https://rxpaaskbhbdirlxaavsm.supabase.co/functions/v1/webhook-receiver?webhook_id=${createdWebhook.id}`;
+      const webhookUrl = `https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/webhook-receiver?webhook_id=${createdWebhook.id}`;
       await navigator.clipboard.writeText(webhookUrl);
       setCopiedUrl(true);
       setTimeout(() => setCopiedUrl(false), 2000);
@@ -72,7 +72,7 @@ export default function CreateWebhookDialog({ open, onOpenChange, workspaceId }:
   };
 
   if (createdWebhook) {
-    const webhookUrl = `https://rxpaaskbhbdirlxaavsm.supabase.co/functions/v1/webhook-receiver?webhook_id=${createdWebhook.id}`;
+    const webhookUrl = `https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/webhook-receiver?webhook_id=${createdWebhook.id}`;
 
     return (
       <Dialog open={open} onOpenChange={handleClose}>

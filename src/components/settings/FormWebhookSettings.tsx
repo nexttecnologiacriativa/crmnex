@@ -20,7 +20,7 @@ export default function FormWebhookSettings() {
 
   useEffect(() => {
     if (currentWorkspace?.id) {
-      const baseUrl = 'https://rxpaaskbhbdirlxaavsm.supabase.co/functions/v1/form-webhook';
+      const baseUrl = 'https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/form-webhook';
       const params = new URLSearchParams({
         workspace_id: currentWorkspace.id,
         platform: 'elementor'

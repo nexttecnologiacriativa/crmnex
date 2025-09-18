@@ -163,7 +163,7 @@ export default function AudioPlayer({ audioUrl, originalUrl, permanentUrl, durat
           const file = new File([blob], 'audio.ogg', { type: blob.type || 'audio/ogg' });
           form.append('file', file);
 
-          const convResp = await fetch('https://rxpaaskbhbdirlxaavsm.supabase.co/functions/v1/whatsapp-audio-converter', {
+          const convResp = await fetch('https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/whatsapp-audio-converter', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${session.access_token}` },
             body: form
@@ -302,7 +302,7 @@ export default function AudioPlayer({ audioUrl, originalUrl, permanentUrl, durat
           return;
         }
 
-        const response = await fetch('https://rxpaaskbhbdirlxaavsm.supabase.co/functions/v1/whatsapp-media-proxy', {
+        const response = await fetch('https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/whatsapp-media-proxy', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${session.access_token}`,

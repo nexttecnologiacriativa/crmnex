@@ -56,21 +56,21 @@ serve(async (req) => {
 
     console.log('User authenticated:', user.id);
 
-    // Get user's workspace
-    const { data: workspaceMember } = await supabaseClient
+    // Get user's workspaces (support multiple workspaces)
+    const { data: workspaceMembers } = await supabaseClient
       .from('workspace_members')
       .select('workspace_id')
-      .eq('user_id', user.id)
-      .single();
+      .eq('user_id', user.id);
 
-    if (!workspaceMember) {
+    if (!workspaceMembers || workspaceMembers.length === 0) {
       return new Response(JSON.stringify({ error: 'Workspace not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const workspaceId = workspaceMember.workspace_id;
+    // Use the first workspace for now (later we can add workspace selection in frontend)
+    const workspaceId = workspaceMembers[0].workspace_id;
     console.log('Workspace ID:', workspaceId);
 
     // Check for cached insights first (skip if force refresh)

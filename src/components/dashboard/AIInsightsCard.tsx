@@ -169,9 +169,41 @@ export default function AIInsightsCard() {
     return { blocks };
   };
 
-  // Don't show insights if API key is not configured
+  // Show insights card for all users when API key is configured
+  // Show setup message for non-configured workspaces
   if (!hasApiKey) {
-    return null;
+    return (
+      <Card className="border-0 shadow-lg">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Brain className="h-5 w-5 text-blue-600" />
+            Insights de IA
+            <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600">
+              Não Configurado
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="text-center py-8">
+            <Brain className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Insights de IA não configurados
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Para usar os insights de IA, é necessário configurar uma chave da API OpenAI. 
+              Entre em contato com um administrador para configurar.
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => window.location.href = '/settings?tab=ai'}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0 hover:from-blue-700 hover:to-purple-700"
+            >
+              Ver Configurações de IA
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   if (error) {

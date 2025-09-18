@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useWorkspaceSettings, useUpdateWorkspaceSettings } from '@/hooks/useWorkspaceSettings';
 import { usePipelines } from '@/hooks/usePipeline';
 import { useWorkspace } from '@/hooks/useWorkspace';
-import { Eye, EyeOff, Brain, Sparkles, Filter, TestTube } from 'lucide-react';
+import { Eye, EyeOff, Brain, Sparkles, Filter, TestTube, AlertTriangle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -254,8 +254,23 @@ export default function AISettings({ currentUserRole }: AISettingsProps) {
           )}
 
           {isDisabled && (
-            <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">
-              Apenas administradores e gerentes podem configurar as integrações de IA.
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-medium text-amber-800 mb-1">
+                    Permissão Necessária
+                  </h4>
+                  <p className="text-sm text-amber-700 mb-2">
+                    Apenas administradores e gerentes podem configurar as integrações de IA. 
+                    Entre em contato com um administrador para solicitar a configuração da OpenAI API.
+                  </p>
+                  <p className="text-xs text-amber-600">
+                    Seu perfil atual: <strong>{currentUserRole}</strong> • 
+                    Perfis com acesso: <strong>admin</strong>, <strong>manager</strong>
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </CardContent>

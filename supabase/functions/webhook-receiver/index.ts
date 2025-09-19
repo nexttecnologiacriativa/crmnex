@@ -339,22 +339,7 @@ serve(async (req) => {
       if (pipelines && pipelines.length > 0) {
         targetPipelineId = pipelines[0].id
         pipelineData = pipelines[0]
-        
-        // Buscar o primeiro estágio do pipeline
-        const { data: stages, error: stageError } = await supabaseClient
-          .from('pipeline_stages')
-          .select('id')
-          .eq('pipeline_id', targetPipelineId)
-          .order('position', { ascending: true })
-          .limit(1)
-
-        if (stageError) {
-          console.error('Error getting stages:', stageError);
-        } else if (stages && stages.length > 0) {
-          targetStageId = stages[0].id
-        }
-
-        console.log('Found default pipeline:', targetPipelineId, 'stage:', targetStageId);
+        console.log('Found default pipeline:', targetPipelineId);
       } else {
         throw new Error('No pipelines found for workspace');
       }
@@ -368,6 +353,27 @@ serve(async (req) => {
 
       if (!pipelineError && pipeline) {
         pipelineData = pipeline
+      }
+    }
+
+    // SEMPRE buscar o primeiro estágio se não foi especificado
+    if (!targetStageId && targetPipelineId) {
+      console.log('Getting first stage for pipeline:', targetPipelineId);
+      const { data: stages, error: stageError } = await supabaseClient
+        .from('pipeline_stages')
+        .select('id')
+        .eq('pipeline_id', targetPipelineId)
+        .order('position', { ascending: true })
+        .limit(1)
+
+      if (stageError) {
+        console.error('Error getting stages:', stageError);
+        throw new Error('Could not find stages for pipeline: ' + stageError.message);
+      } else if (stages && stages.length > 0) {
+        targetStageId = stages[0].id
+        console.log('Found first stage:', targetStageId);
+      } else {
+        throw new Error('No stages found for pipeline: ' + targetPipelineId);
       }
     }
 

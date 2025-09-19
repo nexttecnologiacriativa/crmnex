@@ -1,1 +1,13 @@
 project_id = "mqotdnvwyjhyiqzbefpm"
+
+[functions.test-webhook]
+verify_jwt = false
+
+[functions.form-webhook]
+verify_jwt = false
+
+[functions.webhook-receiver]
+verify_jwt = false
+
+[functions.platform-webhook-receiver]
+verify_jwt = false

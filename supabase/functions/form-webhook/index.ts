@@ -4,7 +4,76 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
+
+// Função para extrair dados do Elementor (formato fields[nome][value])
+function extractElementorData(data: any): any {
+  console.log('🔍 Extracting Elementor data from:', JSON.stringify(data, null, 2));
+  
+  const result: any = {};
+  
+  // Processar dados do formato fields[campo][value]
+  for (const [key, value] of Object.entries(data)) {
+    if (key.startsWith('fields[') && key.endsWith('][value]')) {
+      const fieldName = key.match(/fields\[(.+?)\]\[value\]/)?.[1];
+      if (fieldName) {
+        result[fieldName] = value;
+        console.log(`✅ Extracted Elementor field: ${fieldName} = ${value}`);
+      }
+    }
+  }
+  
+  // Se não encontrou campos no formato Elementor, usar os dados como estão
+  if (Object.keys(result).length === 0) {
+    console.log('ℹ️ No Elementor fields found, using original data');
+    return data;
+  }
+  
+  console.log('🎯 Elementor extracted data:', JSON.stringify(result, null, 2));
+  return result;
+}
+
+// Função para processar request body de diferentes formatos
+async function parseRequestBody(req: Request): Promise<any> {
+  const contentType = req.headers.get('content-type') || '';
+  console.log('📄 Content-Type:', contentType);
+  
+  if (contentType.includes('application/json')) {
+    const jsonData = await req.json();
+    console.log('📋 JSON data received:', JSON.stringify(jsonData, null, 2));
+    return jsonData;
+  } else if (contentType.includes('application/x-www-form-urlencoded')) {
+    const formData = await req.text();
+    console.log('📝 Form data received:', formData);
+    
+    const params = new URLSearchParams(formData);
+    const data: any = {};
+    
+    for (const [key, value] of params.entries()) {
+      data[key] = value;
+    }
+    
+    console.log('📋 Parsed form data:', JSON.stringify(data, null, 2));
+    return extractElementorData(data);
+  } else {
+    const text = await req.text();
+    console.log('📄 Raw request body:', text);
+    
+    try {
+      return JSON.parse(text);
+    } catch {
+      const params = new URLSearchParams(text);
+      const data: any = {};
+      
+      for (const [key, value] of params.entries()) {
+        data[key] = value;
+      }
+      
+      return extractElementorData(data);
+    }
+  }
+}
 
 // Função para processar telefone com DDI padrão 55
 function processPhone(phone: string): string {
@@ -45,19 +114,38 @@ function processPhone(phone: string): string {
 }
 
 serve(async (req) => {
+  console.log('🚀 Form webhook started');
+  console.log('📍 Method:', req.method);
+  console.log('🌐 URL:', req.url);
+  console.log('📋 Headers:', Object.fromEntries(req.headers.entries()));
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('✅ CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('❌ Missing Supabase environment variables');
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Only accept POST requests
     if (req.method !== 'POST') {
+      console.log('❌ Method not allowed:', req.method);
       return new Response(
         JSON.stringify({ error: 'Method not allowed' }),
         { 
@@ -70,10 +158,13 @@ serve(async (req) => {
     // Get workspace_id and platform from query params
     const url = new URL(req.url);
     const workspaceId = url.searchParams.get('workspace_id');
-    const platform = url.searchParams.get('platform') || 'external';
+    const platform = url.searchParams.get('platform') || 'elementor';
     const pipelineId = url.searchParams.get('pipeline_id');
 
+    console.log('🔧 Parameters:', { workspaceId, platform, pipelineId });
+
     if (!workspaceId) {
+      console.error('❌ Missing workspace_id parameter');
       return new Response(
         JSON.stringify({ error: 'workspace_id is required' }),
         { 
@@ -83,9 +174,24 @@ serve(async (req) => {
       );
     }
 
-    // Parse request body
-    const formData = await req.json();
-    console.log('Form data received from', platform, ':', JSON.stringify(formData, null, 2));
+    // Parse request body with improved error handling
+    let formData;
+    try {
+      formData = await parseRequestBody(req);
+      console.log('📋 Processed form data:', JSON.stringify(formData, null, 2));
+    } catch (parseError) {
+      console.error('❌ Error parsing request body:', parseError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request body', 
+          details: parseError.message 
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
 
     // Get custom fields for this workspace
     const { data: customFields, error: customFieldsError } = await supabase
@@ -222,7 +328,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('Lead created successfully:', newLead.id);
+    console.log('✅ Lead created successfully:', newLead.id);
 
     // Processar automações para lead criado
     try {
@@ -299,44 +405,90 @@ serve(async (req) => {
     }
 
     // Create activity record
-    await supabase
-      .from('lead_activities')
-      .insert({
+    try {
+      await supabase
+        .from('lead_activities')
+        .insert({
+          lead_id: newLead.id,
+          user_id: newLead.id, // Using lead id as placeholder since we don't have a user context
+          activity_type: 'form_submission',
+          title: `Formulário ${platform} enviado`,
+          description: `Lead criado via formulário ${platform}`,
+          metadata: {
+            platform,
+            form_data: formData,
+            custom_fields_mapped: customFieldsData
+          }
+        });
+    } catch (activityError) {
+      console.error('⚠️ Error creating activity record:', activityError);
+      // Não falhar a criação do lead por erro de atividade
+    }
+
+    // Resposta otimizada para Elementor
+    console.log('🎉 Webhook completed successfully');
+    
+    const response = {
+      success: true,
+      status: 'ok',
+      message: 'Lead criado com sucesso',
+      data: {
         lead_id: newLead.id,
-        user_id: newLead.id, // Using lead id as placeholder since we don't have a user context
-        activity_type: 'form_submission',
-        title: `Formulário ${platform} enviado`,
-        description: `Lead criado via formulário ${platform}`,
-        metadata: {
-          platform,
-          form_data: formData,
-          custom_fields_mapped: customFieldsData
-        }
-      });
+        name: newLead.name,
+        email: newLead.email,
+        phone: newLead.phone,
+        platform: platform,
+        workspace_id: workspaceId,
+        mapped_fields: Object.keys(customFieldsData).length,
+        timestamp: new Date().toISOString()
+      }
+    };
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        lead_id: newLead.id,
-        message: 'Lead criado com sucesso',
-        mapped_fields: Object.keys(customFieldsData).length
-      }),
+      JSON.stringify(response),
       { 
         status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Access-Control-Max-Age': '86400'
+        }
       }
     );
 
   } catch (error) {
-    console.error('Error in form webhook:', error);
+    console.error('💥 Critical error in form webhook:', error);
+    console.error('📍 Error stack:', error.stack);
+    
+    // Log detalhado para debug
+    console.error('🔍 Error details:', {
+      message: error.message,
+      name: error.name,
+      cause: error.cause
+    });
+    
+    // Resposta de erro otimizada para Elementor
+    const errorResponse = {
+      success: false,
+      status: 'error',
+      message: 'Erro interno do servidor',
+      error: {
+        type: error.name || 'UnknownError',
+        message: error.message || 'Erro desconhecido',
+        timestamp: new Date().toISOString()
+      }
+    };
+    
     return new Response(
-      JSON.stringify({ 
-        error: 'Internal server error',
-        details: error.message
-      }),
+      JSON.stringify(errorResponse),
       { 
         status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
       }
     );
   }

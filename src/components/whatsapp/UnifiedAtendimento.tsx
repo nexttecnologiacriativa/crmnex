@@ -42,12 +42,29 @@ export default function UnifiedAtendimento() {
   const { data: leads = [] } = useLeads();
   const queryClient = useQueryClient();
 
-  // Force refresh data when component mounts
+  // Force refresh data when component mounts and add debug logs
   useEffect(() => {
+    console.log('🔄 Forçando refresh de conversas e mensagens');
+    console.log('Current workspace:', currentWorkspace?.id);
+    console.log('Conversations count:', conversations.length);
+    
+    // Force complete cache invalidation
+    queryClient.clear();
+    
+    // Then refresh specific queries
     refetchConversations();
     queryClient.invalidateQueries({ queryKey: ['whatsapp-conversations'] });
     queryClient.invalidateQueries({ queryKey: ['whatsapp-messages'] });
-  }, [refetchConversations, queryClient]);
+    
+    // Debug auth context
+    if (currentWorkspace?.id) {
+      supabase.rpc('debug_auth_context').then(result => {
+        console.log('🔍 Auth context debug:', result.data);
+      }, err => {
+        console.error('❌ Auth context debug error:', err);
+      });
+    }
+  }, [refetchConversations, queryClient, currentWorkspace?.id, conversations.length]);
 
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
@@ -211,6 +228,33 @@ export default function UnifiedAtendimento() {
 
   const selectedConv = useMemo(() => conversations.find(c => c.id === selectedConvId) || null, [conversations, selectedConvId]);
   const { data: messages = [] } = useWhatsAppMessages(selectedConvId || '');
+
+  // Debug effect for conversations and messages
+  useEffect(() => {
+    console.log('📊 Conversations updated:', {
+      count: conversations.length,
+      conversations: conversations.map(c => ({
+        id: c.id,
+        phone: c.phone_number,
+        name: c.contact_name,
+        messageCount: c.message_count
+      }))
+    });
+  }, [conversations]);
+
+  useEffect(() => {
+    if (selectedConvId && messages.length >= 0) {
+      console.log('💬 Messages updated for conversation:', selectedConvId, {
+        count: messages.length,
+        messages: messages.map(m => ({
+          id: m.id,
+          type: m.message_type,
+          text: m.message_text?.substring(0, 50) + '...',
+          timestamp: m.timestamp
+        }))
+      });
+    }
+  }, [messages, selectedConvId]);
 
   // Auto-scroll para última mensagem
   const scrollToBottom = () => {

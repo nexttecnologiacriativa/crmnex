@@ -120,12 +120,12 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
         mediaUrl = messageContent.imageMessage.url;
         mediaBase64 = messageContent.imageMessage.base64 || '';
       } else if (messageContent?.audioMessage) {
-        messageText = '[audio enviado]';
+        messageText = !fromMe ? '[audio recebido]' : '[audio enviado]';
         msgType = 'audio';
         mediaUrl = messageContent.audioMessage.url;
         mediaBase64 = messageContent.audioMessage.base64 || '';
         
-        console.log('🎵 Audio message received, saving as [audio enviado]');
+        console.log('🎵 Audio message received, saving as:', messageText);
       } else if (messageContent?.videoMessage) {
         messageText = messageContent.videoMessage.caption || 'Vídeo';
         msgType = 'video';

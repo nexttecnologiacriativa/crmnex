@@ -266,6 +266,50 @@ export function MessageItem({ message, isFromCurrentUser }: MessageItemProps) {
         );
 
       case 'audio':
+        return (
+          <div className="space-y-2">
+            {effectiveUrl ? (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost" 
+                  size="sm"
+                  onClick={handleAudioPlay}
+                  className="p-1"
+                >
+                  {isPlaying ? (
+                    <Pause className="h-4 w-4" />
+                  ) : (
+                    <Play className="h-4 w-4" />
+                  )}
+                </Button>
+                <span className="text-sm">
+                  {message.message_text}
+                </span>
+                <audio
+                  ref={(el) => {
+                    if (el && el !== audioRef) {
+                      setAudioRef(el);
+                      el.onended = handleAudioEnd;
+                      el.onerror = handleAudioError;
+                    }
+                  }}
+                  src={effectiveUrl}
+                  preload="metadata"
+                />
+              </div>
+            ) : isProcessing ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="animate-spin h-3 w-3 border-2 border-current border-t-transparent rounded-full" />
+                ⚠️ Áudio sendo processado...
+              </div>
+            ) : (
+              <div className="text-sm">
+                {message.message_text}
+              </div>
+            )}
+          </div>
+        );
+        
       case 'video':
         return (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">

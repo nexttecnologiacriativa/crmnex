@@ -114,7 +114,7 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
         mediaUrl = messageContent.imageMessage.url;
         mediaBase64 = messageContent.imageMessage.base64 || '';
       } else if (messageContent?.audioMessage) {
-        messageText = 'Áudio';
+        messageText = '[audio enviado]';
         msgType = 'audio';
         mediaUrl = messageContent.audioMessage.url;
         mediaBase64 = messageContent.audioMessage.base64 || '';

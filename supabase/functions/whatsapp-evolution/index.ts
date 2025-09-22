@@ -1063,7 +1063,7 @@ async function sendAudio(instanceName: string, number: string, audioBase64: stri
             .from('whatsapp_messages')
             .insert({
               conversation_id: conversation.id,
-              message_text: 'Áudio',
+              message_text: '[audio enviado]',
               message_type: 'audio',
               is_from_lead: false,
               sent_by: null,

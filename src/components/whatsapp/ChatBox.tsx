@@ -53,7 +53,7 @@ export function ChatBox({ conversation, workspaceId, className }: ChatBoxProps) 
   // Usar a primeira instância ativa disponível
   const activeInstance = instances.find(instance => instance.status === 'open') || instances[0];
 
-  const { data: messages = [], isLoading } = useQuery({
+  const { data: messages = [], isLoading, refetch } = useQuery({
     queryKey: ['whatsapp-messages', conversation.id],
     queryFn: async () => {
       console.log('Fetching messages for conversation:', conversation.id);
@@ -82,6 +82,32 @@ export function ChatBox({ conversation, workspaceId, className }: ChatBoxProps) 
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
+
+  // Real-time subscription para novas mensagens
+  useEffect(() => {
+    if (!conversation.id) return;
+
+    const channel = supabase
+      .channel(`messages-${conversation.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'whatsapp_messages',
+          filter: `conversation_id=eq.${conversation.id}`
+        },
+        (payload) => {
+          console.log('New message received via realtime:', payload);
+          refetch(); // Refetch messages when a new one is inserted
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [conversation.id, refetch]);
 
   // Marcar conversa como lida quando aberta
   useEffect(() => {

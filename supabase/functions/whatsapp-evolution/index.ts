@@ -247,8 +247,10 @@ serve(async (req) => {
         return await testWebhook(instanceName, workspaceId, supabase, currentApiUrl, currentApiKey);
       case 'get_webhook_status':
         return await getWebhookStatus(instanceName, supabase, currentApiUrl, currentApiKey);
+      case 'reconfigure_all_instances':
+        return await reconfigureAllInstances(workspaceId, supabase, currentApiUrl, currentApiKey);
       default:
-        console.log('❌ Invalid action received:', action, 'Available actions:', ['create_instance', 'get_qr', 'get_status', 'send_message', 'send_image', 'sendMedia', 'sendAudio', 'verify_instance', 'list_instances', 'configure_webhook', 'test_webhook', 'get_webhook_status']);
+        console.log('❌ Invalid action received:', action, 'Available actions:', ['create_instance', 'get_qr', 'get_status', 'send_message', 'send_image', 'sendMedia', 'sendAudio', 'verify_instance', 'list_instances', 'configure_webhook', 'test_webhook', 'get_webhook_status', 'reconfigure_all_instances']);
         throw new Error(`Invalid action: ${action}`);
     }
   } catch (error) {
@@ -1677,5 +1679,145 @@ async function getWebhookStatus(instanceName: string, supabase: any, apiUrl: str
       active: false,
       error: error.message
     };
+  }
+}
+
+// Função para reconfigurar todas as instâncias
+async function reconfigureAllInstances(workspaceId: string, supabase: any, apiUrl: string, apiKey: string) {
+  try {
+    console.log(`🔧 Reconfigurando todas as instâncias para workspace ${workspaceId}`);
+    
+    const workspacePrefix = getWorkspacePrefix(workspaceId);
+    const webhookUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/whatsapp-webhook`;
+    
+    // 1. Buscar todas as instâncias da API Evolution
+    const response = await fetch(`${apiUrl}/instance/fetchInstances`, {
+      method: 'GET',
+      headers: {
+        'apikey': apiKey,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch instances: ${response.status}`);
+    }
+
+    const instances = await response.json();
+    console.log(`📋 Encontradas ${instances.length} instâncias na API Evolution`);
+
+    let reconfiguredCount = 0;
+    const errors = [];
+
+    // 2. Para cada instância, reconfigurar com prefixo correto e webhook
+    for (const instance of instances) {
+      try {
+        const originalName = instance.name;
+        const shouldHavePrefix = !originalName.startsWith(workspacePrefix);
+        const newName = shouldHavePrefix ? `${workspacePrefix}${originalName}` : originalName;
+        
+        console.log(`🔄 Reconfigurando instância ${originalName} → ${newName}`);
+
+        // Sempre configurar webhook independentemente do nome
+        const webhookResponse = await fetch(`${apiUrl}/webhook/set/${originalName}`, {
+          method: 'POST',
+          headers: {
+            'apikey': apiKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            url: webhookUrl,
+            events: [
+              'QRCODE_UPDATED',
+              'CONNECTION_UPDATE',
+              'MESSAGES_UPSERT',
+              'MESSAGES_UPDATE',
+              'SEND_MESSAGE'
+            ],
+            webhook_by_events: false,
+            webhook_base64: false
+          }),
+        });
+
+        if (!webhookResponse.ok) {
+          const errorText = await webhookResponse.text();
+          console.warn(`⚠️ Webhook configuration failed for ${originalName}: ${errorText}`);
+          errors.push(`Webhook para ${originalName}: ${errorText}`);
+        } else {
+          console.log(`🔗 Webhook configurado para ${originalName}`);
+        }
+
+        // Se o nome precisa ser alterado, renomear instância
+        if (shouldHavePrefix) {
+          const renameResponse = await fetch(`${apiUrl}/instance/rename`, {
+            method: 'PUT',
+            headers: {
+              'apikey': apiKey,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              oldName: originalName,
+              newName: newName
+            }),
+          });
+
+          if (!renameResponse.ok) {
+            const errorText = await renameResponse.text();
+            console.warn(`⚠️ Rename failed for ${originalName} → ${newName}: ${errorText}`);
+            errors.push(`Rename ${originalName}: ${errorText}`);
+          } else {
+            console.log(`✏️ Instância renomeada: ${originalName} → ${newName}`);
+          }
+        }
+
+        // Atualizar no banco de dados local
+        const { error: dbError } = await supabase
+          .from('whatsapp_instances')
+          .upsert({
+            workspace_id: workspaceId,
+            instance_name: newName,
+            instance_key: newName,
+            webhook_url: webhookUrl,
+            phone_number: instance.ownerJid?.replace('@s.whatsapp.net', ''),
+            status: instance.connectionStatus || 'unknown',
+            updated_at: new Date().toISOString(),
+          }, {
+            onConflict: 'instance_name,workspace_id'
+          });
+
+        if (dbError) {
+          console.error(`Database error for ${newName}:`, dbError);
+          errors.push(`Database para ${newName}: ${dbError.message}`);
+        } else {
+          console.log(`💾 Banco de dados atualizado para ${newName}`);
+        }
+
+        reconfiguredCount++;
+      } catch (instanceError) {
+        console.error(`Error reconfiguring instance ${instance.name}:`, instanceError);
+        errors.push(`${instance.name}: ${instanceError.message}`);
+      }
+    }
+
+    const result = {
+      success: true,
+      message: `Reconfiguração concluída. ${reconfiguredCount} instâncias processadas.`,
+      reconfigured_count: reconfiguredCount,
+      errors: errors.length > 0 ? errors : undefined
+    };
+
+    console.log('✅ Reconfiguração concluída:', result);
+    
+    return new Response(
+      JSON.stringify(result),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error) {
+    console.error('Error reconfiguring instances:', error);
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
   }
 }

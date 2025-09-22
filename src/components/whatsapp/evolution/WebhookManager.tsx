@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, CheckCircle, XCircle, RefreshCw, Settings } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, RefreshCw, Settings, AlertCircle } from 'lucide-react';
 
 interface WebhookManagerProps {
   instanceName: string;
@@ -16,6 +16,7 @@ interface WebhookManagerProps {
 export default function WebhookManager({ instanceName, workspaceId, apiUrl, apiKey }: WebhookManagerProps) {
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [reconfiguring, setReconfiguring] = useState(false);
   const [webhookStatus, setWebhookStatus] = useState<any>(null);
   const { toast } = useToast();
 
@@ -95,6 +96,45 @@ export default function WebhookManager({ instanceName, workspaceId, apiUrl, apiK
       });
     } finally {
       setTesting(false);
+    }
+  };
+
+  const handleReconfigureAllInstances = async () => {
+    setReconfiguring(true);
+    try {
+      // Reconfigurar todas as instâncias com o prefixo correto do workspace
+      const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
+        body: {
+          action: 'reconfigure_all_instances',
+          workspaceId,
+          apiUrl,
+          apiKey
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast({
+          title: "Instâncias Reconfiguradas",
+          description: `${data.reconfigured_count} instâncias foram reconfiguradas com sucesso. Todas agora usam o prefixo correto e webhook atualizado.`,
+        });
+        
+        // Atualizar o status após reconfiguração
+        setTimeout(() => {
+          testWebhook();
+        }, 2000);
+      } else {
+        throw new Error(data.error || 'Erro desconhecido ao reconfigurar instâncias');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro ao Reconfigurar Instâncias",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setReconfiguring(false);
     }
   };
 
@@ -199,6 +239,39 @@ export default function WebhookManager({ instanceName, workspaceId, apiUrl, apiK
           <p className="break-all font-mono text-xs">
             https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/whatsapp-webhook
           </p>
+        </div>
+
+        <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-medium text-yellow-800 mb-2">
+                Reconfigurar Todas as Instâncias
+              </h3>
+              <p className="text-sm text-yellow-700 mb-3">
+                Se você não está recebendo mensagens, clique aqui para reconfigurar todas as instâncias 
+                com o webhook correto e prefixo do workspace.
+              </p>
+              <Button
+                onClick={handleReconfigureAllInstances}
+                disabled={reconfiguring}
+                variant="outline"
+                className="border-yellow-300 text-yellow-800 hover:bg-yellow-100"
+              >
+                {reconfiguring ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Reconfigurando...
+                  </>
+                ) : (
+                  <>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Reconfigurar Todas as Instâncias
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

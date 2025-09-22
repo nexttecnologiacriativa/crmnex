@@ -2555,6 +2555,10 @@ export type Database = {
         Args: { p_role?: string; p_user_email: string; p_workspace_id: string }
         Returns: Json
       }
+      debug_auth_context: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_scheduler_stats: {
         Args: Record<PropertyKey, never>
         Returns: Json

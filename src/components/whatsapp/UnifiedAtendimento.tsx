@@ -34,13 +34,20 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 // Audio functionality has been removed from this component
 export default function UnifiedAtendimento() {
   const { currentWorkspace } = useWorkspace();
-  const { data: conversations = [] } = useWhatsAppConversations();
+  const { data: conversations = [], refetch: refetchConversations } = useWhatsAppConversations();
   const { data: instances = [] } = useWhatsAppInstances();
   const { data: syncStatuses } = useWhatsAppSyncStatus();
   const sendEvolution = useSendWhatsAppMessage();
   const createConversation = useCreateConversation();
   const { data: leads = [] } = useLeads();
   const queryClient = useQueryClient();
+
+  // Force refresh data when component mounts
+  useEffect(() => {
+    refetchConversations();
+    queryClient.invalidateQueries({ queryKey: ['whatsapp-conversations'] });
+    queryClient.invalidateQueries({ queryKey: ['whatsapp-messages'] });
+  }, [refetchConversations, queryClient]);
 
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
   const [message, setMessage] = useState('');

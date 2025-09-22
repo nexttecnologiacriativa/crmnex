@@ -51,6 +51,11 @@ export default function UnifiedAtendimento() {
   } = useLeads();
   const queryClient = useQueryClient();
 
+  // State declarations first
+  const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
+  const [message, setMessage] = useState('');
+  const [search, setSearch] = useState('');
+
   // Controlled initialization - runs only once
   const hasInitialized = useRef(false);
   useEffect(() => {
@@ -94,9 +99,6 @@ export default function UnifiedAtendimento() {
     refetchConversations();
     toast.success('Dados atualizados!');
   };
-  const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
-  const [message, setMessage] = useState('');
-  const [search, setSearch] = useState('');
 
   // Track unread conversations with new messages since user last opened them
   const [unreadConversations, setUnreadConversations] = useState<Set<string>>(new Set());

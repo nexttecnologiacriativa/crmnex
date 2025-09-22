@@ -306,110 +306,104 @@ serve(async (req) => {
               if (mediaResponse.ok) {
                 const mediaData = await mediaResponse.json();
                 const originalUrl = mediaData.url;
-            console.log('✅ Got original media URL:', originalUrl);
-            
-            // Se for imagem, salvar permanentemente no storage público
-            if (attachment.type === 'image') {
-              try {
-                console.log('💾 Saving image permanently to storage...');
+                console.log('✅ Got original media URL:', originalUrl);
                 
-                // Baixar a imagem
-                const imageResponse = await fetch(originalUrl, {
-                  headers: { 'Authorization': `Bearer ${officialConfig.access_token}` }
-                });
-                
-                if (imageResponse.ok) {
-                  const imageBuffer = await imageResponse.arrayBuffer();
-                  const fileName = `${Date.now()}_${attachment.mediaId}.jpg`;
-                  const filePath = `${workspaceMember.workspace_id}/images/${fileName}`;
-                  
-                  // Upload para storage público
-                  const { data: uploadData, error: uploadError } = await supabase.storage
-                    .from('whatsapp-media') // Usar novo bucket público
-                    .upload(filePath, imageBuffer, {
-                      contentType: 'image/jpeg',
-                      cacheControl: '31536000', // 1 ano de cache
-                      upsert: false
-                    });
-
-                  if (!uploadError && uploadData) {
-                    // Obter URL pública
-                    const { data: publicUrlData } = supabase.storage
-                      .from('whatsapp-media')
-                      .getPublicUrl(uploadData.path);
+                // Se for imagem, salvar permanentemente no storage público
+                if (attachment.type === 'image') {
+                  try {
+                    console.log('💾 Saving image permanently to storage...');
                     
-                    if (publicUrlData.publicUrl) {
-                      mediaUrl = publicUrlData.publicUrl;
-                      console.log('✅ Image saved permanently with public URL:', mediaUrl);
+                    // Baixar a imagem
+                    const imageResponse = await fetch(originalUrl, {
+                      headers: { 'Authorization': `Bearer ${officialConfig.access_token}` }
+                    });
+                    
+                    if (imageResponse.ok) {
+                      const imageBuffer = await imageResponse.arrayBuffer();
+                      const fileName = `${Date.now()}_${attachment.mediaId}.jpg`;
+                      const filePath = `${workspaceMember.workspace_id}/images/${fileName}`;
+                      
+                      // Upload para storage público
+                      const { data: uploadData, error: uploadError } = await supabase.storage
+                        .from('whatsapp-media') // Usar novo bucket público
+                        .upload(filePath, imageBuffer, {
+                          contentType: 'image/jpeg',
+                          cacheControl: '31536000', // 1 ano de cache
+                          upsert: false
+                        });
+
+                      if (!uploadError && uploadData) {
+                        // Obter URL pública
+                        const { data: publicUrlData } = supabase.storage
+                          .from('whatsapp-media')
+                          .getPublicUrl(uploadData.path);
+                        
+                        if (publicUrlData.publicUrl) {
+                          mediaUrl = publicUrlData.publicUrl;
+                          console.log('✅ Image saved permanently with public URL:', mediaUrl);
+                        } else {
+                          console.log('⚠️ Failed to get public URL, using original');
+                          mediaUrl = originalUrl;
+                        }
+                      } else {
+                        console.error('❌ Failed to save image permanently:', uploadError);
+                        mediaUrl = originalUrl;
+                      }
                     } else {
-                      console.log('⚠️ Failed to get public URL, using original');
+                      console.error('❌ Failed to download image for permanent storage');
                       mediaUrl = originalUrl;
                     }
-                  } else {
-                    console.error('❌ Failed to save image permanently:', uploadError);
+                  } catch (storageError) {
+                    console.error('❌ Error in permanent image storage:', storageError);
                     mediaUrl = originalUrl;
                   }
+                } else if (attachment.type === 'audio') {
+                  // Para áudio, usar permanent URL se disponível
+                  if (attachment.permanentUrl) {
+                    mediaUrl = attachment.permanentUrl;
+                    console.log('🎵 Audio sent with permanent URL:', attachment.permanentUrl);
+                  } else {
+                    mediaUrl = null;
+                    console.log('🎵 Audio sent with media_id only:', attachment.mediaId);
+                  }
                 } else {
-                  console.error('❌ Failed to download image for permanent storage');
+                  // Para outros tipos de mídia, usar URL original
                   mediaUrl = originalUrl;
                 }
-              } catch (storageError) {
-                console.error('❌ Error in permanent image storage:', storageError);
-                mediaUrl = originalUrl;
+              } else {
+                console.error('❌ Failed to get media URL for attachment, using fallback');
+                mediaUrl = `https://graph.facebook.com/v18.0/${attachment.mediaId}`;
               }
-      } else if (attachment.type === 'audio') {
-        // Para áudio, usar permanent URL se disponível
-        if (attachment.permanentUrl) {
-          mediaUrl = attachment.permanentUrl;
-          console.log('🎵 Audio sent with permanent URL:', attachment.permanentUrl);
-        } else {
-          mediaUrl = null;
-          console.log('🎵 Audio sent with media_id only:', attachment.mediaId);
-        }
-            } else if (isUsingEvolution) {
-              // For Evolution API, use permanent URL directly
-              mediaUrl = attachment.permanentUrl || null;
-              console.log('✅ Using permanent URL for Evolution API:', mediaUrl);
-            }
-          } else {
-            console.error('❌ Failed to get media URL for attachment, using fallback');
-            if (isUsingEvolution) {
-              // For Evolution API, use permanent URL if available
-              mediaUrl = attachment.permanentUrl || null;
-            } else {
-              // For Official API, use Facebook URL
+            } catch (error) {
+              console.error('❌ Error fetching media URL for attachment:', error);
               mediaUrl = `https://graph.facebook.com/v18.0/${attachment.mediaId}`;
             }
-          }
-        } catch (error) {
-          console.error('❌ Error fetching media URL for attachment:', error);
-          if (isUsingEvolution) {
+          } else if (isUsingEvolution) {
+            // For Evolution API, use permanent URL directly
             mediaUrl = attachment.permanentUrl || null;
-          } else {
-            mediaUrl = `https://graph.facebook.com/v18.0/${attachment.mediaId}`;
+            console.log('✅ Using permanent URL for Evolution API:', mediaUrl);
+          }
+          
+          // Set message text based on attachment type
+          if (attachment.type === 'image') {
+            messageText = attachment.caption || '📷 Imagem';
+            mediaType = 'image/jpeg';
+            attachmentName = attachment.filename;
+          } else if (attachment.type === 'video') {
+            messageText = attachment.caption || '🎥 Vídeo';
+            mediaType = 'video/mp4';
+            attachmentName = attachment.filename;
+          } else if (attachment.type === 'audio') {
+            messageText = '🎤 Mensagem de áudio';
+            messageType = 'audio';
+            mediaType = null; // Não definir mediaType para áudios enviados
+            attachmentName = attachment.filename;
+          } else if (attachment.type === 'document') {
+            messageText = attachment.filename || '📄 Documento';
+            mediaType = 'application/pdf';
+            attachmentName = attachment.filename;
           }
         }
-        messageType = attachment.type;
-        
-        if (attachment.type === 'image') {
-          messageText = attachment.caption || '📷 Imagem';
-          mediaType = 'image/jpeg';
-          attachmentName = attachment.filename;
-        } else if (attachment.type === 'video') {
-          messageText = attachment.caption || '🎥 Vídeo';
-          mediaType = 'video/mp4';
-          attachmentName = attachment.filename;
-        } else if (attachment.type === 'audio') {
-          messageText = '🎤 Mensagem de áudio';
-          messageType = 'audio';
-          mediaType = null; // Não definir mediaType para áudios enviados
-          attachmentName = attachment.filename;
-        } else if (attachment.type === 'document') {
-          messageText = attachment.filename || '📄 Documento';
-          mediaType = 'application/pdf';
-          attachmentName = attachment.filename;
-        }
-      }
 
       const messageRecord = {
         conversation_id: conversationId,

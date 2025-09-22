@@ -1305,16 +1305,22 @@ async function listInstances(workspaceId: string, supabase: any, apiUrl: string,
 
       // Processar instâncias da Evolution API
       for (const evolutionInstance of evolutionInstances) {
-        const instanceName = evolutionInstance.instance?.instanceName || evolutionInstance.instanceName;
-        const instanceStatus = evolutionInstance.instance?.state || evolutionInstance.state || 'close';
+        // Diferentes estruturas de dados da Evolution API
+        const instanceName = evolutionInstance.name || evolutionInstance.instance?.instanceName || evolutionInstance.instanceName;
+        const instanceStatus = evolutionInstance.connectionStatus || evolutionInstance.instance?.state || evolutionInstance.state || 'close';
+        const ownerJid = evolutionInstance.ownerJid;
+        const profileName = evolutionInstance.profileName;
         
         if (!instanceName) continue;
 
+        console.log(`📱 Processing Evolution instance: ${instanceName} (status: ${instanceStatus})`);
+        
         const localInstance = localInstanceMap.get(instanceName);
         
         if (!localInstance) {
           // Instância existe na Evolution mas não no banco - criar
           try {
+            console.log(`➕ Creating local instance for ${instanceName}`);
             const { error: insertError } = await supabase
               .from('whatsapp_instances')
               .insert({
@@ -1322,7 +1328,9 @@ async function listInstances(workspaceId: string, supabase: any, apiUrl: string,
                 instance_key: instanceName,
                 workspace_id: workspaceId,
                 status: instanceStatus,
+                phone_number: ownerJid ? ownerJid.split('@')[0] : null,
                 webhook_url: `https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/whatsapp-webhook`,
+                last_seen: new Date().toISOString()
               });
 
             if (insertError) {
@@ -1336,28 +1344,44 @@ async function listInstances(workspaceId: string, supabase: any, apiUrl: string,
             console.error(`❌ Exception creating instance ${instanceName}:`, error);
             syncResults.errors.push(`Exception creating ${instanceName}: ${error.message}`);
           }
-        } else if (localInstance.status !== instanceStatus) {
-          // Instância existe mas status diferente - atualizar
-          try {
-            const { error: updateError } = await supabase
-              .from('whatsapp_instances')
-              .update({ 
+        } else {
+          // Instância existe - verificar se precisa atualizar
+          const needsUpdate = localInstance.status !== instanceStatus || 
+                            localInstance.status === 'unknown' ||
+                            !localInstance.phone_number && ownerJid;
+          
+          if (needsUpdate) {
+            try {
+              console.log(`🔄 Updating instance ${instanceName}: ${localInstance.status} → ${instanceStatus}`);
+              const updateData: any = { 
                 status: instanceStatus,
                 last_seen: new Date().toISOString(),
                 updated_at: new Date().toISOString()
-              })
-              .eq('id', localInstance.id);
+              };
+              
+              // Atualizar phone_number se disponível
+              if (ownerJid && !localInstance.phone_number) {
+                updateData.phone_number = ownerJid.split('@')[0];
+              }
+              
+              const { error: updateError } = await supabase
+                .from('whatsapp_instances')
+                .update(updateData)
+                .eq('id', localInstance.id);
 
-            if (updateError) {
-              console.error(`❌ Failed to update instance ${instanceName}:`, updateError);
-              syncResults.errors.push(`Failed to update ${instanceName}: ${updateError.message}`);
-            } else {
-              console.log(`🔄 Updated instance ${instanceName}: ${localInstance.status} → ${instanceStatus}`);
-              syncResults.updated.push(instanceName);
+              if (updateError) {
+                console.error(`❌ Failed to update instance ${instanceName}:`, updateError);
+                syncResults.errors.push(`Failed to update ${instanceName}: ${updateError.message}`);
+              } else {
+                console.log(`✅ Updated instance ${instanceName} successfully`);
+                syncResults.updated.push(instanceName);
+              }
+            } catch (error) {
+              console.error(`❌ Exception updating instance ${instanceName}:`, error);
+              syncResults.errors.push(`Exception updating ${instanceName}: ${error.message}`);
             }
-          } catch (error) {
-            console.error(`❌ Exception updating instance ${instanceName}:`, error);
-            syncResults.errors.push(`Exception updating ${instanceName}: ${error.message}`);
+          } else {
+            console.log(`⚪ Instance ${instanceName} already up to date`);
           }
         }
         
@@ -1365,27 +1389,32 @@ async function listInstances(workspaceId: string, supabase: any, apiUrl: string,
         localInstanceMap.delete(instanceName);
       }
 
-      // Instâncias que sobraram no mapa local não existem mais na Evolution API
-      for (const [instanceName, localInstance] of localInstanceMap) {
-        console.log(`⚠️ Instance ${instanceName} exists locally but not in Evolution API`);
-        // Marcar como "unknown" para que o usuário possa recriar se necessário
-        try {
-          const { error: updateError } = await supabase
-            .from('whatsapp_instances')
-            .update({ 
-              status: 'unknown',
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', localInstance.id);
+      // Instâncias que sobraram no mapa local podem não existir mais na Evolution API
+      // Mas só marcar como órfãs se temos certeza que conseguimos acessar a API
+      if (evolutionInstances.length > 0) {
+        for (const [instanceName, localInstance] of localInstanceMap) {
+          console.log(`⚠️ Instance ${instanceName} exists locally but not found in Evolution API response`);
+          // Apenas marcar como órfã se não foi encontrada na resposta da API
+          try {
+            const { error: updateError } = await supabase
+              .from('whatsapp_instances')
+              .update({ 
+                status: 'unknown',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', localInstance.id);
 
-          if (!updateError) {
-            syncResults.orphansDetected.push(instanceName);
-            syncResults.updated.push(`${instanceName} (marked as unknown - not found in API)`);
+            if (!updateError) {
+              syncResults.orphansDetected.push(instanceName);
+              console.log(`🔄 Marked ${instanceName} as orphan (not found in API)`);
+            }
+          } catch (error) {
+            console.error(`❌ Failed to mark ${instanceName} as unknown:`, error);
+            syncResults.errors.push(`Failed to mark ${instanceName} as unknown: ${error.message}`);
           }
-        } catch (error) {
-          console.error(`❌ Failed to mark ${instanceName} as unknown:`, error);
-          syncResults.errors.push(`Failed to mark ${instanceName} as unknown: ${error.message}`);
         }
+      } else {
+        console.log(`⚠️ No instances received from Evolution API - skipping orphan detection`);
       }
     }
 

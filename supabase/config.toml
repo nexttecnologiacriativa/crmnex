@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.platform-webhook-receiver]
 verify_jwt = false
+
+[functions.fix-whatsapp-sync]
+verify_jwt = false

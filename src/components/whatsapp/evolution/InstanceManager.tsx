@@ -225,84 +225,26 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
     }
   };
 
-  const recreateInstance = async (instanceName: string) => {
-    const confirmed = window.confirm(`Tem certeza que deseja recriar a instância ${instanceName}? Isso criará uma nova instância com o mesmo nome.`);
-    if (!confirmed) return;
-
+  const handleFixSync = async (instanceName: string) => {
     try {
-      const config = getEvolutionConfig();
-      if (!config?.global_api_key) {
-        toast.error('Configure a API Key da Evolution primeiro');
-        return;
-      }
-
-      toast.info('Recriando instância...');
+      if (!currentWorkspace) return;
       
-      // Primeiro tentar excluir da Evolution API (caso ainda exista)
-      try {
-        await fetch(`${config.api_url}/instance/delete/${instanceName}`, {
-          method: 'DELETE',
-          headers: { 'apikey': config.global_api_key },
-        });
-      } catch (error) {
-        console.warn('Instance may not exist in Evolution API:', error);
-      }
-
-      // Excluir do banco local
-      const { error: deleteError } = await supabase
-        .from('whatsapp_instances')
-        .delete()
-        .eq('workspace_id', currentWorkspace.id)
-        .eq('instance_name', instanceName);
-
-      if (deleteError) {
-        console.error('Error deleting from database:', deleteError);
-      }
-
-      // Aguardar um pouco para garantir que foi excluída
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Criar nova instância na Evolution API
-      const createResponse = await fetch(`${config.api_url}/instance/create`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': config.global_api_key,
-        },
-        body: JSON.stringify({
-          instanceName,
-          qrcode: true,
-        }),
+      toast.info('Corrigindo sincronização...');
+      
+      const { data, error } = await supabase.functions.invoke('fix-whatsapp-sync', {
+        body: {
+          workspaceId: currentWorkspace.id,
+          instanceName: instanceName
+        }
       });
 
-      if (!createResponse.ok) {
-        const errorData = await createResponse.json();
-        throw new Error(errorData.message || 'Erro ao criar instância na Evolution API');
-      }
-
-      const instanceData = await createResponse.json();
-
-      // Salvar no banco local
-      const { error: insertError } = await supabase
-        .from('whatsapp_instances')
-        .insert({
-          workspace_id: currentWorkspace.id,
-          instance_name: instanceName,
-          instance_key: instanceData.instance?.instanceKey || instanceName,
-          status: 'connecting',
-          qr_code: instanceData.qrcode?.code || null,
-        });
-
-      if (insertError) {
-        console.error('Error saving to database:', insertError);
-        throw insertError;
-      }
+      if (error) throw error;
 
       await refetch();
-      toast.success(`Instância ${instanceName} recriada com sucesso!`);
+      toast.success(`Instância ${instanceName} sincronizada com sucesso!`);
     } catch (error) {
-      console.error('Error recreating instance:', error);
-      toast.error('Erro ao recriar instância: ' + (error as any)?.message);
+      console.error('Error fixing sync:', error);
+      toast.error('Erro ao corrigir sincronização: ' + (error as Error).message);
     }
   };
 
@@ -568,17 +510,19 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
                           <RefreshCw className="h-4 w-4" />
                         </Button>
                         
-                        {/* Botão para recriar instância se não existir na API */}
+                        {/* Botão para corrigir sincronização se mostrar como órfã */}
                         {(!instance.status || instance.status === 'unknown') && isAllowedToEdit && (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => recreateInstance(instance.instance_name)}
-                            className="text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300"
-                          >
-                            <RotateCcw className="h-4 w-4 mr-1" />
-                            Recriar
-                          </Button>
+                          <>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => handleFixSync(instance.instance_name)}
+                              className="text-green-600 hover:text-green-700 border-green-200 hover:border-green-300"
+                            >
+                              <RefreshCw className="h-4 w-4 mr-1" />
+                              Corrigir
+                            </Button>
+                          </>
                         )}
                         
                         {isAllowedToEdit && (

@@ -1530,13 +1530,13 @@ async function sendMediaGeneric(
 
   // Format phone number
   const normalizedPhone = ensureCountryCode55(number);
-  if (!formattedNumber) {
+  if (!normalizedPhone) {
     throw new Error('Número inválido');
   }
 
   console.log('📎 Sending media via Evolution API:', {
     instanceName,
-    number: formattedNumber,
+    number: normalizedPhone,
     mediaType,
     fileName,
     base64Length: cleanBase64.length
@@ -1551,7 +1551,7 @@ async function sendMediaGeneric(
         'apikey': apiKey,
       },
       body: JSON.stringify({
-        number: formattedNumber,
+        number: normalizedPhone,
         options: {
           delay: 1200,
           presence: "composing"

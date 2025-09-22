@@ -68,22 +68,37 @@ serve(async (req) => {
       );
     }
 
-    // Get WhatsApp config
-    const { data: config } = await supabase
+    // Try to get WhatsApp Official config first
+    const { data: officialConfig } = await supabase
       .from('whatsapp_official_configs')
       .select('access_token, phone_number_id')
       .eq('workspace_id', workspaceMember.workspace_id)
       .eq('is_active', true)
       .single();
 
-    if (!config?.access_token || !config?.phone_number_id) {
+    // If no official config, try Evolution API config
+    let evolutionConfig = null;
+    if (!officialConfig?.access_token) {
+      const { data: evolutionData } = await supabase
+        .from('whatsapp_evolution_configs')
+        .select('*')
+        .eq('workspace_id', workspaceMember.workspace_id)
+        .single();
+      
+      evolutionConfig = evolutionData;
+    }
+
+    const isUsingOfficial = !!officialConfig?.access_token;
+    const isUsingEvolution = !!evolutionConfig;
+
+    if (!isUsingOfficial && !isUsingEvolution) {
       return new Response(
-        JSON.stringify({ error: 'WhatsApp configuration not found or inactive' }),
+        JSON.stringify({ error: 'Nenhuma configuração do WhatsApp encontrada. Configure WhatsApp Oficial ou Evolution API.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('✅ WhatsApp config found, uploading to phone_number_id:', config.phone_number_id);
+    console.log('✅ WhatsApp config found, using:', isUsingOfficial ? 'Official API' : 'Evolution API');
 
     // Validate file type and size based on media type
     let maxSize = 16 * 1024 * 1024; // 16MB default
@@ -117,76 +132,102 @@ serve(async (req) => {
       );
     }
 
-    console.log('✅ File validation passed, uploading to WhatsApp Media API...');
+    console.log('✅ File validation passed, uploading...');
 
-    // Convert file to FormData for WhatsApp API
-    const whatsappFormData = new FormData();
-    whatsappFormData.append('file', file);
-    whatsappFormData.append('type', file.type);
-    whatsappFormData.append('messaging_product', 'whatsapp');
+    let mediaId = '';
+    
+    if (isUsingOfficial && officialConfig) {
+      // Upload to WhatsApp Official API
+      const whatsappFormData = new FormData();
+      whatsappFormData.append('file', file);
+      whatsappFormData.append('type', file.type);
+      whatsappFormData.append('messaging_product', 'whatsapp');
 
-    // Upload to WhatsApp Media API
-    const uploadResponse = await fetch(
-      `https://graph.facebook.com/v18.0/${config.phone_number_id}/media`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${config.access_token}`,
-        },
-        body: whatsappFormData,
-      }
-    );
-
-    const uploadData = await uploadResponse.json();
-    console.log('📤 WhatsApp Media API response:', JSON.stringify(uploadData, null, 2));
-
-    if (!uploadResponse.ok || uploadData.error) {
-      console.error('❌ WhatsApp Media API error:', uploadData);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Failed to upload media to WhatsApp', 
-          details: uploadData.error?.message || 'Unknown error',
-          whatsappResponse: uploadData
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      const uploadResponse = await fetch(
+        `https://graph.facebook.com/v18.0/${officialConfig.phone_number_id}/media`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${officialConfig.access_token}`,
+          },
+          body: whatsappFormData,
+        }
       );
+
+      const uploadData = await uploadResponse.json();
+      console.log('📤 WhatsApp Official API response:', JSON.stringify(uploadData, null, 2));
+
+      if (!uploadResponse.ok || uploadData.error) {
+        console.error('❌ WhatsApp Official API error:', uploadData);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to upload media to WhatsApp Official API', 
+            details: uploadData.error?.message || 'Unknown error',
+            whatsappResponse: uploadData
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      mediaId = uploadData.id;
+      console.log('✅ Media uploaded to Official API with ID:', mediaId);
+      
+    } else if (isUsingEvolution) {
+      // For Evolution API, we just save to storage and generate a unique media ID
+      // Evolution API handles media differently - it fetches from URLs
+      mediaId = `evolution_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      console.log('✅ Generated Evolution API media ID:', mediaId);
     }
 
-    const mediaId = uploadData.id;
-    console.log('✅ Media uploaded successfully with ID:', mediaId);
-
-    // Save image permanently to Supabase Storage if it's an image
+    // Save media permanently to Supabase Storage
     let permanentUrl = null;
-    if (mediaType === 'image') {
-      try {
-        console.log('💾 Saving image permanently to Supabase Storage...');
-        
-        const fileBuffer = await file.arrayBuffer();
-        const fileName = `${Date.now()}_${mediaId}.${file.name.split('.').pop()}`;
-        const filePath = `${workspaceMember.workspace_id}/images/${fileName}`;
-        
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('whatsapp-media') // Using new public bucket
-          .upload(filePath, fileBuffer, {
-            contentType: file.type,
-            cacheControl: '31536000', // 1 year cache
-            upsert: false
-          });
+    try {
+      console.log('💾 Saving media permanently to Supabase Storage...');
+      
+      const fileBuffer = await file.arrayBuffer();
+      const fileName = `${Date.now()}_${mediaId}.${file.name.split('.').pop()}`;
+      const filePath = `${workspaceMember.workspace_id}/${mediaType}s/${fileName}`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('whatsapp-media')
+        .upload(filePath, fileBuffer, {
+          contentType: file.type,
+          cacheControl: '31536000', // 1 year cache
+          upsert: false
+        });
 
-        if (!uploadError && uploadData) {
-          const { data: publicUrlData } = supabase.storage
-            .from('whatsapp-media')
-            .getPublicUrl(uploadData.path);
-          
-          if (publicUrlData.publicUrl) {
-            permanentUrl = publicUrlData.publicUrl;
-            console.log('✅ Image saved permanently with public URL:', permanentUrl);
-          }
-        } else {
-          console.error('❌ Failed to save image permanently:', uploadError);
+      if (!uploadError && uploadData) {
+        const { data: publicUrlData } = supabase.storage
+          .from('whatsapp-media')
+          .getPublicUrl(uploadData.path);
+        
+        if (publicUrlData.publicUrl) {
+          permanentUrl = publicUrlData.publicUrl;
+          console.log('✅ Media saved permanently with public URL:', permanentUrl);
         }
-      } catch (storageError) {
-        console.error('❌ Error saving image to permanent storage:', storageError);
+      } else {
+        console.error('❌ Failed to save media permanently:', uploadError);
+        // For Evolution API, this is critical as it needs the permanent URL
+        if (isUsingEvolution) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Failed to save media to storage - required for Evolution API',
+              details: uploadError?.message || 'Storage error'
+            }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+    } catch (storageError) {
+      console.error('❌ Error saving media to permanent storage:', storageError);
+      if (isUsingEvolution) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Storage error - required for Evolution API',
+            details: (storageError as Error).message
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
     }
 

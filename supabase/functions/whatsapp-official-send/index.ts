@@ -63,23 +63,38 @@ serve(async (req) => {
 
     console.log('🏢 Workspace found:', workspaceMember.workspace_id);
 
-    // Get WhatsApp config
-    const { data: config } = await supabase
+    // Try to get WhatsApp Official config first
+    const { data: officialConfig } = await supabase
       .from('whatsapp_official_configs')
       .select('access_token, phone_number_id')
       .eq('workspace_id', workspaceMember.workspace_id)
       .eq('is_active', true)
       .single();
 
-    if (!config?.access_token || !config?.phone_number_id) {
-      console.log('❌ WhatsApp config missing for workspace:', workspaceMember.workspace_id);
+    // If no official config, try Evolution API config
+    let evolutionConfig = null;
+    if (!officialConfig?.access_token) {
+      const { data: evolutionData } = await supabase
+        .from('whatsapp_evolution_configs')
+        .select('*')
+        .eq('workspace_id', workspaceMember.workspace_id)
+        .single();
+      
+      evolutionConfig = evolutionData;
+    }
+
+    const isUsingOfficial = !!officialConfig?.access_token;
+    const isUsingEvolution = !!evolutionConfig;
+
+    if (!isUsingOfficial && !isUsingEvolution) {
+      console.log('❌ No WhatsApp config found for workspace:', workspaceMember.workspace_id);
       return new Response(
-        JSON.stringify({ error: 'WhatsApp configuration not found or inactive' }),
+        JSON.stringify({ error: 'Nenhuma configuração do WhatsApp encontrada. Configure WhatsApp Oficial ou Evolution API.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('✅ WhatsApp config found, phone_number_id:', config.phone_number_id);
+    console.log('✅ WhatsApp config found, using:', isUsingOfficial ? 'Official API' : 'Evolution API');
 
     // Normalize phone number
     const cleanPhone = to.replace(/\D/g, '');
@@ -152,36 +167,113 @@ serve(async (req) => {
 
     console.log('📤 WhatsApp API payload:', JSON.stringify(whatsappPayload, null, 2));
 
-    // Send message to WhatsApp API
-    const response = await fetch(
-      `https://graph.facebook.com/v18.0/${config.phone_number_id}/messages`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${config.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(whatsappPayload),
-      }
-    );
+    let response: Response;
+    let responseData: any;
+    let whatsappMessageId: string | null = null;
 
-    const responseData = await response.json();
-    console.log('📤 WhatsApp API response:', JSON.stringify(responseData, null, 2));
-
-    // Verificar erros mesmo em respostas 200
-    if (!response.ok || responseData.error) {
-      console.error('❌ WhatsApp API error:', responseData);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Failed to send message', 
-          details: responseData.error?.message || 'Unknown error',
-          whatsappResponse: responseData
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    if (isUsingOfficial && officialConfig) {
+      // Send message to WhatsApp Official API
+      response = await fetch(
+        `https://graph.facebook.com/v18.0/${officialConfig.phone_number_id}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${officialConfig.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(whatsappPayload),
+        }
       );
+      
+      responseData = await response.json();
+      console.log('📤 WhatsApp Official API response:', JSON.stringify(responseData, null, 2));
+      
+      if (!response.ok || responseData.error) {
+        console.error('❌ WhatsApp Official API error:', responseData);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to send message', 
+            details: responseData.error?.message || 'Unknown error',
+            whatsappResponse: responseData
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      whatsappMessageId = responseData.messages?.[0]?.id;
+      
+    } else if (isUsingEvolution && evolutionConfig) {
+      // Send message to Evolution API
+      console.log('🚀 Sending via Evolution API...');
+      
+      // Get or create an instance for this workspace
+      const { data: instances } = await supabase
+        .from('whatsapp_instances')
+        .select('*')
+        .eq('workspace_id', workspaceMember.workspace_id)
+        .eq('status', 'connected')
+        .limit(1);
+      
+      if (!instances || instances.length === 0) {
+        return new Response(
+          JSON.stringify({ error: 'Nenhuma instância do WhatsApp conectada encontrada. Conecte uma instância primeiro.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const instance = instances[0];
+      let evolutionPayload: any = {
+        number: finalPhone,
+      };
+      
+      // Handle media for Evolution API
+      if (attachment) {
+        if (attachment.type === 'image' && attachment.permanentUrl) {
+          evolutionPayload = {
+            ...evolutionPayload,
+            mediaMessage: {
+              mediatype: 'image',
+              media: attachment.permanentUrl,
+              caption: message || attachment.caption || ''
+            }
+          };
+        } else {
+          evolutionPayload.text = message || '';
+        }
+      } else {
+        evolutionPayload.text = message || '';
+      }
+      
+      const endpoint = attachment ? '/message/sendMedia' : '/message/sendText';
+      
+      response = await fetch(
+        `${evolutionConfig.api_url}${endpoint}/${instance.instance_name}`,
+        {
+          method: 'POST',
+          headers: {
+            'ApiKey': evolutionConfig.global_api_key,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(evolutionPayload),
+        }
+      );
+      
+      responseData = await response.json();
+      console.log('📤 Evolution API response:', JSON.stringify(responseData, null, 2));
+      
+      if (!response.ok || !responseData.key) {
+        console.error('❌ Evolution API error:', responseData);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to send message via Evolution API', 
+            details: responseData.error || 'Unknown error' 
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      whatsappMessageId = responseData.key?.id;
     }
-
-    const whatsappMessageId = responseData.messages?.[0]?.id;
     console.log('✅ Message sent successfully:', JSON.stringify(responseData, null, 2));
 
     // Save message to database
@@ -194,24 +286,26 @@ serve(async (req) => {
       let mediaType = null;
       let attachmentName = null;
       
-      if (attachment) {
-        messageType = attachment.type;
-        
-        // Para anexos, buscar a URL pública e salvar permanentemente se for imagem
-        console.log('🔍 Fetching public media URL for attachment:', attachment.mediaId);
-        try {
-          const mediaResponse = await fetch(
-            `https://graph.facebook.com/v18.0/${attachment.mediaId}`,
-            {
-              headers: {
-                'Authorization': `Bearer ${config.access_token}`,
-              },
-            }
-          );
+        if (attachment) {
+          messageType = attachment.type;
           
-          if (mediaResponse.ok) {
-            const mediaData = await mediaResponse.json();
-            const originalUrl = mediaData.url;
+          // Handle media URLs for both APIs  
+          if (isUsingOfficial && officialConfig) {
+            // Para anexos do WhatsApp oficial, buscar a URL pública
+            console.log('🔍 Fetching public media URL for attachment:', attachment.mediaId);
+            try {
+              const mediaResponse = await fetch(
+                `https://graph.facebook.com/v18.0/${attachment.mediaId}`,
+                {
+                  headers: {
+                    'Authorization': `Bearer ${officialConfig.access_token}`,
+                  },
+                }
+              );
+              
+              if (mediaResponse.ok) {
+                const mediaData = await mediaResponse.json();
+                const originalUrl = mediaData.url;
             console.log('✅ Got original media URL:', originalUrl);
             
             // Se for imagem, salvar permanentemente no storage público
@@ -221,7 +315,7 @@ serve(async (req) => {
                 
                 // Baixar a imagem
                 const imageResponse = await fetch(originalUrl, {
-                  headers: { 'Authorization': `Bearer ${config.access_token}` }
+                  headers: { 'Authorization': `Bearer ${officialConfig.access_token}` }
                 });
                 
                 if (imageResponse.ok) {
@@ -272,17 +366,28 @@ serve(async (req) => {
           mediaUrl = null;
           console.log('🎵 Audio sent with media_id only:', attachment.mediaId);
         }
-      } else {
-              // Para outros tipos de mídia, usar URL original
-              mediaUrl = originalUrl;
+            } else if (isUsingEvolution) {
+              // For Evolution API, use permanent URL directly
+              mediaUrl = attachment.permanentUrl || null;
+              console.log('✅ Using permanent URL for Evolution API:', mediaUrl);
             }
           } else {
             console.error('❌ Failed to get media URL for attachment, using fallback');
-            mediaUrl = `https://graph.facebook.com/v18.0/${attachment.mediaId}`;
+            if (isUsingEvolution) {
+              // For Evolution API, use permanent URL if available
+              mediaUrl = attachment.permanentUrl || null;
+            } else {
+              // For Official API, use Facebook URL
+              mediaUrl = `https://graph.facebook.com/v18.0/${attachment.mediaId}`;
+            }
           }
         } catch (error) {
           console.error('❌ Error fetching media URL for attachment:', error);
-          mediaUrl = `https://graph.facebook.com/v18.0/${attachment.mediaId}`;
+          if (isUsingEvolution) {
+            mediaUrl = attachment.permanentUrl || null;
+          } else {
+            mediaUrl = `https://graph.facebook.com/v18.0/${attachment.mediaId}`;
+          }
         }
         messageType = attachment.type;
         

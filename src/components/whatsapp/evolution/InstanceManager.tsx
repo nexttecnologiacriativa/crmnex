@@ -381,6 +381,20 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
             </div>
           </div>
 
+          {/* Header de segurança para instâncias antigas */}
+          {instances.length === 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle className="h-5 w-5 text-blue-600" />
+                <h3 className="font-semibold text-blue-900">Sistema Seguro</h3>
+              </div>
+              <p className="text-sm text-blue-800">
+                O sistema agora está protegido contra vazamento de dados entre workspaces. 
+                Apenas instâncias com prefixo <code className="bg-blue-100 px-1 rounded">ws_{currentWorkspace?.id.substring(0, 8)}_</code> são exibidas.
+              </p>
+            </div>
+          )}
+
           {!config?.global_api_key && isAllowedToEdit && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
               <div className="flex items-center gap-2 mb-2">

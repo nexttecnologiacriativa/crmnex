@@ -26,6 +26,9 @@ export function useWhatsAppInstances() {
     queryFn: async () => {
       if (!currentWorkspace) return [];
       
+      // Generate workspace prefix for security filtering
+      const workspacePrefix = `ws_${currentWorkspace.id.substring(0, 8)}_`;
+      
       const { data, error } = await supabase
         .from('whatsapp_instances')
         .select('*')
@@ -33,7 +36,22 @@ export function useWhatsAppInstances() {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data as WhatsAppInstance[];
+      
+      // SECURITY: Filter out instances that don't belong to this workspace
+      const secureInstances = (data as WhatsAppInstance[] || []).filter(instance => {
+        // Allow instances that start with the correct workspace prefix
+        const belongsToWorkspace = instance.instance_name.startsWith(workspacePrefix);
+        
+        if (!belongsToWorkspace) {
+          console.warn(`🔒 Filtering out instance ${instance.instance_name} - doesn't belong to workspace ${currentWorkspace.id}`);
+        }
+        
+        return belongsToWorkspace;
+      });
+      
+      console.log(`🔒 Workspace security: ${data?.length || 0} total instances, ${secureInstances.length} belong to workspace ${currentWorkspace.id}`);
+      
+      return secureInstances;
     },
     enabled: !!currentWorkspace,
   });

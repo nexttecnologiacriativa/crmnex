@@ -22,7 +22,9 @@ export function useWhatsAppNotifications() {
       return count || 0;
     },
     enabled: !!currentWorkspace?.id,
-    refetchInterval: 3000
+    refetchInterval: false, // Disable polling to stop auto-refresh
+    refetchOnWindowFocus: false,
+    refetchIntervalInBackground: false
   });
 
   useEffect(() => {

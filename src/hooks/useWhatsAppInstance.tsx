@@ -65,10 +65,6 @@ export function useCreateWhatsAppInstance() {
     mutationFn: async (instanceName: string) => {
       if (!currentWorkspace) throw new Error('No workspace selected');
       
-      // Create workspace-isolated instance name with prefix
-      const workspacePrefix = currentWorkspace.id.substring(0, 8);
-      const isolatedInstanceName = `ws_${workspacePrefix}_${instanceName}`;
-      
       // Get API key from localStorage
       const configKey = `evolution_config_${currentWorkspace.id}`;
       const storedConfig = localStorage.getItem(configKey);
@@ -81,8 +77,7 @@ export function useCreateWhatsAppInstance() {
       const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
         body: {
           action: 'create_instance',
-          instanceName: isolatedInstanceName,
-          originalName: instanceName,
+          instanceName: instanceName, // Send original name, edge function will add prefix
           workspaceId: currentWorkspace.id,
           apiKey: config.global_api_key,
           apiUrl: config.api_url,
@@ -109,18 +104,6 @@ export function useGetQRCode() {
     mutationFn: async (instanceName: string) => {
       if (!currentWorkspace) throw new Error('No workspace selected');
       
-      // Use the full instance name from database (already has workspace prefix)
-      const { data: instance } = await supabase
-        .from('whatsapp_instances')
-        .select('instance_name')
-        .eq('workspace_id', currentWorkspace.id)
-        .eq('instance_name', instanceName)
-        .single();
-      
-      if (!instance) {
-        throw new Error('Instância não encontrada');
-      }
-      
       // Get API key from localStorage
       const configKey = `evolution_config_${currentWorkspace.id}`;
       const storedConfig = localStorage.getItem(configKey);
@@ -133,7 +116,7 @@ export function useGetQRCode() {
       const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
         body: {
           action: 'get_qr',
-          instanceName: instance.instance_name,
+          instanceName: instanceName, // Use the name as stored (with prefix)
           workspaceId: currentWorkspace.id,
           apiKey: config.global_api_key,
           apiUrl: config.api_url,
@@ -156,18 +139,6 @@ export function useGetInstanceStatus() {
     mutationFn: async (instanceName: string) => {
       if (!currentWorkspace) throw new Error('No workspace selected');
       
-      // Use the full instance name from database (already has workspace prefix)
-      const { data: instance } = await supabase
-        .from('whatsapp_instances')
-        .select('instance_name')
-        .eq('workspace_id', currentWorkspace.id)
-        .eq('instance_name', instanceName)
-        .single();
-      
-      if (!instance) {
-        throw new Error('Instância não encontrada');
-      }
-      
       // Get API key from localStorage
       const configKey = `evolution_config_${currentWorkspace.id}`;
       const storedConfig = localStorage.getItem(configKey);
@@ -180,7 +151,7 @@ export function useGetInstanceStatus() {
       const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
         body: {
           action: 'get_status',
-          instanceName: instance.instance_name,
+          instanceName: instanceName, // Use the name as stored (with prefix)
           apiKey: config.global_api_key,
           apiUrl: config.api_url,
         },

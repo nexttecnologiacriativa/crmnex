@@ -271,26 +271,25 @@ serve(async (req) => {
 
 async function createInstance(instanceName: string, workspaceId: string, supabase: any, apiUrl: string, apiKey: string, originalName?: string) {
   try {
-    console.log(`🚀 Creating instance ${instanceName} for workspace ${workspaceId}`);
-    console.log(`🔧 Using API URL: ${apiUrl}, has API key: ${!!apiKey}`);
-    
-    // Validate workspace isolation by checking instance name prefix
+    // Generate workspace prefix for security
     const workspacePrefix = `ws_${workspaceId.substring(0, 8)}_`;
-    if (!instanceName.startsWith(workspacePrefix)) {
-      console.error(`❌ Security violation: Instance name ${instanceName} doesn't match workspace ${workspaceId}`);
-      throw new Error('Violação de segurança: Nome da instância não corresponde ao workspace');
-    }
+    
+    // If instanceName doesn't have prefix, add it (for security isolation)
+    const secureInstanceName = instanceName.startsWith(workspacePrefix) ? instanceName : `${workspacePrefix}${instanceName}`;
+    
+    console.log(`🚀 Creating instance ${secureInstanceName} (original: ${instanceName}) for workspace ${workspaceId}`);
+    console.log(`🔧 Using API URL: ${apiUrl}, has API key: ${!!apiKey}`);
 
     // Verificar se instância já existe no banco antes de criar
     const { data: existingInstance } = await supabase
       .from('whatsapp_instances')
       .select('id, instance_name, status')
       .eq('workspace_id', workspaceId)
-      .eq('instance_name', instanceName)
+      .eq('instance_name', secureInstanceName)
       .maybeSingle();
 
     if (existingInstance) {
-      console.log(`⚠️ Instance ${instanceName} already exists in database with status: ${existingInstance.status}`);
+      console.log(`⚠️ Instance ${secureInstanceName} already exists in database with status: ${existingInstance.status}`);
       return new Response(JSON.stringify({ 
         success: true,
         message: 'Instance already exists',
@@ -303,7 +302,7 @@ async function createInstance(instanceName: string, workspaceId: string, supabas
     }
 
     const payload = {
-      instanceName: instanceName,
+      instanceName: secureInstanceName,
       qrcode: true,
       integration: "WHATSAPP-BAILEYS",
       webhook: {
@@ -346,57 +345,57 @@ async function createInstance(instanceName: string, workspaceId: string, supabas
         errorData = { message: responseText };
       }
       
-      // Se a instância já existe na Evolution API, não é erro fatal
-      if (response.status === 409 || responseText.includes('already exists') || responseText.includes('já existe')) {
-        console.log(`📝 Instance ${instanceName} already exists in Evolution API, proceeding to save in database...`);
-        
-        // Salvar no banco mesmo assim
-        const { data: instanceData, error: instanceError } = await supabase
-          .from('whatsapp_instances')
-          .insert({
-            instance_name: instanceName,
-            instance_key: instanceName,
-            workspace_id: workspaceId,
-            status: 'close', // Default status para instâncias que já existem
-            webhook_url: `https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/whatsapp-webhook`,
-          })
-          .select()
-          .single();
-
-        if (instanceError) {
-          console.error('❌ Error saving existing instance to Supabase:', instanceError);
-          // Tentar buscar se já existe no banco (race condition)
-          const { data: existingInDb } = await supabase
+        // Se a instância já existe na Evolution API, não é erro fatal
+        if (response.status === 409 || responseText.includes('already exists') || responseText.includes('já existe')) {
+          console.log(`📝 Instance ${secureInstanceName} already exists in Evolution API, proceeding to save in database...`);
+          
+          // Salvar no banco mesmo assim
+          const { data: instanceData, error: instanceError } = await supabase
             .from('whatsapp_instances')
-            .select('*')
-            .eq('workspace_id', workspaceId)
-            .eq('instance_name', instanceName)
-            .maybeSingle();
-            
-          if (existingInDb) {
-            return new Response(JSON.stringify({ 
-              success: true,
-              message: 'Instance recovered from database',
-              data: existingInDb,
-              status: existingInDb.status
-            }), { 
-              status: 200,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-            });
-          }
-          throw new Error(`Failed to save existing instance to Supabase: ${instanceError.message}`);
-        }
+            .insert({
+              instance_name: secureInstanceName,
+              instance_key: secureInstanceName,
+              workspace_id: workspaceId,
+              status: 'close', // Default status para instâncias que já existem
+              webhook_url: `https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/whatsapp-webhook`,
+            })
+            .select()
+            .single();
 
-        return new Response(JSON.stringify({ 
-          success: true,
-          message: 'Instance already existed, saved to database',
-          data: instanceData,
-          status: 'close'
-        }), { 
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        });
-      }
+          if (instanceError) {
+            console.error('❌ Error saving existing instance to Supabase:', instanceError);
+            // Tentar buscar se já existe no banco (race condition)
+            const { data: existingInDb } = await supabase
+              .from('whatsapp_instances')
+              .select('*')
+              .eq('workspace_id', workspaceId)
+              .eq('instance_name', secureInstanceName)
+              .maybeSingle();
+              
+            if (existingInDb) {
+              return new Response(JSON.stringify({ 
+                success: true,
+                message: 'Instance recovered from database',
+                data: existingInDb,
+                status: existingInDb.status
+              }), { 
+                status: 200,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+              });
+            }
+            throw new Error(`Failed to save existing instance to Supabase: ${instanceError.message}`);
+          }
+
+          return new Response(JSON.stringify({ 
+            success: true,
+            message: 'Instance already existed, saved to database',
+            data: instanceData,
+            status: 'close'
+          }), { 
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          });
+        }
       
       throw new Error(`Failed to create instance on Evolution API: ${response.status} - ${responseText}`);
     }
@@ -423,8 +422,8 @@ async function createInstance(instanceName: string, workspaceId: string, supabas
         const { data: insertResult, error: instanceError } = await supabase
           .from('whatsapp_instances')
           .insert({
-            instance_name: instanceName,
-            instance_key: data.instance?.instanceName || instanceName,
+            instance_name: secureInstanceName,
+            instance_key: data.instance?.instanceName || secureInstanceName,
             workspace_id: workspaceId,
             status: 'close', // Status inicial mais conservador
             webhook_url: `https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/whatsapp-webhook`,
@@ -440,7 +439,7 @@ async function createInstance(instanceName: string, workspaceId: string, supabas
               .from('whatsapp_instances')
               .select('*')
               .eq('workspace_id', workspaceId)
-              .eq('instance_name', instanceName)
+              .eq('instance_name', secureInstanceName)
               .maybeSingle();
               
             if (existingInDb) {

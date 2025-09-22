@@ -229,7 +229,7 @@ export default function UnifiedAtendimento() {
   const selectedConv = useMemo(() => conversations.find(c => c.id === selectedConvId) || null, [conversations, selectedConvId]);
   const { data: messages = [] } = useWhatsAppMessages(selectedConvId || '');
 
-  // Debug effect for conversations and messages
+  // Debug effect for conversations and messages (added after variable declarations)
   useEffect(() => {
     console.log('📊 Conversations updated:', {
       count: conversations.length,

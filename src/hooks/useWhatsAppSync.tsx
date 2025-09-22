@@ -146,6 +146,10 @@ export function useWhatsAppSyncStatus() {
       return data?.sync_status ? [data.sync_status] : [];
     },
     enabled: !!currentWorkspace,
+    refetchInterval: false, // Disable automatic polling
+    refetchOnWindowFocus: false, // Disable refetch on window focus
+    refetchIntervalInBackground: false, // Disable background refetch
+    staleTime: 5 * 60 * 1000, // Consider data stale after 5 minutes
   });
 }
 

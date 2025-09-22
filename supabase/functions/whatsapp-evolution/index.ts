@@ -1687,7 +1687,8 @@ async function reconfigureAllInstances(workspaceId: string, supabase: any, apiUr
   try {
     console.log(`🔧 Reconfigurando todas as instâncias para workspace ${workspaceId}`);
     
-    const workspacePrefix = getWorkspacePrefix(workspaceId);
+    // Generate workspace prefix for security
+    const workspacePrefix = `ws_${workspaceId.substring(0, 8)}_`;
     const webhookUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/whatsapp-webhook`;
     
     // 1. Buscar todas as instâncias da API Evolution
@@ -1735,7 +1736,7 @@ async function reconfigureAllInstances(workspaceId: string, supabase: any, apiUr
               'SEND_MESSAGE'
             ],
             webhook_by_events: false,
-            webhook_base64: false
+            webhook_base64: true
           }),
         });
 

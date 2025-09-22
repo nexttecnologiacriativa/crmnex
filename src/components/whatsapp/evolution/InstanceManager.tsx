@@ -323,30 +323,81 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
                 Gerencie até {maxInstances} instâncias do WhatsApp
               </p>
             </div>
-          {isAllowedToEdit && (
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowConfig(!showConfig)}
-                className="text-blue-600 hover:text-blue-700"
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Configurar API
-              </Button>
-              <Button
-                variant="outline"
-                onClick={forceSyncWithAPI}
-                disabled={isLoading || syncInstances.isPending}
-                className="text-green-600 hover:text-green-700"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${(isLoading || syncInstances.isPending) ? 'animate-spin' : ''}`} />
-                Sincronizar
-              </Button>
-              <Button
-                onClick={() => setShowCreator(!showCreator)}
-                disabled={!canCreateInstance}
-                className="bg-green-600 hover:bg-green-700"
-              >
+           {isAllowedToEdit && (
+             <div className="flex gap-2">
+               <Button
+                 variant="outline"
+                 onClick={() => setShowConfig(!showConfig)}
+                 className="text-blue-600 hover:text-blue-700"
+               >
+                 <Settings className="h-4 w-4 mr-2" />
+                 Configurar API
+               </Button>
+               <Button
+                 variant="outline"
+                 onClick={forceSyncWithAPI}
+                 disabled={isLoading || syncInstances.isPending}
+                 className="text-green-600 hover:text-green-700"
+               >
+                 <RefreshCw className={`h-4 w-4 mr-2 ${(isLoading || syncInstances.isPending) ? 'animate-spin' : ''}`} />
+                 Sincronizar
+               </Button>
+               <Button
+                 variant="destructive"
+                 onClick={async () => {
+                   const confirmed = window.confirm(
+                     `⚠️ ATENÇÃO: Esta ação irá DELETAR PERMANENTEMENTE todas as conversas do WhatsApp!\n\n` +
+                     `• Total de conversas: ${instances.length > 0 ? 'Múltiplas' : '0'}\n` +
+                     `• Todas as mensagens serão perdidas\n` +
+                     `• Esta ação NÃO pode ser desfeita\n\n` +
+                     `Tem certeza que deseja continuar?`
+                   );
+                   
+                   if (confirmed) {
+                     const doubleConfirm = window.prompt(
+                       'Para confirmar, digite "LIMPAR TUDO" (em maiúsculas):'
+                     );
+                     
+                     if (doubleConfirm === 'LIMPAR TUDO') {
+                       try {
+                         toast('Limpando conversas...', { 
+                           description: 'Por favor aguarde, isso pode demorar alguns segundos.' 
+                         });
+
+                         const { data, error } = await supabase.functions.invoke('whatsapp-clear-conversations', {
+                           body: { workspace_id: currentWorkspace?.id }
+                         });
+                         
+                         if (error) throw error;
+                         
+                         toast('Conversas Limpas com Sucesso', {
+                           description: data.message,
+                         });
+                         
+                         // Força reload da página para garantir que tudo foi atualizado
+                         window.location.reload();
+                       } catch (error: any) {
+                         toast('Erro ao Limpar Conversas', {
+                           description: error.message,
+                         });
+                       }
+                     } else if (doubleConfirm !== null) {
+                       toast('Operação Cancelada', {
+                         description: 'Texto de confirmação incorreto.',
+                       });
+                     }
+                   }
+                 }}
+                 size="sm"
+               >
+                 <Trash2 className="h-4 w-4 mr-2" />
+                 Limpar Conversas
+               </Button>
+               <Button
+                 onClick={() => setShowCreator(!showCreator)}
+                 disabled={!canCreateInstance}
+                 className="bg-green-600 hover:bg-green-700"
+               >
                 <Plus className="h-4 w-4 mr-2" />
                 Nova Instância
               </Button>

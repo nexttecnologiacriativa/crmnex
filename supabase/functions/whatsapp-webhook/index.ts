@@ -119,6 +119,41 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
         msgType = 'image';
         mediaUrl = messageContent.imageMessage.url;
         mediaBase64 = messageContent.imageMessage.base64 || '';
+        
+        // Process image with base64 if available
+        if (mediaBase64) {
+          console.log('🖼️ Processing image with base64 from webhook...');
+          try {
+            const byteArray = Uint8Array.from(atob(mediaBase64), c => c.charCodeAt(0));
+            const mime = messageContent.imageMessage.mimetype || 'image/jpeg';
+            const blob = new Blob([byteArray], { type: mime });
+            
+            const timestamp = Date.now();
+            const extension = mime.includes('png') ? 'png' : 'jpg';
+            const fileName = `image_${message.messageTimestamp}_${messageId}.${extension}`;
+            const filePath = `${instance.workspace_id}/images/${fileName}`;
+            
+            const { error: uploadError } = await supabase.storage
+              .from('whatsapp-media')
+              .upload(filePath, blob, {
+                contentType: mime,
+                cacheControl: '3600'
+              });
+
+            if (!uploadError) {
+              const { data: urlData } = supabase.storage
+                .from('whatsapp-media')
+                .getPublicUrl(filePath);
+              
+              mediaUrl = urlData.publicUrl;
+              console.log('✅ Image processed and saved, URL:', mediaUrl);
+            } else {
+              console.error('❌ Storage upload error for image:', uploadError);
+            }
+          } catch (error) {
+            console.error('❌ Image processing error:', error);
+          }
+        }
       } else if (messageContent?.audioMessage) {
         messageText = !fromMe ? '[audio recebido]' : '[audio enviado]';
         msgType = 'audio';
@@ -186,7 +221,7 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
             const filePath = `${instance.workspace_id}/${fileName}`;
             
             const { error: uploadError } = await supabase.storage
-              .from('whatsapp-audio')
+              .from('whatsapp-media')
               .upload(filePath, blob, {
                 // usa o mimetype real vindo do WhatsApp (ex.: 'audio/ogg; codecs=opus')
                 contentType: mime,
@@ -195,7 +230,7 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
 
             if (!uploadError) {
               const { data: urlData } = supabase.storage
-                .from('whatsapp-audio')
+                .from('whatsapp-media')
                 .getPublicUrl(filePath);
               
               permanentAudioUrl = urlData.publicUrl;

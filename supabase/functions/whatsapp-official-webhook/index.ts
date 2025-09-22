@@ -302,8 +302,8 @@ serve(async (req) => {
                     
                     // Save to Supabase Storage
                     const { data: uploadData, error: uploadError } = await supabase.storage
-                      .from('whatsapp-images')
-                      .upload(fileName, imageBlob, {
+                      .from('whatsapp-media')
+                      .upload(`images/${fileName}`, imageBlob, {
                         contentType: mediaType || 'image/jpeg',
                         upsert: false
                       });
@@ -315,8 +315,8 @@ serve(async (req) => {
                       
                       // Get the public URL
                       const { data: urlData } = supabase.storage
-                        .from('whatsapp-images')
-                        .getPublicUrl(fileName);
+                        .from('whatsapp-media')
+                        .getPublicUrl(`images/${fileName}`);
                       
                       if (urlData?.publicUrl) {
                         console.log('✅ Permanent image URL generated:', urlData.publicUrl);
@@ -357,8 +357,8 @@ serve(async (req) => {
                     
                     // Save to Supabase Storage
                     const { data: uploadData, error: uploadError } = await supabase.storage
-                      .from('whatsapp-audio')
-                      .upload(fileName, audioBlob, {
+                      .from('whatsapp-media')
+                      .upload(`audio/${fileName}`, audioBlob, {
                         contentType: mediaType || 'audio/ogg',
                         upsert: false
                       });
@@ -370,8 +370,8 @@ serve(async (req) => {
                       
                       // Get the public URL
                       const { data: urlData } = supabase.storage
-                        .from('whatsapp-audio')
-                        .getPublicUrl(fileName);
+                        .from('whatsapp-media')
+                        .getPublicUrl(`audio/${fileName}`);
                       
                       if (urlData?.publicUrl) {
                         console.log('✅ Permanent audio URL generated:', urlData.publicUrl);

@@ -1109,7 +1109,7 @@ async function configureWebhook(instanceName: string, workspaceId: string, supab
         'apikey': apiKey
       },
       body: JSON.stringify({
-        url: `https://rxpaaskbhbdirlxaavsm.supabase.co/functions/v1/whatsapp-webhook`,
+        url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/whatsapp-webhook`,
         enabled: true,
         events: [
           'APPLICATION_STARTUP',

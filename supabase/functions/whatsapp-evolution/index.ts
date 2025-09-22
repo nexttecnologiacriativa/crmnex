@@ -51,7 +51,7 @@ serve(async (req) => {
       });
     }
     
-    const { action, instanceName, workspaceId, phone, message, apiKey, apiUrl } = bodyData;
+    const { action, instanceName, workspaceId, phone, message, apiKey, apiUrl, originalName } = bodyData;
     
     console.log('🚀 Edge Function called:', { action, instanceName, workspaceId, hasApiKey: !!apiKey, hasApiUrl: !!apiUrl });
 
@@ -117,7 +117,7 @@ serve(async (req) => {
 
     switch (action) {
       case 'create_instance':
-        return await createInstance(instanceName, workspaceId, supabase, currentApiUrl, currentApiKey);
+        return await createInstance(instanceName, workspaceId, supabase, currentApiUrl, currentApiKey, originalName);
       case 'get_qr':
         return await getQRCode(instanceName, workspaceId, supabase, currentApiUrl, currentApiKey);
       case 'get_status':
@@ -269,10 +269,17 @@ serve(async (req) => {
   }
 });
 
-async function createInstance(instanceName: string, workspaceId: string, supabase: any, apiUrl: string, apiKey: string) {
+async function createInstance(instanceName: string, workspaceId: string, supabase: any, apiUrl: string, apiKey: string, originalName?: string) {
   try {
     console.log(`🚀 Creating instance ${instanceName} for workspace ${workspaceId}`);
     console.log(`🔧 Using API URL: ${apiUrl}, has API key: ${!!apiKey}`);
+    
+    // Validate workspace isolation by checking instance name prefix
+    const workspacePrefix = `ws_${workspaceId.substring(0, 8)}_`;
+    if (!instanceName.startsWith(workspacePrefix)) {
+      console.error(`❌ Security violation: Instance name ${instanceName} doesn't match workspace ${workspaceId}`);
+      throw new Error('Violação de segurança: Nome da instância não corresponde ao workspace');
+    }
 
     // Verificar se instância já existe no banco antes de criar
     const { data: existingInstance } = await supabase
@@ -1249,6 +1256,10 @@ async function listInstances(workspaceId: string, supabase: any, apiUrl: string,
   try {
     console.log(`🔍 Listando e sincronizando instâncias para workspace ${workspaceId}`);
     
+    // Security: Generate workspace prefix for isolation
+    const workspacePrefix = `ws_${workspaceId.substring(0, 8)}_`;
+    console.log(`🔒 Using workspace prefix: ${workspacePrefix}`);
+    
     // Arrays para tracking de mudanças
     const syncResults = {
       created: [] as string[],
@@ -1269,8 +1280,20 @@ async function listInstances(workspaceId: string, supabase: any, apiUrl: string,
       });
 
       if (evolutionResponse.ok) {
-        evolutionInstances = await evolutionResponse.json();
-        console.log(`📋 Found ${evolutionInstances.length} instances in Evolution API`);
+        const allEvolutionInstances = await evolutionResponse.json();
+        // SECURITY: Filter only instances belonging to this workspace
+        evolutionInstances = allEvolutionInstances.filter((instance: any) => {
+          const instanceName = instance.name || instance.instance?.instanceName || instance.instanceName;
+          const belongsToWorkspace = instanceName && instanceName.startsWith(workspacePrefix);
+          
+          if (instanceName && !belongsToWorkspace) {
+            console.log(`🔒 Security: Filtering out instance ${instanceName} (doesn't belong to workspace ${workspaceId})`);
+          }
+          
+          return belongsToWorkspace;
+        });
+        
+        console.log(`📋 Found ${allEvolutionInstances.length} total instances, ${evolutionInstances.length} belong to workspace ${workspaceId}`);
       } else {
         console.warn(`⚠️ Could not fetch from Evolution API: ${evolutionResponse.status}`);
         syncResults.errors.push(`Evolution API error: ${evolutionResponse.status}`);
@@ -1280,7 +1303,7 @@ async function listInstances(workspaceId: string, supabase: any, apiUrl: string,
       syncResults.errors.push(`Evolution API connection failed: ${evolutionError.message}`);
     }
 
-    // Buscar instâncias do Supabase
+    // Buscar instâncias do Supabase (já filtradas por workspace_id na RLS)
     const { data: localInstances, error: dbError } = await supabase
       .from('whatsapp_instances')
       .select('*')
@@ -1292,7 +1315,22 @@ async function listInstances(workspaceId: string, supabase: any, apiUrl: string,
       throw new Error('Erro ao buscar instâncias do Supabase');
     }
 
-    console.log(`💾 Found ${localInstances?.length || 0} instances in local database`);
+    console.log(`💾 Found ${localInstances?.length || 0} instances in local database for workspace ${workspaceId}`);
+    
+    // SECURITY: Validate that all local instances have the correct prefix
+    const invalidLocalInstances = (localInstances || []).filter(instance => 
+      !instance.instance_name.startsWith(workspacePrefix)
+    );
+    
+    if (invalidLocalInstances.length > 0) {
+      console.warn(`🔒 Security warning: Found ${invalidLocalInstances.length} local instances without workspace prefix`);
+      syncResults.errors.push(`Found ${invalidLocalInstances.length} instances without workspace prefix - manual migration may be needed`);
+      
+      // Mark these instances for migration
+      for (const invalidInstance of invalidLocalInstances) {
+        console.warn(`🔒 Invalid instance: ${invalidInstance.instance_name} (should start with ${workspacePrefix})`);
+      }
+    }
     
     // Se conseguimos dados da Evolution API, sincronizar
     if (evolutionInstances.length > 0) {
@@ -1318,6 +1356,13 @@ async function listInstances(workspaceId: string, supabase: any, apiUrl: string,
         const localInstance = localInstanceMap.get(instanceName);
         
         if (!localInstance) {
+          // SECURITY: Only create instances that belong to this workspace
+          if (!instanceName.startsWith(workspacePrefix)) {
+            console.warn(`🔒 Security: Skipping instance ${instanceName} - doesn't belong to workspace ${workspaceId}`);
+            syncResults.errors.push(`Security: Instance ${instanceName} doesn't belong to this workspace`);
+            continue;
+          }
+          
           // Instância existe na Evolution mas não no banco - criar
           try {
             console.log(`➕ Creating local instance for ${instanceName}`);

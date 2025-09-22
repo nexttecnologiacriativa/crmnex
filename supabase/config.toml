@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.fix-whatsapp-sync]
 verify_jwt = false
+
+[functions.migrate-whatsapp-instances]
+verify_jwt = false

@@ -95,6 +95,9 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
 
       console.log('🔍 Checking for orphan instances...');
       
+      // Generate workspace prefix for security
+      const workspacePrefix = `ws_${currentWorkspace.id.substring(0, 8)}_`;
+      
       // Buscar instâncias diretamente da Evolution API
       const response = await fetch(`${config.api_url}/instance/fetchInstances`, {
         method: 'GET',
@@ -104,8 +107,14 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
       });
 
       if (response.ok) {
-        const evolutionInstances = await response.json();
-        console.log('📋 Evolution API instances:', evolutionInstances);
+        const allEvolutionInstances = await response.json();
+        // SECURITY: Filter only instances belonging to this workspace
+        const evolutionInstances = allEvolutionInstances.filter((apiInstance: any) => {
+          const instanceName = apiInstance.instance?.instanceName || apiInstance.instanceName;
+          return instanceName && instanceName.startsWith(workspacePrefix);
+        });
+        
+        console.log(`📋 Evolution API instances for workspace: ${evolutionInstances.length} of ${allEvolutionInstances.length} total`);
         
         // Buscar instâncias no banco local
         const { data: localInstances } = await supabase
@@ -523,6 +532,47 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
                               Corrigir
                             </Button>
                           </>
+                        )}
+                        
+                        {/* Migration button for instances without workspace prefix */}
+                        {currentWorkspace && !instance.instance_name.startsWith(`ws_${currentWorkspace.id.substring(0, 8)}_`) && isAllowedToEdit && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              const workspacePrefix = `ws_${currentWorkspace.id.substring(0, 8)}_`;
+                              const oldName = instance.instance_name;
+                              const newName = `${workspacePrefix}${oldName}`;
+                              
+                              const confirmed = window.confirm(
+                                `Esta instância precisa ser migrada para garantir segurança.\n\nNome atual: ${oldName}\nNovo nome: ${newName}\n\nDeseja prosseguir?`
+                              );
+                              
+                              if (confirmed) {
+                                try {
+                                  const { error } = await supabase.functions.invoke('migrate-whatsapp-instances', {
+                                    body: {
+                                      workspaceId: currentWorkspace.id,
+                                      instanceName: oldName,
+                                      newInstanceName: newName
+                                    }
+                                  });
+                                  
+                                  if (error) throw error;
+                                  
+                                  toast.success(`Instância migrada: ${oldName} → ${newName}`);
+                                  refetch();
+                                } catch (error) {
+                                  console.error('Migration error:', error);
+                                  toast.error('Erro na migração: ' + (error as Error).message);
+                                }
+                              }
+                            }}
+                            className="text-orange-600 hover:text-orange-700 border-orange-300"
+                          >
+                            <Zap className="h-4 w-4 mr-1" />
+                            Migrar
+                          </Button>
                         )}
                         
                         {isAllowedToEdit && (

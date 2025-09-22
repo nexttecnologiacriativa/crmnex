@@ -36,7 +36,7 @@ export default function UnifiedAtendimento() {
   const { currentWorkspace } = useWorkspace();
   const { data: conversations = [], refetch: refetchConversations } = useWhatsAppConversations();
   const { data: instances = [] } = useWhatsAppInstances();
-  const { data: syncStatuses } = useWhatsAppSyncStatus();
+  // const { data: syncStatuses } = useWhatsAppSyncStatus(); // Temporarily disabled to stop polling
   const sendEvolution = useSendWhatsAppMessage();
   const createConversation = useCreateConversation();
   const { data: leads = [] } = useLeads();
@@ -601,12 +601,14 @@ export default function UnifiedAtendimento() {
                   ) : (
                     <WifiOff className="w-4 h-4 text-destructive" />
                   )}
+                  {/* Temporarily disabled sync status badge 
                   {syncStatuses && syncStatuses.length > 0 && (
                     <Badge variant="outline" className="text-green-600 border-green-200 text-xs">
                       <Download className="h-3 w-3 mr-1" />
                       {syncStatuses[0]?.total_messages || 0} msgs sync
                     </Badge>
                   )}
+                  */}
                 </div>
               </div>
               <div className="relative">

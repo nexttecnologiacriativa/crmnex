@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from './useWorkspace';
 import { toast } from 'sonner';
@@ -74,8 +75,9 @@ interface WhatsAppTemplate {
 
 export function useWhatsAppConversations() {
   const { currentWorkspace } = useWorkspace();
+  const queryClient = useQueryClient();
   
-  return useQuery({
+  const query = useQuery({
     queryKey: ['whatsapp-conversations', currentWorkspace?.id],
     queryFn: async () => {
       if (!currentWorkspace?.id) return [];
@@ -111,10 +113,47 @@ export function useWhatsAppConversations() {
     retry: 1, // Only retry once
     retryDelay: 3000, // Wait 3 seconds before retry
   });
+
+  // Set up realtime subscription for conversations
+  useEffect(() => {
+    if (!currentWorkspace?.id) return;
+
+    console.log('Setting up realtime subscription for conversations in workspace:', currentWorkspace.id);
+
+    const channel = supabase
+      .channel(`whatsapp-conversations-${currentWorkspace.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'whatsapp_conversations',
+          filter: `workspace_id=eq.${currentWorkspace.id}`
+        },
+        (payload) => {
+          console.log('🔄 Conversations updated for workspace:', currentWorkspace.id, payload);
+          
+          // Invalidate and refetch conversations
+          queryClient.invalidateQueries({ 
+            queryKey: ['whatsapp-conversations', currentWorkspace.id] 
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('Cleaning up realtime subscription for conversations');
+      supabase.removeChannel(channel);
+    };
+  }, [currentWorkspace?.id, queryClient]);
+
+  return query;
 }
 
 export function useWhatsAppMessages(conversationId: string) {
-  return useQuery({
+  const queryClient = useQueryClient();
+  
+  const query = useQuery({
     queryKey: ['whatsapp-messages', conversationId],
     queryFn: async () => {
       if (!conversationId) return [];
@@ -148,6 +187,49 @@ export function useWhatsAppMessages(conversationId: string) {
     retry: 1,
     retryDelay: 2000,
   });
+
+  // Set up realtime subscription for this conversation
+  useEffect(() => {
+    if (!conversationId) return;
+
+    console.log('Setting up realtime subscription for conversation:', conversationId);
+
+    const channel = supabase
+      .channel(`whatsapp-messages-${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'whatsapp_messages',
+          filter: `conversation_id=eq.${conversationId}`
+        },
+        (payload) => {
+          console.log('💬 Messages updated for conversation:', conversationId, {
+            count: payload.new ? 'INSERT' : payload.old ? 'DELETE' : 'UPDATE',
+            messages: payload
+          });
+
+          // Invalidate and refetch messages for this conversation
+          queryClient.invalidateQueries({ 
+            queryKey: ['whatsapp-messages', conversationId] 
+          });
+          
+          // Also invalidate conversations to update message counts and last_message_at
+          queryClient.invalidateQueries({ 
+            queryKey: ['whatsapp-conversations'] 
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('Cleaning up realtime subscription for conversation:', conversationId);
+      supabase.removeChannel(channel);
+    };
+  }, [conversationId, queryClient]);
+
+  return query;
 }
 
 export function useCreateConversation() {

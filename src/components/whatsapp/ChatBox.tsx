@@ -326,8 +326,8 @@ export function ChatBox({ conversation, workspaceId, className }: ChatBoxProps) 
 
       {/* Input de mensagem */}
       <MessageInput
-        onSendMessage={handleSendMessage}
-        conversation={conversation}
+        conversationId={conversation.id}
+        phoneNumber={conversation.phone_number}
         disabled={isTyping}
         instanceName={activeInstance?.instance_name}
         workspaceId={workspaceId}

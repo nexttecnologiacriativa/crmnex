@@ -8,58 +8,90 @@ import {
   Image,
   Mic, 
   MicOff, 
-  Square
+  Square,
+  Loader2,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useWhatsAppMediaUpload } from '@/hooks/useWhatsAppMediaUpload';
+import { useWhatsAppSendMessage } from '@/hooks/useWhatsAppSendMessage';
 
-
-interface WhatsAppConversation {
-  id: string;
-  phone_number: string;
-  contact_name: string;
-  last_message_at: string;
-  is_read: boolean;
-  message_count: number;
-  workspace_id: string;
-}
 
 interface MessageInputProps {
-  onSendMessage: (messageData: {
-    text?: string;
-    imageUrl?: string;
-    audioData?: { base64: string; fileName: string };
-    mediaData?: { file: File; type: 'image' | 'document' };
-  }) => Promise<void>;
-  conversation: WhatsAppConversation;
+  conversationId: string;
+  phoneNumber: string;
   disabled?: boolean;
   instanceName?: string;
   workspaceId?: string;
 }
 
-export function MessageInput({ onSendMessage, conversation, disabled, instanceName, workspaceId }: MessageInputProps) {
+export function MessageInput({ conversationId, phoneNumber, disabled, instanceName, workspaceId }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
-  const [isSending, setIsSending] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [caption, setCaption] = useState('');
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  const mediaUpload = useWhatsAppMediaUpload();
+  const sendMessage = useWhatsAppSendMessage();
+
+  const isSending = mediaUpload.isPending || sendMessage.isPending;
+
   const handleSendText = async () => {
     if (!message.trim() || isSending) return;
 
-    setIsSending(true);
     try {
-      await onSendMessage({ text: message.trim() });
+      await sendMessage.mutateAsync({
+        conversationId,
+        phoneNumber,
+        message: message.trim()
+      });
       setMessage('');
     } catch (error) {
-      toast({
-        title: "Erro ao enviar mensagem",
-        description: "Tente novamente em alguns instantes.",
-        variant: "destructive",
+      // Error handling is done in the mutation
+    }
+  };
+
+  const handleSendImage = async () => {
+    if (!selectedImage || isSending) return;
+
+    try {
+      // First upload the image to get mediaId
+      const uploadResult = await mediaUpload.mutateAsync({
+        file: selectedImage,
+        mediaType: 'image'
       });
-    } finally {
-      setIsSending(false);
+
+      // Then send the message with the mediaId
+      await sendMessage.mutateAsync({
+        conversationId,
+        phoneNumber,
+        mediaId: uploadResult.mediaId,
+        mediaType: 'image',
+        fileName: selectedImage.name,
+        caption: caption || undefined,
+        permanentUrl: uploadResult.permanentUrl
+      });
+
+      // Clear the selected image and preview
+      setSelectedImage(null);
+      setImagePreview(null);
+      setCaption('');
+    } catch (error) {
+      // Error handling is done in the mutations
+    }
+  };
+
+  const clearImageSelection = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    setCaption('');
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
     }
   };
 
@@ -95,31 +127,14 @@ export function MessageInput({ onSendMessage, conversation, disabled, instanceNa
       return;
     }
 
-    setIsSending(true);
-    try {
-      await onSendMessage({ 
-        mediaData: { 
-          file, 
-          type: 'image' 
-        } 
-      });
-      toast({
-        title: "Imagem enviada",
-        description: "Sua imagem foi enviada com sucesso.",
-      });
-    } catch (error) {
-      toast({
-        title: "Erro ao enviar imagem",
-        description: "Tente novamente em alguns instantes.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSending(false);
-      // Reset input
-      if (imageInputRef.current) {
-        imageInputRef.current.value = '';
-      }
-    }
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImagePreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+    
+    setSelectedImage(file);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -154,47 +169,34 @@ export function MessageInput({ onSendMessage, conversation, disabled, instanceNa
       return;
     }
 
-    setIsSending(true);
     try {
-      await onSendMessage({ 
-        mediaData: { 
-          file, 
-          type: 'document' 
-        } 
+      // First upload the document to get mediaId
+      const uploadResult = await mediaUpload.mutateAsync({
+        file,
+        mediaType: 'document'
       });
-      toast({
-        title: "Documento enviado",
-        description: "Seu documento foi enviado com sucesso.",
+
+      // Then send the message with the mediaId
+      await sendMessage.mutateAsync({
+        conversationId,
+        phoneNumber,
+        mediaId: uploadResult.mediaId,
+        mediaType: 'document',
+        fileName: file.name
       });
-    } catch (error) {
-      toast({
-        title: "Erro ao enviar documento",
-        description: "Tente novamente em alguns instantes.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSending(false);
+
       // Reset input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+    } catch (error) {
+      // Error handling is done in the mutations
     }
   };
 
-
   const handleAudioRecording = async (audioData: { base64: string; fileName: string }) => {
-    setIsSending(true);
-    try {
-      await onSendMessage({ audioData });
-    } catch (error) {
-      toast({
-        title: "Erro ao enviar áudio",
-        description: "Tente novamente em alguns instantes.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSending(false);
-    }
+    // Audio recording is handled by the main interface component
+    console.log('Audio recording triggered:', audioData);
   };
 
   const isDisabled = disabled || isSending;
@@ -202,64 +204,128 @@ export function MessageInput({ onSendMessage, conversation, disabled, instanceNa
   return (
     <Card className="border-t rounded-none">
       <div className="p-4 space-y-3">
-        {/* Campo de mensagem e botões */}
-        <div className="flex items-end gap-2">
-          {/* Botão de imagem */}
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="p-2"
-            disabled={isDisabled}
-            onClick={() => imageInputRef.current?.click()}
-          >
-            <Image className="h-4 w-4" />
-          </Button>
-
-          {/* Botão de arquivo */}
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="p-2"
-            disabled={isDisabled}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <FileImage className="h-4 w-4" />
-          </Button>
-
-          {/* Campo de texto */}
-          <div className="flex-1">
-            <Input
-              placeholder="Digite sua mensagem..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              disabled={isDisabled}
-              className="resize-none min-h-[40px]"
-            />
+        {/* Image preview */}
+        {imagePreview && selectedImage && (
+          <div className="relative bg-gray-50 p-4 rounded-lg">
+            <div className="flex items-start gap-3">
+              <img 
+                src={imagePreview} 
+                alt="Preview" 
+                className="w-20 h-20 object-cover rounded"
+              />
+              <div className="flex-1">
+                <p className="text-sm font-medium">{selectedImage.name}</p>
+                <p className="text-xs text-gray-500">
+                  {(selectedImage.size / 1024 / 1024).toFixed(2)} MB
+                </p>
+                <Input
+                  placeholder="Adicionar legenda (opcional)..."
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  className="mt-2"
+                  disabled={isDisabled}
+                />
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearImageSelection}
+                disabled={isDisabled}
+                className="p-1"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex gap-2 mt-3">
+              <Button
+                onClick={handleSendImage}
+                disabled={isDisabled}
+                size="sm"
+                className="flex-1"
+              >
+                {isSending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Send className="h-4 w-4 mr-2" />
+                )}
+                Enviar Imagem
+              </Button>
+              <Button
+                variant="outline"
+                onClick={clearImageSelection}
+                disabled={isDisabled}
+                size="sm"
+              >
+                Cancelar
+              </Button>
+            </div>
           </div>
+        )}
 
-          {/* Botão de envio */}
-          {message.trim() ? (
-            <Button
-              onClick={handleSendText}
-              disabled={isDisabled}
-              size="sm"
+        {/* Campo de mensagem e botões - only show if no image is selected */}
+        {!selectedImage && (
+          <div className="flex items-end gap-2">
+            {/* Botão de imagem */}
+            <Button 
+              variant="ghost" 
+              size="sm" 
               className="p-2"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          ) : (
-            <Button
-              onClick={() => setIsRecording(!isRecording)}
               disabled={isDisabled}
-              size="sm"
-              className="p-2"
-              variant={isRecording ? "destructive" : "ghost"}
+              onClick={() => imageInputRef.current?.click()}
             >
-              {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              <Image className="h-4 w-4" />
             </Button>
-          )}
-        </div>
+
+            {/* Botão de arquivo */}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="p-2"
+              disabled={isDisabled}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <FileImage className="h-4 w-4" />
+            </Button>
+
+            {/* Campo de texto */}
+            <div className="flex-1">
+              <Input
+                placeholder="Digite sua mensagem..."
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                disabled={isDisabled}
+                className="resize-none min-h-[40px]"
+              />
+            </div>
+
+            {/* Botão de envio */}
+            {message.trim() ? (
+              <Button
+                onClick={handleSendText}
+                disabled={isDisabled}
+                size="sm"
+                className="p-2"
+              >
+                {isSending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            ) : (
+              <Button
+                onClick={() => setIsRecording(!isRecording)}
+                disabled={isDisabled}
+                size="sm"
+                className="p-2"
+                variant={isRecording ? "destructive" : "ghost"}
+              >
+                {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Áudio sender quando estiver gravando */}
         {isRecording && instanceName && workspaceId && (

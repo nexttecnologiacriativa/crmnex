@@ -42,13 +42,12 @@ export default function UnifiedAtendimento() {
   const { data: leads = [] } = useLeads();
   const queryClient = useQueryClient();
 
-  // Force refresh data when component mounts and add debug logs
+  // Force refresh data when component mounts and add debug logs (controlled execution)
   useEffect(() => {
     console.log('🔄 Forçando refresh de conversas e mensagens');
     console.log('Current workspace:', currentWorkspace?.id);
-    console.log('Conversations count:', conversations.length);
     
-    // Force complete cache invalidation
+    // Only clear cache on mount or workspace change
     queryClient.clear();
     
     // Then refresh specific queries
@@ -64,7 +63,7 @@ export default function UnifiedAtendimento() {
         console.error('❌ Auth context debug error:', err);
       });
     }
-  }, [refetchConversations, queryClient, currentWorkspace?.id, conversations.length]);
+  }, [refetchConversations, queryClient, currentWorkspace?.id]); // Removed conversations.length to prevent infinite loop
 
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
   const [message, setMessage] = useState('');

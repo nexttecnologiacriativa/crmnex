@@ -210,23 +210,72 @@ export default function QRCodeManager({ instance, onClose, onStatusUpdate }: QRC
   };
 
   return (
-    <Card className="border-blue-200">
-      <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-blue-900">
-            <QrCode className="h-5 w-5" />
-            QR Code - {instance.instance_name}
-          </CardTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="text-blue-700 hover:text-blue-900"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardHeader>
+    <>
+      {/* Verificar se a instância existe na Evolution API */}
+      {(!instance.status || instance.status === 'unknown') ? (
+        <Card className="border-orange-200">
+          <CardHeader className="bg-gradient-to-r from-orange-50 to-red-50">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-orange-900">
+                <AlertCircle className="h-5 w-5" />
+                Instância não encontrada - {instance.instance_name}
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onClose}
+                className="text-orange-700 hover:text-orange-900"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardHeader>
+          
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="text-center space-y-4 py-8">
+                <AlertCircle className="h-16 w-16 text-orange-500 mx-auto" />
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Instância não encontrada
+                  </h3>
+                  <p className="text-gray-600">
+                    A instância "{instance.instance_name}" não foi encontrada na Evolution API.
+                  </p>
+                  <p className="text-sm text-orange-600 mt-2">
+                    Use o botão "Recriar" na lista de instâncias para restaurá-la.
+                  </p>
+                </div>
+              </div>
+              
+              <Button 
+                variant="outline" 
+                onClick={onClose}
+                className="w-full"
+              >
+                Voltar para lista de instâncias
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-blue-200">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-blue-900">
+                <QrCode className="h-5 w-5" />
+                QR Code - {instance.instance_name}
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onClose}
+                className="text-blue-700 hover:text-blue-900"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardHeader>
 
       <CardContent className="p-6">
         <div className="space-y-6">
@@ -334,5 +383,7 @@ export default function QRCodeManager({ instance, onClose, onStatusUpdate }: QRC
         </div>
       </CardContent>
     </Card>
+      )}
+    </>
   );
 }

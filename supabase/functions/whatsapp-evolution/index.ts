@@ -1254,7 +1254,8 @@ async function listInstances(workspaceId: string, supabase: any, apiUrl: string,
       created: [] as string[],
       updated: [] as string[],
       removed: [] as string[],
-      errors: [] as string[]
+      errors: [] as string[],
+      orphansDetected: [] as string[]
     };
 
     // Buscar instâncias do Evolution API
@@ -1367,22 +1368,23 @@ async function listInstances(workspaceId: string, supabase: any, apiUrl: string,
       // Instâncias que sobraram no mapa local não existem mais na Evolution API
       for (const [instanceName, localInstance] of localInstanceMap) {
         console.log(`⚠️ Instance ${instanceName} exists locally but not in Evolution API`);
-        // Por segurança, não removemos automaticamente - apenas marcamos status como desconectado
+        // Marcar como "unknown" para que o usuário possa recriar se necessário
         try {
           const { error: updateError } = await supabase
             .from('whatsapp_instances')
             .update({ 
-              status: 'disconnected',
+              status: 'unknown',
               updated_at: new Date().toISOString()
             })
             .eq('id', localInstance.id);
 
           if (!updateError) {
-            syncResults.updated.push(`${instanceName} (marked as disconnected)`);
+            syncResults.orphansDetected.push(instanceName);
+            syncResults.updated.push(`${instanceName} (marked as unknown - not found in API)`);
           }
         } catch (error) {
-          console.error(`❌ Failed to mark ${instanceName} as disconnected:`, error);
-          syncResults.errors.push(`Failed to disconnect ${instanceName}: ${error.message}`);
+          console.error(`❌ Failed to mark ${instanceName} as unknown:`, error);
+          syncResults.errors.push(`Failed to mark ${instanceName} as unknown: ${error.message}`);
         }
       }
     }

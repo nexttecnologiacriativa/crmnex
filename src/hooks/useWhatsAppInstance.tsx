@@ -224,7 +224,7 @@ export function useSyncWhatsAppInstances() {
       
       const { syncResults, instances } = data;
       if (syncResults) {
-        const { created, updated, removed, errors } = syncResults;
+        const { created, updated, removed, errors, orphansDetected } = syncResults;
         
         if (created.length > 0) {
           toast.success(`${created.length} instância(s) criada(s): ${created.join(', ')}`);
@@ -234,6 +234,9 @@ export function useSyncWhatsAppInstances() {
         }
         if (removed.length > 0) {
           toast.warning(`${removed.length} instância(s) removida(s): ${removed.join(', ')}`);
+        }
+        if (orphansDetected && orphansDetected.length > 0) {
+          toast.warning(`${orphansDetected.length} instância(s) não encontrada(s) na API Evolution. Use o botão "Recriar" para restaurá-las.`);
         }
         if (errors.length > 0) {
           console.warn('Sync warnings/errors:', errors);
@@ -246,7 +249,7 @@ export function useSyncWhatsAppInstances() {
           }
         }
         
-        if (created.length === 0 && updated.length === 0 && removed.length === 0 && errors.length === 0) {
+        if (created.length === 0 && updated.length === 0 && removed.length === 0 && errors.length === 0 && (!orphansDetected || orphansDetected.length === 0)) {
           toast.success('Instâncias sincronizadas - nenhuma alteração necessária');
         }
       }

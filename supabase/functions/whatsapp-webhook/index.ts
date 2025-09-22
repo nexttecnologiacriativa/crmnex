@@ -122,8 +122,6 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
         mediaBase64 = messageContent.audioMessage.base64 || '';
         
         console.log('🎵 Audio message received, saving as [audio enviado]');
-          urlPreview: messageContent.audioMessage.url ? messageContent.audioMessage.url.substring(0, 80) + '...' : null
-        });
       } else if (messageContent?.videoMessage) {
         messageText = messageContent.videoMessage.caption || 'Vídeo';
         msgType = 'video';

@@ -994,13 +994,13 @@ async function sendAudio(instanceName: string, number: string, audioBase64: stri
 
   // Format phone number
   const normalizedPhone = ensureCountryCode55(number);
-  if (!formattedNumber) {
+  if (!normalizedPhone) {
     throw new Error('Número inválido');
   }
 
   console.log('🎵 Sending audio via official Evolution API:', {
     instanceName,
-    number: formattedNumber,
+    number: normalizedPhone,
     base64Length: cleanBase64.length,
     endpoint: `${apiUrl}/message/sendWhatsAppAudio/${instanceName}`,
     hasApiKey: !!apiKey
@@ -1009,7 +1009,7 @@ async function sendAudio(instanceName: string, number: string, audioBase64: stri
   try {
     // Prepare request body according to Evolution API documentation
     const requestBody = {
-      number: formattedNumber,
+      number: normalizedPhone,
       audio: cleanBase64,
       delay: 1200,
       quoted: {

@@ -153,6 +153,49 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
           } catch (error) {
             console.error('❌ Image processing error:', error);
           }
+        } else {
+          // If no base64, try to use the media proxy to get the image and save it
+          console.log('🖼️ Processing image without base64, saving via proxy...');
+          try {
+            // Save directly to storage using the media URL
+            const timestamp = Date.now();
+            const fileName = `image_${message.messageTimestamp}_${messageId}.jpg`;
+            const filePath = `${instance.workspace_id}/images/${fileName}`;
+            
+            // Try to fetch the image from the original URL and save it
+            const imageResponse = await fetch(mediaUrl, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+              }
+            });
+            
+            if (imageResponse.ok) {
+              const imageBuffer = await imageResponse.arrayBuffer();
+              const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
+              
+              const { error: uploadError } = await supabase.storage
+                .from('whatsapp-media')
+                .upload(filePath, imageBuffer, {
+                  contentType: contentType,
+                  cacheControl: '3600'
+                });
+
+              if (!uploadError) {
+                const { data: urlData } = supabase.storage
+                  .from('whatsapp-media')
+                  .getPublicUrl(filePath);
+                
+                mediaUrl = urlData.publicUrl;
+                console.log('✅ Image downloaded and saved, URL:', mediaUrl);
+              } else {
+                console.error('❌ Storage upload error for downloaded image:', uploadError);
+              }
+            } else {
+              console.log('⚠️ Could not fetch image directly, keeping original URL');
+            }
+          } catch (error) {
+            console.error('❌ Image download and save error:', error);
+          }
         }
       } else if (messageContent?.audioMessage) {
         messageText = !fromMe ? '[audio recebido]' : '[audio enviado]';

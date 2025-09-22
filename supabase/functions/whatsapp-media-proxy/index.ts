@@ -58,29 +58,47 @@ serve(async (req) => {
       });
     }
 
-    const { data: config } = await supabase
+    // Try WhatsApp Official API first
+    const { data: officialConfig } = await supabase
       .from('whatsapp_official_configs')
       .select('access_token')
       .eq('workspace_id', workspaceMember.workspace_id)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
 
-    if (!config?.access_token) {
+    // If no official config, try Evolution API
+    const { data: evolutionConfig } = await supabase
+      .from('whatsapp_evolution_configs')
+      .select('api_url, global_api_key')
+      .eq('workspace_id', workspaceMember.workspace_id)
+      .maybeSingle();
+
+    console.log('📥 Fetching media from WhatsApp:', mediaUrl);
+
+    let mediaResponse;
+    
+    if (officialConfig?.access_token) {
+      console.log('📥 Using WhatsApp Official API');
+      // Use WhatsApp Official API
+      mediaResponse = await fetch(mediaUrl, {
+        headers: {
+          'Authorization': `Bearer ${officialConfig.access_token}`,
+        },
+      });
+    } else if (evolutionConfig?.api_url && evolutionConfig?.global_api_key) {
+      console.log('📥 Using Evolution API - direct download');
+      // For Evolution API, try to fetch the media directly (URLs are usually accessible)
+      mediaResponse = await fetch(mediaUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+      });
+    } else {
       return new Response(JSON.stringify({ error: 'WhatsApp not configured' }), { 
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
-
-    console.log('📥 Fetching media from WhatsApp:', mediaUrl);
-    console.log('📥 Using access token:', config.access_token ? 'Token available' : 'No token');
-
-    // Fetch media from WhatsApp
-    const mediaResponse = await fetch(mediaUrl, {
-      headers: {
-        'Authorization': `Bearer ${config.access_token}`,
-      },
-    });
 
     if (!mediaResponse.ok) {
       console.error('❌ Failed to fetch media from WhatsApp:', mediaResponse.status, await mediaResponse.text());
@@ -110,8 +128,8 @@ serve(async (req) => {
         console.log('💾 Saving audio permanently:', filePath);
         
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('whatsapp-audio')
-          .upload(filePath, mediaBuffer, {
+          .from('whatsapp-media')
+          .upload(`audio/${fileName}`, mediaBuffer, {
             contentType: contentType,
             cacheControl: '3600',
             upsert: false
@@ -124,7 +142,7 @@ serve(async (req) => {
           
           // Return permanent URL instead of proxied content
           const { data: publicUrlData } = supabase.storage
-            .from('whatsapp-audio')
+            .from('whatsapp-media')
             .getPublicUrl(uploadData.path);
           
           if (publicUrlData.publicUrl) {

@@ -70,6 +70,15 @@ export function ChatBox({ conversation, workspaceId, className }: ChatBoxProps) 
       }
 
       console.log('Messages fetched for conversation:', data?.length || 0);
+      if (data?.length) {
+        console.log('📋 All messages in conversation:', data.map(msg => ({
+          id: msg.id,
+          type: msg.message_type,
+          text: msg.message_text,
+          isFromLead: msg.is_from_lead,
+          createdAt: msg.created_at
+        })));
+      }
       return data as WhatsAppMessage[];
     },
     enabled: !!conversation.id,
@@ -98,7 +107,12 @@ export function ChatBox({ conversation, workspaceId, className }: ChatBoxProps) 
           filter: `conversation_id=eq.${conversation.id}`
         },
         (payload) => {
-          console.log('New message received via realtime:', payload);
+          console.log('📨 New message received via realtime:', payload);
+          console.log('📨 Message details:', {
+            messageType: payload.new?.message_type,
+            messageText: payload.new?.message_text,
+            isFromLead: payload.new?.is_from_lead
+          });
           refetch(); // Refetch messages when a new one is inserted
         }
       )

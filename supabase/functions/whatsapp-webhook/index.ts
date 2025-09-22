@@ -106,8 +106,10 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
 
       if (messageContent?.conversation) {
         messageText = messageContent.conversation;
+        console.log('✅ Text message received:', messageText);
       } else if (messageContent?.extendedTextMessage?.text) {
         messageText = messageContent.extendedTextMessage.text;
+        console.log('✅ Extended text message received:', messageText);
       } else if (messageContent?.imageMessage) {
         messageText = messageContent.imageMessage.caption || 'Imagem';
         msgType = 'image';
@@ -119,15 +121,7 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
         mediaUrl = messageContent.audioMessage.url;
         mediaBase64 = messageContent.audioMessage.base64 || '';
         
-        // Log audio message details for debugging
-        console.log('🎵 Audio message details:', {
-          hasUrl: !!messageContent.audioMessage.url,
-          hasBase64: !!messageContent.audioMessage.base64,
-          hasMediaKey: !!messageContent.audioMessage.mediaKey,
-          hasFileSha256: !!messageContent.audioMessage.fileSha256,
-          hasMediaSha256: !!messageContent.audioMessage.mediaSha256,
-          mimetype: messageContent.audioMessage.mimetype,
-          directPath: messageContent.audioMessage.directPath,
+        console.log('🎵 Audio message received, saving as [audio enviado]');
           urlPreview: messageContent.audioMessage.url ? messageContent.audioMessage.url.substring(0, 80) + '...' : null
         });
       } else if (messageContent?.videoMessage) {
@@ -145,13 +139,12 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
         msgType = 'unknown';
       }
 
-      console.log('Extracted message data:', {
+      console.log('💾 Saving message to database:', {
         messageText,
         msgType,
-        mediaUrl: mediaUrl ? mediaUrl.substring(0, 80) + '...' : null,
-        hasBase64: !!mediaBase64,
-        base64Length: mediaBase64 ? mediaBase64.length : 0,
-        phone
+        isFromLead: !fromMe,
+        conversationId: conversation.id,
+        messageId
       });
 
       // Buscar instância pelo nome no banco
@@ -355,13 +348,9 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
         console.error('Error saving message:', msgError);
       } else {
         console.log('Message saved successfully:', messageId);
-        console.log('Saved media references:', {
-          mediaUrl: mediaUrl ? mediaUrl.substring(0, 80) + '...' : null,
-          permanentAudioUrl: permanentAudioUrl || null,
-          hasBase64: !!mediaBase64,
-          base64Length: mediaBase64 ? mediaBase64.length : 0,
-          hasDecryptionData: msgType === 'audio' && !!messageContent?.audioMessage?.mediaKey
-        });
+        console.log('✅ Message type:', msgType);
+        console.log('✅ Is from lead:', !fromMe);
+        console.log('✅ Message text:', messageText);
         
         // Para áudio, sempre tentar processar (Base64 ou URL criptografada)
         if (msgType === 'audio' && savedMessage) {

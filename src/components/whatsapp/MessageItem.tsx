@@ -1,6 +1,4 @@
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -9,15 +7,10 @@ import {
   CheckCheck, 
   Clock, 
   AlertCircle, 
-  Image, 
   FileText, 
-  Download,
-  Play,
-  Pause
+  Download
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 
 interface WhatsAppMessage {
   id: string;
@@ -43,32 +36,6 @@ interface MessageItemProps {
 }
 
 export function MessageItem({ message, isFromCurrentUser }: MessageItemProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
-
-  // 1) Escolha da URL de áudio (sempre evitar .enc)
-  const preferredUrl = useMemo(() => {
-    const clean = message.permanent_audio_url || message.media_url || "";
-    if (!clean) return "";
-
-    // Evitar .enc/WhatsApp direto:
-    const looksEncrypted =
-      clean.includes("mmg.whatsapp.net") ||
-      clean.endsWith(".enc") ||
-      clean.includes("/v/t62.");
-    return looksEncrypted ? "" : clean;
-  }, [message.media_url, message.permanent_audio_url]);
-
-  const [effectiveUrl, setEffectiveUrl] = useState<string>(preferredUrl);
-
-  // 2) Estados de processamento/polling e fallback
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-  const maxRetries = 10;          // ~20s total com interval de 2s
-  const pollingIntervalMs = 2000; // 2s
-
-  // Usado para testar URL alternativa se a atual falhar
-  const triedAltRef = useRef(false);
 
   const formatTime = (dateString: string) => {
     try {
@@ -97,131 +64,6 @@ export function MessageItem({ message, isFromCurrentUser }: MessageItemProps) {
     }
   };
 
-  const handleAudioPlay = () => {
-    if (audioRef) {
-      if (isPlaying) {
-        audioRef.pause();
-      } else {
-        audioRef.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
-
-  const handleAudioEnd = () => {
-    setIsPlaying(false);
-  };
-
-  // 3) Realtime: assine a linha da mensagem
-  useEffect(() => {
-    // zera estados quando troca a mensagem
-    setEffectiveUrl(preferredUrl);
-    setRetryCount(0);
-    triedAltRef.current = false;
-  }, [message.id, preferredUrl]);
-
-  useEffect(() => {
-    if (!message?.id) return;
-
-    const channel = supabase
-      .channel(`msg-${message.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "whatsapp_messages",
-          filter: `id=eq.${message.id}`,
-        },
-        (payload: any) => {
-          const newMediaUrl = payload.new?.media_url ?? "";
-          const newPermanent = payload.new?.permanent_audio_url ?? "";
-          // Mesma regra de prioridade/limpeza:
-          const candidate = newPermanent || newMediaUrl || "";
-          const looksEncrypted =
-            candidate.includes("mmg.whatsapp.net") ||
-            candidate.endsWith(".enc") ||
-            candidate.includes("/v/t62.");
-          const next = looksEncrypted ? "" : candidate;
-          if (next && next !== effectiveUrl) {
-            setEffectiveUrl(next);
-            setIsProcessing(false);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [message.id, effectiveUrl]);
-
-  // 4) Polling (backup do realtime) até a URL limpa existir
-  async function refetchMessageUrls() {
-    const { data, error } = await supabase
-      .from("whatsapp_messages")
-      .select("media_url, permanent_audio_url")
-      .eq("id", message.id)
-      .maybeSingle();
-
-    if (error) return;
-
-    const candidate = (data?.permanent_audio_url || data?.media_url || "") as string;
-    const looksEncrypted =
-      candidate.includes("mmg.whatsapp.net") ||
-      candidate.endsWith(".enc") ||
-      candidate.includes("/v/t62.");
-    const next = looksEncrypted ? "" : candidate;
-
-    if (next && next !== effectiveUrl) {
-      setEffectiveUrl(next);
-      setIsProcessing(false);
-    }
-  }
-
-  useEffect(() => {
-    // só faz polling se:
-    // 1) é áudio
-    // 2) ainda não temos URL tocável
-    // 3) não estourou retries
-    if (message.message_type !== "audio") return;
-    if (effectiveUrl) return;
-
-    setIsProcessing(true);
-
-    const id = setInterval(async () => {
-      if (retryCount >= maxRetries) {
-        clearInterval(id);
-        setIsProcessing(false);
-        return;
-      }
-      setRetryCount((n) => n + 1);
-      await refetchMessageUrls();
-    }, pollingIntervalMs);
-
-    return () => clearInterval(id);
-  }, [message.message_type, effectiveUrl, retryCount]);
-
-  // 5) Fallback automático no onError do <audio>
-  function handleAudioError() {
-    console.error("🎵 Falha ao tocar:", effectiveUrl);
-
-    // tenta alternar entre media_url e permanent_audio_url uma única vez
-    if (triedAltRef.current) return;
-    triedAltRef.current = true;
-
-    const alt =
-      effectiveUrl === (message.permanent_audio_url || "")
-        ? (message.media_url || "")
-        : (message.permanent_audio_url || "");
-
-    const looksEncrypted =
-      alt.includes("mmg.whatsapp.net") || alt.endsWith(".enc") || alt.includes("/v/t62.");
-
-    if (!looksEncrypted && alt) {
-      setEffectiveUrl(alt);
-    }
-  }
 
   const renderMessageContent = () => {
     switch (message.message_type) {
@@ -267,46 +109,8 @@ export function MessageItem({ message, isFromCurrentUser }: MessageItemProps) {
 
       case 'audio':
         return (
-          <div className="space-y-2">
-            {effectiveUrl ? (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost" 
-                  size="sm"
-                  onClick={handleAudioPlay}
-                  className="p-1"
-                >
-                  {isPlaying ? (
-                    <Pause className="h-4 w-4" />
-                  ) : (
-                    <Play className="h-4 w-4" />
-                  )}
-                </Button>
-                <span className="text-sm">
-                  {message.message_text}
-                </span>
-                <audio
-                  ref={(el) => {
-                    if (el && el !== audioRef) {
-                      setAudioRef(el);
-                      el.onended = handleAudioEnd;
-                      el.onerror = handleAudioError;
-                    }
-                  }}
-                  src={effectiveUrl}
-                  preload="metadata"
-                />
-              </div>
-            ) : isProcessing ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div className="animate-spin h-3 w-3 border-2 border-current border-t-transparent rounded-full" />
-                ⚠️ Áudio sendo processado...
-              </div>
-            ) : (
-              <div className="text-sm">
-                {message.message_text}
-              </div>
-            )}
+          <div className="text-sm">
+            {message.message_text}
           </div>
         );
         

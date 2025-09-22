@@ -273,112 +273,17 @@ export default function UnifiedAtendimento() {
   // Remover polling automático para economizar créditos
   // Atualizações serão feitas apenas via realtime e ações do usuário
 
-  // Realtime sync for incoming/outgoing messages with reconnection
-  useEffect(() => {
-    if (!selectedConvId || !currentWorkspace?.id) return;
+  // Realtime disabled to prevent auto-refresh issues
+  // useEffect(() => {
+  //   if (!selectedConvId || !currentWorkspace?.id) return;
+  //   console.log('Realtime messages disabled to prevent auto-refresh');
+  // }, [selectedConvId, currentWorkspace?.id, queryClient]);
 
-    console.log('Setting up realtime for conversation:', selectedConvId);
-    
-    let reconnectTimeout: NodeJS.Timeout;
-    let channel: any;
-
-    const setupChannel = () => {
-      channel = supabase
-        .channel(`messages-${selectedConvId}-${Date.now()}`) // Unique channel name
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'whatsapp_messages',
-          filter: `conversation_id=eq.${selectedConvId}`
-        }, (payload) => {
-          console.log('Message realtime update:', payload);
-          queryClient.invalidateQueries({ queryKey: ['whatsapp-messages', selectedConvId] });
-          queryClient.invalidateQueries({ queryKey: ['whatsapp-conversations', currentWorkspace.id] });
-        })
-        .subscribe((status, err) => {
-          console.log('Messages subscription status:', status, err);
-          
-          if (status === 'SUBSCRIBED') {
-            console.log('✅ Realtime messages conectado com sucesso');
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            console.error('❌ Erro no realtime messages:', status, err);
-            
-            // Force refresh immediately
-            queryClient.invalidateQueries({ queryKey: ['whatsapp-messages', selectedConvId] });
-            
-            // Try to reconnect after 5 seconds
-            reconnectTimeout = setTimeout(() => {
-              console.log('🔄 Tentando reconectar realtime messages...');
-              supabase.removeChannel(channel);
-              setupChannel();
-            }, 5000);
-          }
-        });
-    };
-
-    setupChannel();
-
-    return () => {
-      if (reconnectTimeout) clearTimeout(reconnectTimeout);
-      if (channel) supabase.removeChannel(channel);
-    };
-  }, [selectedConvId, currentWorkspace?.id, queryClient]);
-
-  // Realtime sync for conversations list with reconnection  
-  useEffect(() => {
-    if (!currentWorkspace?.id) return;
-
-    console.log('Setting up conversations realtime for workspace:', currentWorkspace.id);
-    
-    let reconnectTimeout: NodeJS.Timeout;
-    let conversationsChannel: any;
-
-    const setupConversationsChannel = () => {
-      conversationsChannel = supabase
-        .channel(`conversations-${currentWorkspace.id}-${Date.now()}`) // Unique channel name
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'whatsapp_conversations',
-          filter: `workspace_id=eq.${currentWorkspace.id}`
-        }, (payload) => {
-          console.log('Conversation realtime update:', payload);
-          
-          // Mark conversation as having new messages if it's an insert/update
-          if (payload.eventType === 'UPDATE' && payload.new?.id) {
-            setUnreadConversations(prev => new Set(prev).add(payload.new.id));
-          }
-          
-          queryClient.invalidateQueries({ queryKey: ['whatsapp-conversations', currentWorkspace.id] });
-        })
-        .subscribe((status, err) => {
-          console.log('Conversations subscription status:', status, err);
-          
-          if (status === 'SUBSCRIBED') {
-            console.log('✅ Realtime conversations conectado com sucesso');
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            console.error('❌ Erro no realtime conversations:', status, err);
-            
-            // Force refresh immediately
-            queryClient.invalidateQueries({ queryKey: ['whatsapp-conversations', currentWorkspace.id] });
-            
-            // Try to reconnect after 5 seconds
-            reconnectTimeout = setTimeout(() => {
-              console.log('🔄 Tentando reconectar realtime conversations...');
-              supabase.removeChannel(conversationsChannel);
-              setupConversationsChannel();
-            }, 5000);
-          }
-        });
-    };
-
-    setupConversationsChannel();
-
-    return () => {
-      if (reconnectTimeout) clearTimeout(reconnectTimeout);
-      if (conversationsChannel) supabase.removeChannel(conversationsChannel);
-    };
-  }, [currentWorkspace?.id, queryClient]);
+  // Realtime disabled to prevent auto-refresh issues
+  // useEffect(() => {
+  //   if (!currentWorkspace?.id) return;
+  //   console.log('Realtime conversations disabled to prevent auto-refresh');
+  // }, [currentWorkspace?.id, queryClient]);
 
   const handleSend = async () => {
     if (!message.trim() || !selectedConv || !selectedInstanceName) {

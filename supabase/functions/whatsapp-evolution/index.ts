@@ -245,8 +245,10 @@ serve(async (req) => {
         return await configureWebhook(instanceName, workspaceId, supabase, currentApiUrl, currentApiKey);
       case 'test_webhook':
         return await testWebhook(instanceName, workspaceId, supabase, currentApiUrl, currentApiKey);
+      case 'get_webhook_status':
+        return await getWebhookStatus(instanceName, supabase, currentApiUrl, currentApiKey);
       default:
-        console.log('❌ Invalid action received:', action, 'Available actions:', ['create_instance', 'get_qr', 'get_status', 'send_message', 'send_image', 'sendMedia', 'sendAudio', 'verify_instance', 'list_instances', 'configure_webhook', 'test_webhook']);
+        console.log('❌ Invalid action received:', action, 'Available actions:', ['create_instance', 'get_qr', 'get_status', 'send_message', 'send_image', 'sendMedia', 'sendAudio', 'verify_instance', 'list_instances', 'configure_webhook', 'test_webhook', 'get_webhook_status']);
         throw new Error(`Invalid action: ${action}`);
     }
   } catch (error) {
@@ -1624,5 +1626,56 @@ async function sendMediaGeneric(
   } catch (error) {
     console.error('❌ Error sending media:', error);
     throw error;
+  }
+}
+
+async function getWebhookStatus(instanceName: string, supabase: any, apiUrl: string, apiKey: string) {
+  try {
+    console.log(`📊 Verificando status do webhook para instância ${instanceName}`);
+
+    // Buscar status do webhook na API Evolution
+    const response = await fetch(`${apiUrl}/webhook/find/${instanceName}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': apiKey
+      }
+    });
+
+    if (!response.ok) {
+      console.log(`⚠️ Webhook não encontrado para ${instanceName} - status: ${response.status}`);
+      return {
+        success: true,
+        configured: false,
+        active: false,
+        error: 'Webhook não configurado'
+      };
+    }
+
+    const data = await response.json();
+    console.log(`✅ Status do webhook para ${instanceName}:`, data);
+
+    const expectedUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/whatsapp-webhook`;
+    const isCorrectUrl = data.url === expectedUrl;
+
+    return {
+      success: true,
+      configured: true,
+      active: data.enabled || false,
+      url: data.url,
+      expected_url: expectedUrl,
+      correct_url: isCorrectUrl,
+      events: data.events || [],
+      webhook_base64: data.webhook_base64 || false,
+      data
+    };
+  } catch (error) {
+    console.error('❌ Erro ao verificar status do webhook:', error);
+    return {
+      success: false,
+      configured: false,
+      active: false,
+      error: error.message
+    };
   }
 }

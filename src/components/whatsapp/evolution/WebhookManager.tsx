@@ -58,9 +58,10 @@ export default function WebhookManager({ instanceName, workspaceId, apiUrl, apiK
   const testWebhook = async () => {
     setTesting(true);
     try {
-      const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
+      // Primeiro verificar o status atual do webhook
+      const statusResponse = await supabase.functions.invoke('whatsapp-evolution', {
         body: {
-          action: 'test_webhook',
+          action: 'get_webhook_status',
           instanceName,
           workspaceId,
           apiUrl,
@@ -68,19 +69,21 @@ export default function WebhookManager({ instanceName, workspaceId, apiUrl, apiK
         }
       });
 
-      if (error) throw error;
+      if (statusResponse.error) throw statusResponse.error;
 
-      setWebhookStatus(data);
+      setWebhookStatus(statusResponse.data);
 
-      if (data.success) {
+      if (statusResponse.data.success) {
         toast({
           title: "Status do Webhook",
-          description: data.active ? "Webhook está ativo e configurado" : "Webhook não está configurado",
+          description: statusResponse.data.configured 
+            ? `Webhook ${statusResponse.data.active ? 'ativo' : 'inativo'} - URL: ${statusResponse.data.correct_url ? 'Correta' : 'Incorreta'}`
+            : "Webhook não configurado",
         });
       } else {
         toast({
           title: "Erro ao Verificar Webhook",
-          description: data.error,
+          description: statusResponse.data.error,
           variant: "destructive",
         });
       }
@@ -126,6 +129,44 @@ export default function WebhookManager({ instanceName, workspaceId, apiUrl, apiK
             <RefreshCw className="mr-2 h-4 w-4" />
             Verificar Status
           </Button>
+
+          <Button
+            onClick={async () => {
+              const testData = {
+                event: 'MESSAGES_UPSERT',
+                instance: instanceName,
+                data: [{
+                  key: { fromMe: false, remoteJid: '5512974012534@s.whatsapp.net', id: 'test123' },
+                  message: { conversation: 'Teste de webhook direto!' },
+                  messageType: 'text',
+                  pushName: 'Teste'
+                }]
+              };
+              
+              try {
+                const response = await fetch('https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/whatsapp-webhook', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(testData)
+                });
+                const result = await response.text();
+                toast({
+                  title: "Teste Direto",
+                  description: `Status: ${response.status} - ${result}`,
+                });
+              } catch (error: any) {
+                toast({
+                  title: "Erro no Teste Direto",
+                  description: error.message,
+                  variant: "destructive",
+                });
+              }
+            }}
+            variant="secondary"
+            size="sm"
+          >
+            Testar Webhook Direto
+          </Button>
         </div>
 
         {webhookStatus && (
@@ -141,25 +182,13 @@ export default function WebhookManager({ instanceName, workspaceId, apiUrl, apiK
               </span>
             </div>
 
-            {webhookStatus.configured_url && (
-              <div>
-                <p className="text-sm font-medium">URL Configurada:</p>
-                <p className="text-xs text-muted-foreground break-all">
-                  {webhookStatus.configured_url}
-                </p>
-              </div>
-            )}
-
-            {webhookStatus.events && webhookStatus.events.length > 0 && (
-              <div>
-                <p className="text-sm font-medium mb-2">Eventos Configurados:</p>
-                <div className="flex flex-wrap gap-1">
-                  {webhookStatus.events.map((event: string, index: number) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
-                      {event}
-                    </Badge>
-                  ))}
-                </div>
+            {webhookStatus?.configured && (
+              <div className="space-y-2 text-sm">
+                <p><strong>URL:</strong> {webhookStatus.url}</p>
+                <p><strong>URL Correta:</strong> {webhookStatus.correct_url ? '✅ Sim' : '❌ Não'}</p>
+                <p><strong>Ativo:</strong> {webhookStatus.active ? '✅ Sim' : '❌ Não'}</p>
+                <p><strong>Base64:</strong> {webhookStatus.webhook_base64 ? '✅ Ativado' : '❌ Desativado'}</p>
+                <p><strong>Eventos:</strong> {webhookStatus.events?.join(', ')}</p>
               </div>
             )}
           </div>

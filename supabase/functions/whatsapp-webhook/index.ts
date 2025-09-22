@@ -12,6 +12,7 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 serve(async (req) => {
   console.log(`🚀 Webhook receiver started - URL: ${req.url}, Method: ${req.method}`);
+  console.log(`🧪 WEBHOOK TEST - This confirms the webhook is being called!`);
   console.log(`🚀 Headers:`, Object.fromEntries(req.headers.entries()));
 
   if (req.method === 'OPTIONS') {
@@ -144,7 +145,6 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
         messageText,
         msgType,
         isFromLead: !fromMe,
-        conversationId: conversation.id,
         messageId
       });
 

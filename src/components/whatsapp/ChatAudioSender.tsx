@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Mic, MicOff, Square, Send, Play, Pause, Trash2, Upload } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AudioRecordingState {
   isRecording: boolean;
@@ -296,73 +297,40 @@ export const ChatAudioSender: React.FC<ChatAudioSenderProps> = ({
       return;
     }
 
-    const phoneDigits = (selectedConv.phone_number || '').replace(/\D/g, '');
+    const phoneToSend = selectedConv.phone_number?.replace(/\D/g, '') || '';
     
     try {
       setIsSending(true);
       
-      // Get Evolution API config from localStorage
-      const cfgRaw = currentWorkspace?.id ? localStorage.getItem(`evolution_config_${currentWorkspace.id}`) : null;
-      const cfg = cfgRaw ? JSON.parse(cfgRaw) : null;
-
-      if (!cfg?.api_url && !cfg?.apiUrl) {
-        toast.error('Configure a URL da Evolution API primeiro');
-        return;
-      }
-
-      if (!cfg?.global_api_key) {
-        toast.error('Configure a API Key da Evolution API primeiro');
-        return;
-      }
-      
-      // Convert audio to base64 - using the same logic as upload
+      // Convert audio to base64
       const arrayBuffer = await state.audioBlob.arrayBuffer();
       const base64String = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
       
-      console.log('🎵 Audio details:', {
-        blobType: state.audioBlob.type,
-        blobSize: state.audioBlob.size,
-        base64Length: base64String.length
-      });
-      
-      // Extract instance name from the selected instance  
-      const apiUrl = cfg?.api_url || cfg?.apiUrl;
-      
-      console.log('🎵 Enviando áudio via Evolution:', {
+      console.log('🎵 Enviando áudio via Supabase Edge Function:', {
         instanceName: selectedInstanceName,
-        phoneDigits,
+        phoneToSend,
         audioBase64Length: base64String.length,
-        apiUrl,
-        hasApiKey: !!cfg?.global_api_key,
         workspaceId: currentWorkspace?.id
       });
 
-      // Send audio using Evolution API format from documentation
-      const response = await fetch(`${apiUrl}/message/sendWhatsAppAudio/${selectedInstanceName}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': cfg?.global_api_key
-        },
-        body: JSON.stringify({
-          number: phoneDigits,
-          audio: base64String,  // Just the base64 string, no data: prefix
-          delay: 1200,
-          quoted: {
-            message: {
-              conversation: ""
-            }
-          }
-        })
+      // Evolution API config (optional)
+      const cfgRaw = currentWorkspace?.id ? localStorage.getItem(`evolution_config_${currentWorkspace.id}`) : null;
+      const cfg = cfgRaw ? JSON.parse(cfgRaw) : null;
+
+      // Use Supabase edge function (same as images) to ensure message is saved in database
+      await supabase.functions.invoke('whatsapp-evolution', {
+        body: {
+          action: 'sendAudio',
+          instanceName: selectedInstanceName,
+          phone: phoneToSend,
+          audioBase64: base64String,
+          workspaceId: currentWorkspace?.id,
+          apiKey: cfg?.global_api_key,
+          apiUrl: cfg?.apiUrl || cfg?.api_url,
+        }
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Erro ${response.status}: ${errorText}`);
-      }
-
-      const responseData = await response.json();
-      console.log('✅ Áudio enviado com sucesso:', responseData);
+      console.log('✅ Áudio enviado com sucesso via Supabase');
 
       // Reset form and notify parent
       discardRecording();

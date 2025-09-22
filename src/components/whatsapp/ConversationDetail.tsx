@@ -7,9 +7,12 @@ import { ptBR } from 'date-fns/locale';
 import { Trash2, ArrowLeft } from 'lucide-react';
 import { useDeleteWhatsAppMessage } from '@/hooks/useWhatsAppOfficial';
 import { useWhatsAppMessages } from '@/hooks/useWhatsApp';
+import { MessageInput } from './MessageInput';
 import AttachmentPreview from './AttachmentPreview';
 import AudioPlayer from './AudioPlayer';
 import WhatsAppImage from './WhatsAppImage';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Message {
   id: string;
@@ -34,6 +37,22 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const deleteMessage = useDeleteWhatsAppMessage();
   const { data: messages = [], isLoading } = useWhatsAppMessages(conversationId);
+
+  // Get conversation details for phone number
+  const { data: conversation } = useQuery({
+    queryKey: ['whatsapp-conversation', conversationId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('whatsapp_conversations')
+        .select('phone_number')
+        .eq('id', conversationId)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!conversationId,
+  });
 
   // Auto scroll to bottom when new messages arrive
   useEffect(() => {
@@ -272,6 +291,13 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
           </div>
         </ScrollArea>
       )}
+      
+      {/* Message Input */}
+      <MessageInput
+        conversationId={conversationId}
+        phoneNumber={conversation?.phone_number || 'unknown'}
+        disabled={false}
+      />
     </div>
   );
 }

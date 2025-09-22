@@ -231,7 +231,7 @@ serve(async (req) => {
                   
                   // Upload para storage público
                   const { data: uploadData, error: uploadError } = await supabase.storage
-                    .from('whatsapp-audio') // Usar bucket público existente
+                    .from('whatsapp-media') // Usar novo bucket público
                     .upload(filePath, imageBuffer, {
                       contentType: 'image/jpeg',
                       cacheControl: '31536000', // 1 ano de cache
@@ -241,7 +241,7 @@ serve(async (req) => {
                   if (!uploadError && uploadData) {
                     // Obter URL pública
                     const { data: publicUrlData } = supabase.storage
-                      .from('whatsapp-audio')
+                      .from('whatsapp-media')
                       .getPublicUrl(uploadData.path);
                     
                     if (publicUrlData.publicUrl) {

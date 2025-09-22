@@ -166,7 +166,7 @@ serve(async (req) => {
         const filePath = `${workspaceMember.workspace_id}/images/${fileName}`;
         
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('whatsapp-audio') // Using existing public bucket
+          .from('whatsapp-media') // Using new public bucket
           .upload(filePath, fileBuffer, {
             contentType: file.type,
             cacheControl: '31536000', // 1 year cache
@@ -175,7 +175,7 @@ serve(async (req) => {
 
         if (!uploadError && uploadData) {
           const { data: publicUrlData } = supabase.storage
-            .from('whatsapp-audio')
+            .from('whatsapp-media')
             .getPublicUrl(uploadData.path);
           
           if (publicUrlData.publicUrl) {

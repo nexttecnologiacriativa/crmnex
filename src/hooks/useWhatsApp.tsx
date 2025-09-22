@@ -96,16 +96,20 @@ export function useWhatsAppConversations() {
       
       if (error) {
         console.error('Error fetching conversations:', error);
-        throw error;
+        // Return empty array instead of throwing to prevent infinite retries
+        return [];
       }
       
       console.log('WhatsApp conversations fetched:', data?.length || 0);
       return data as WhatsAppConversation[];
     },
     enabled: !!currentWorkspace?.id,
-    refetchInterval: false, // Desabilitar polling automático
-    refetchOnWindowFocus: false, // Não atualizar no foco
-    refetchIntervalInBackground: false, // Não atualizar em background
+    refetchInterval: false,
+    refetchOnWindowFocus: false, 
+    refetchIntervalInBackground: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1, // Only retry once
+    retryDelay: 3000, // Wait 3 seconds before retry
   });
 }
 
@@ -130,15 +134,19 @@ export function useWhatsAppMessages(conversationId: string) {
       
       if (error) {
         console.error('Error fetching messages:', error);
-        throw error;
+        // Return empty array instead of throwing to prevent infinite retries
+        return [];
       }
       
       console.log('Messages fetched for conversation:', data?.length || 0);
       return data as WhatsAppMessage[];
     },
     enabled: !!conversationId,
-    refetchInterval: false, // Desabilitar polling automático
-    refetchIntervalInBackground: false, // Não atualizar em background
+    refetchInterval: false,
+    refetchIntervalInBackground: false,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    retry: 1,
+    retryDelay: 2000,
   });
 }
 

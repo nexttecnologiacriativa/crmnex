@@ -423,7 +423,7 @@ export default function AudioPlayer({ audioUrl, originalUrl, permanentUrl, durat
 
       // Check if we have any valid URL
       const urlToUse = permanentUrl || audioUrl;
-      if (!urlToUse || urlToUse === 'null' || urlToUse === 'undefined') {
+      if (!urlToUse || urlToUse === 'null' || urlToUse === 'undefined' || urlToUse === 'none') {
         setError('Áudio não disponível');
         return;
       }
@@ -438,33 +438,48 @@ export default function AudioPlayer({ audioUrl, originalUrl, permanentUrl, durat
         }
       }
 
-      // For temporary URLs or failed permanent URLs, try processing
+      // For temporary URLs or failed permanent URLs, try processing with conservative timeout
       if (messageId && audioUrl?.includes('mmg.whatsapp.net')) {
         console.log('🔄 Processing temporary URL via audio processor');
         setIsLoading(true);
+        setError('⚠️ Áudio sendo processado...');
+        
         try {
+          // Use a shorter timeout to prevent hanging
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds timeout
+          
           const { data } = await supabase.functions.invoke('whatsapp-audio-processor', {
             body: { messageId }
           });
+          
+          clearTimeout(timeoutId);
           
           if (data?.permanentUrl) {
             const success = await tryLoadAudio(data.permanentUrl);
             if (success) {
               setProcessedUrl(data.permanentUrl);
+              setError(null);
               setIsLoading(false);
               return;
             }
           }
+          
+          // If processing didn't return a URL, show user-friendly message
+          setError('Áudio temporariamente indisponível');
         } catch (error) {
           console.error('Error processing audio:', error);
+          setError('Áudio temporariamente indisponível');
         }
         setIsLoading(false);
+        return;
       }
 
       // Last resort - try the original URL
       const success = await tryLoadAudio(urlToUse);
       if (success) {
         setProcessedUrl(urlToUse);
+        setError(null);
       } else {
         setError('Áudio não disponível');
       }

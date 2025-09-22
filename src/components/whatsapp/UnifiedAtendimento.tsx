@@ -71,6 +71,15 @@ export default function UnifiedAtendimento() {
     hasInitialized.current = false;
   }, [currentWorkspace?.id]);
 
+  // Manual refresh function
+  const handleManualRefresh = () => {
+    console.log('🔄 Manual refresh triggered');
+    queryClient.invalidateQueries({ queryKey: ['whatsapp-conversations', currentWorkspace?.id] });
+    queryClient.invalidateQueries({ queryKey: ['whatsapp-messages'] });
+    refetchConversations();
+    toast.success('Dados atualizados!');
+  };
+
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [search, setSearch] = useState('');
@@ -485,14 +494,7 @@ export default function UnifiedAtendimento() {
               size="sm"
               variant="outline"
               className="h-7 px-2"
-              onClick={() => {
-                console.log('Forçando atualização manual...');
-                queryClient.invalidateQueries({ queryKey: ['whatsapp-conversations', currentWorkspace?.id] });
-                if (selectedConvId) {
-                  queryClient.invalidateQueries({ queryKey: ['whatsapp-messages', selectedConvId] });
-                }
-                toast.success('Dados atualizados');
-              }}
+              onClick={handleManualRefresh}
             >
               🔄
             </Button>

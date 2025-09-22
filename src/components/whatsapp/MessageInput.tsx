@@ -271,9 +271,13 @@ export function MessageInput({ conversationId, phoneNumber, disabled, instanceNa
               size="sm" 
               className="p-2"
               disabled={isDisabled}
-              onClick={() => imageInputRef.current?.click()}
+              onClick={() => {
+                console.log('📸 Clicando no botão de imagem');
+                imageInputRef.current?.click();
+              }}
+              title="Enviar imagem"
             >
-              <Image className="h-4 w-4" />
+              <Image className="h-4 w-4 text-green-600" />
             </Button>
 
             {/* Botão de arquivo */}
@@ -282,9 +286,13 @@ export function MessageInput({ conversationId, phoneNumber, disabled, instanceNa
               size="sm" 
               className="p-2"
               disabled={isDisabled}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => {
+                console.log('📄 Clicando no botão de arquivo');
+                fileInputRef.current?.click();
+              }}
+              title="Enviar documento"
             >
-              <FileImage className="h-4 w-4" />
+              <FileImage className="h-4 w-4 text-blue-600" />
             </Button>
 
             {/* Campo de texto */}
@@ -340,18 +348,28 @@ export function MessageInput({ conversationId, phoneNumber, disabled, instanceNa
         <input
           ref={imageInputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
           onChange={handleImageUpload}
           className="hidden"
+          onClick={(e) => {
+            console.log('📸 Input de imagem clicado');
+            // Reset value to allow selecting the same file again
+            e.currentTarget.value = '';
+          }}
         />
 
         {/* Input oculto para arquivos */}
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf,.doc,.docx,.txt,.csv,.xlsx,.ppt,.pptx,.zip,.rar,audio/*,video/*"
+          accept=".pdf,.doc,.docx,.txt,.csv,.xlsx,.ppt,.pptx,.zip,.rar"
           onChange={handleFileUpload}
           className="hidden"
+          onClick={(e) => {
+            console.log('📄 Input de arquivo clicado');
+            // Reset value to allow selecting the same file again
+            e.currentTarget.value = '';
+          }}
         />
       </div>
     </Card>

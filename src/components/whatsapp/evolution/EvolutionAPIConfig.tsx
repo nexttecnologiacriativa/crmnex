@@ -29,7 +29,7 @@ interface EvolutionAPIConfigProps {
 export default function EvolutionAPIConfig({ onSave, onCancel }: EvolutionAPIConfigProps) {
   const { currentWorkspace } = useWorkspace();
   const [config, setConfig] = useState<EvolutionConfig>({
-    api_url: 'https://api.nextcrm.com.br',
+    api_url: 'https://api.glav.com.br',
     global_api_key: ''
   });
   const [isSaving, setIsSaving] = useState(false);
@@ -52,7 +52,7 @@ export default function EvolutionAPIConfig({ onSave, onCancel }: EvolutionAPICon
     if (stored) {
       const parsed = JSON.parse(stored);
       setConfig({
-        api_url: parsed.api_url || 'https://api.nextcrm.com.br',
+        api_url: parsed.api_url || 'https://api.glav.com.br',
         global_api_key: parsed.global_api_key || ''
       });
       
@@ -66,11 +66,11 @@ export default function EvolutionAPIConfig({ onSave, onCancel }: EvolutionAPICon
 
         if (!existingConfig && parsed.global_api_key) {
           console.log('🔄 Auto-syncing localStorage credentials to database...');
-          await supabase
+            await supabase
             .from('whatsapp_evolution_configs')
             .upsert({
               workspace_id: currentWorkspace.id,
-              api_url: parsed.api_url || 'https://api.nextcrm.com.br',
+              api_url: parsed.api_url || 'https://api.glav.com.br',
               global_api_key: parsed.global_api_key,
               updated_at: new Date().toISOString()
             }, { onConflict: 'workspace_id' });
@@ -197,7 +197,7 @@ export default function EvolutionAPIConfig({ onSave, onCancel }: EvolutionAPICon
             </Label>
             <Input
               id="api_url"
-              placeholder="https://api.nextcrm.com.br"
+              placeholder="https://api.glav.com.br"
               value={config.api_url}
               onChange={(e) => setConfig(prev => ({ ...prev, api_url: e.target.value }))}
               disabled={isSaving}

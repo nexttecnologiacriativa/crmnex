@@ -274,12 +274,33 @@ async function createInstance(instanceName: string, workspaceId: string, supabas
     console.log(`🚀 Creating instance ${instanceName} for workspace ${workspaceId}`);
     console.log(`🔧 Using API URL: ${apiUrl}, has API key: ${!!apiKey}`);
 
+    // Verificar se instância já existe no banco antes de criar
+    const { data: existingInstance } = await supabase
+      .from('whatsapp_instances')
+      .select('id, instance_name, status')
+      .eq('workspace_id', workspaceId)
+      .eq('instance_name', instanceName)
+      .maybeSingle();
+
+    if (existingInstance) {
+      console.log(`⚠️ Instance ${instanceName} already exists in database with status: ${existingInstance.status}`);
+      return new Response(JSON.stringify({ 
+        success: true,
+        message: 'Instance already exists',
+        data: existingInstance,
+        status: existingInstance.status
+      }), { 
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
+
     const payload = {
       instanceName: instanceName,
       qrcode: true,
       integration: "WHATSAPP-BAILEYS",
       webhook: {
-        url: `https://rxpaaskbhbdirlxaavsm.supabase.co/functions/v1/whatsapp-webhook`,
+        url: `https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/whatsapp-webhook`,
         events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "SEND_MESSAGE", "QRCODE_UPDATED"]
       },
       settings: {
@@ -305,64 +326,143 @@ async function createInstance(instanceName: string, workspaceId: string, supabas
     });
 
     console.log(`📨 Evolution API response status: ${response.status}`);
-    console.log(`📨 Evolution API response headers:`, Object.fromEntries(response.headers.entries()));
+    const responseText = await response.text();
+    console.log(`📨 Evolution API response body:`, responseText);
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ Evolution API error response:`, errorText);
+      console.error(`❌ Evolution API error response:`, responseText);
       
       let errorData;
       try {
-        errorData = JSON.parse(errorText);
+        errorData = JSON.parse(responseText);
       } catch (e) {
-        errorData = { message: errorText };
+        errorData = { message: responseText };
       }
       
-      console.error(`❌ Evolution API error details:`, {
-        status: response.status,
-        statusText: response.statusText,
-        url: `${apiUrl}/instance/create`,
-        errorData
-      });
+      // Se a instância já existe na Evolution API, não é erro fatal
+      if (response.status === 409 || responseText.includes('already exists') || responseText.includes('já existe')) {
+        console.log(`📝 Instance ${instanceName} already exists in Evolution API, proceeding to save in database...`);
+        
+        // Salvar no banco mesmo assim
+        const { data: instanceData, error: instanceError } = await supabase
+          .from('whatsapp_instances')
+          .insert({
+            instance_name: instanceName,
+            instance_key: instanceName,
+            workspace_id: workspaceId,
+            status: 'close', // Default status para instâncias que já existem
+            webhook_url: `https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/whatsapp-webhook`,
+          })
+          .select()
+          .single();
+
+        if (instanceError) {
+          console.error('❌ Error saving existing instance to Supabase:', instanceError);
+          // Tentar buscar se já existe no banco (race condition)
+          const { data: existingInDb } = await supabase
+            .from('whatsapp_instances')
+            .select('*')
+            .eq('workspace_id', workspaceId)
+            .eq('instance_name', instanceName)
+            .maybeSingle();
+            
+          if (existingInDb) {
+            return new Response(JSON.stringify({ 
+              success: true,
+              message: 'Instance recovered from database',
+              data: existingInDb,
+              status: existingInDb.status
+            }), { 
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            });
+          }
+          throw new Error(`Failed to save existing instance to Supabase: ${instanceError.message}`);
+        }
+
+        return new Response(JSON.stringify({ 
+          success: true,
+          message: 'Instance already existed, saved to database',
+          data: instanceData,
+          status: 'close'
+        }), { 
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      }
       
-      throw new Error(`Failed to create instance on Evolution API: ${response.status} - ${errorText}`);
+      throw new Error(`Failed to create instance on Evolution API: ${response.status} - ${responseText}`);
     }
 
-    const data = await response.json();
-    console.log(`✅ Instance ${instanceName} created on Evolution API:`, JSON.stringify(data, null, 2));
-
-    // Store instance in Supabase immediately after successful creation
-    const { data: instanceData, error: instanceError } = await supabase
-      .from('whatsapp_instances')
-      .insert({
-        instance_name: instanceName,
-        instance_key: data.instance?.instanceName || instanceName,
-        workspace_id: workspaceId,
-        status: 'starting', // Default status since we can't verify immediately
-        webhook_url: `https://rxpaaskbhbdirlxaavsm.supabase.co/functions/v1/whatsapp-webhook`,
-      })
-      .select()
-      .single();
-
-    if (instanceError) {
-      console.error('❌ Error saving instance to Supabase:', instanceError);
-      console.error('❌ Supabase error details:', JSON.stringify(instanceError, null, 2));
-      console.error('❌ Data being inserted:', {
-        instance_name: instanceName,
-        instance_key: data.instance?.instanceName || instanceName,
-        workspace_id: workspaceId,
-        status: 'starting'
-      });
-      throw new Error(`Failed to save instance to Supabase: ${instanceError.message}`);
+    let data;
+    try {
+      data = JSON.parse(responseText);
+      console.log(`✅ Instance ${instanceName} created on Evolution API:`, JSON.stringify(data, null, 2));
+    } catch (parseError) {
+      console.error('❌ Failed to parse Evolution API response:', parseError);
+      throw new Error('Invalid JSON response from Evolution API');
     }
 
-    console.log('✅ Instance saved to Supabase:', JSON.stringify(instanceData, null, 2));
+    // Tentar salvar no Supabase com múltiplas tentativas
+    let instanceData = null;
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (attempts < maxAttempts && !instanceData) {
+      attempts++;
+      console.log(`💾 Attempt ${attempts}/${maxAttempts} to save instance to Supabase...`);
+      
+      try {
+        const { data: insertResult, error: instanceError } = await supabase
+          .from('whatsapp_instances')
+          .insert({
+            instance_name: instanceName,
+            instance_key: data.instance?.instanceName || instanceName,
+            workspace_id: workspaceId,
+            status: 'close', // Status inicial mais conservador
+            webhook_url: `https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/whatsapp-webhook`,
+          })
+          .select()
+          .single();
+
+        if (instanceError) {
+          console.error(`❌ Attempt ${attempts} failed:`, instanceError);
+          if (attempts === maxAttempts) {
+            // Última tentativa - verificar se já existe no banco
+            const { data: existingInDb } = await supabase
+              .from('whatsapp_instances')
+              .select('*')
+              .eq('workspace_id', workspaceId)
+              .eq('instance_name', instanceName)
+              .maybeSingle();
+              
+            if (existingInDb) {
+              console.log('✅ Instance found in database after all attempts');
+              instanceData = existingInDb;
+            } else {
+              throw new Error(`Failed to save instance after ${maxAttempts} attempts: ${instanceError.message}`);
+            }
+          } else {
+            // Aguardar antes da próxima tentativa
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        } else {
+          instanceData = insertResult;
+          console.log(`✅ Instance saved to Supabase on attempt ${attempts}:`, JSON.stringify(instanceData, null, 2));
+        }
+      } catch (error) {
+        console.error(`❌ Exception on attempt ${attempts}:`, error);
+        if (attempts === maxAttempts) {
+          throw error;
+        }
+      }
+    }
     
     const responseData = { 
       success: true,
       data, 
       instanceData, 
-      status: 'starting',
+      status: instanceData?.status || 'close',
       message: 'Instance created successfully'
     };
     
@@ -1147,25 +1247,167 @@ async function verifyInstance(instanceName: string, supabase: any, apiUrl: strin
 
 async function listInstances(workspaceId: string, supabase: any, apiUrl: string, apiKey: string) {
   try {
-    console.log(`Listando instâncias para workspace ${workspaceId}`);
+    console.log(`🔍 Listando e sincronizando instâncias para workspace ${workspaceId}`);
+    
+    // Arrays para tracking de mudanças
+    const syncResults = {
+      created: [] as string[],
+      updated: [] as string[],
+      removed: [] as string[],
+      errors: [] as string[]
+    };
+
+    // Buscar instâncias do Evolution API
+    let evolutionInstances = [];
+    try {
+      const evolutionResponse = await fetch(`${apiUrl}/instance/fetchInstances`, {
+        method: 'GET',
+        headers: {
+          'apikey': apiKey
+        }
+      });
+
+      if (evolutionResponse.ok) {
+        evolutionInstances = await evolutionResponse.json();
+        console.log(`📋 Found ${evolutionInstances.length} instances in Evolution API`);
+      } else {
+        console.warn(`⚠️ Could not fetch from Evolution API: ${evolutionResponse.status}`);
+        syncResults.errors.push(`Evolution API error: ${evolutionResponse.status}`);
+      }
+    } catch (evolutionError) {
+      console.warn('⚠️ Evolution API not accessible:', evolutionError);
+      syncResults.errors.push(`Evolution API connection failed: ${evolutionError.message}`);
+    }
 
     // Buscar instâncias do Supabase
-    const { data: instances, error: dbError } = await supabase
+    const { data: localInstances, error: dbError } = await supabase
       .from('whatsapp_instances')
       .select('*')
-      .eq('workspace_id', workspaceId);
+      .eq('workspace_id', workspaceId)
+      .order('created_at', { ascending: false });
 
     if (dbError) {
-      console.error('Erro ao buscar instâncias do Supabase:', dbError);
+      console.error('❌ Erro ao buscar instâncias do Supabase:', dbError);
       throw new Error('Erro ao buscar instâncias do Supabase');
     }
 
-    console.log(`Instâncias encontradas no Supabase:`, instances);
+    console.log(`💾 Found ${localInstances?.length || 0} instances in local database`);
+    
+    // Se conseguimos dados da Evolution API, sincronizar
+    if (evolutionInstances.length > 0) {
+      console.log('🔄 Starting synchronization...');
+      
+      const localInstanceMap = new Map();
+      (localInstances || []).forEach(instance => {
+        localInstanceMap.set(instance.instance_name, instance);
+      });
 
-    return new Response(JSON.stringify(instances), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      // Processar instâncias da Evolution API
+      for (const evolutionInstance of evolutionInstances) {
+        const instanceName = evolutionInstance.instance?.instanceName || evolutionInstance.instanceName;
+        const instanceStatus = evolutionInstance.instance?.state || evolutionInstance.state || 'close';
+        
+        if (!instanceName) continue;
+
+        const localInstance = localInstanceMap.get(instanceName);
+        
+        if (!localInstance) {
+          // Instância existe na Evolution mas não no banco - criar
+          try {
+            const { error: insertError } = await supabase
+              .from('whatsapp_instances')
+              .insert({
+                instance_name: instanceName,
+                instance_key: instanceName,
+                workspace_id: workspaceId,
+                status: instanceStatus,
+                webhook_url: `https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/whatsapp-webhook`,
+              });
+
+            if (insertError) {
+              console.error(`❌ Failed to create local instance ${instanceName}:`, insertError);
+              syncResults.errors.push(`Failed to create ${instanceName}: ${insertError.message}`);
+            } else {
+              console.log(`✅ Created local instance: ${instanceName}`);
+              syncResults.created.push(instanceName);
+            }
+          } catch (error) {
+            console.error(`❌ Exception creating instance ${instanceName}:`, error);
+            syncResults.errors.push(`Exception creating ${instanceName}: ${error.message}`);
+          }
+        } else if (localInstance.status !== instanceStatus) {
+          // Instância existe mas status diferente - atualizar
+          try {
+            const { error: updateError } = await supabase
+              .from('whatsapp_instances')
+              .update({ 
+                status: instanceStatus,
+                last_seen: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', localInstance.id);
+
+            if (updateError) {
+              console.error(`❌ Failed to update instance ${instanceName}:`, updateError);
+              syncResults.errors.push(`Failed to update ${instanceName}: ${updateError.message}`);
+            } else {
+              console.log(`🔄 Updated instance ${instanceName}: ${localInstance.status} → ${instanceStatus}`);
+              syncResults.updated.push(instanceName);
+            }
+          } catch (error) {
+            console.error(`❌ Exception updating instance ${instanceName}:`, error);
+            syncResults.errors.push(`Exception updating ${instanceName}: ${error.message}`);
+          }
+        }
+        
+        // Remover da lista local para identificar instâncias órfãs
+        localInstanceMap.delete(instanceName);
+      }
+
+      // Instâncias que sobraram no mapa local não existem mais na Evolution API
+      for (const [instanceName, localInstance] of localInstanceMap) {
+        console.log(`⚠️ Instance ${instanceName} exists locally but not in Evolution API`);
+        // Por segurança, não removemos automaticamente - apenas marcamos status como desconectado
+        try {
+          const { error: updateError } = await supabase
+            .from('whatsapp_instances')
+            .update({ 
+              status: 'disconnected',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', localInstance.id);
+
+          if (!updateError) {
+            syncResults.updated.push(`${instanceName} (marked as disconnected)`);
+          }
+        } catch (error) {
+          console.error(`❌ Failed to mark ${instanceName} as disconnected:`, error);
+          syncResults.errors.push(`Failed to disconnect ${instanceName}: ${error.message}`);
+        }
+      }
+    }
+
+    // Buscar instâncias atualizadas do banco após sincronização
+    const { data: finalInstances } = await supabase
+      .from('whatsapp_instances')
+      .select('*')
+      .eq('workspace_id', workspaceId)
+      .order('created_at', { ascending: false });
+
+    console.log(`✅ Sync completed. Final count: ${finalInstances?.length || 0} instances`);
+
+    return new Response(JSON.stringify({ 
+      instances: finalInstances || [], 
+      syncResults 
+    }), { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    });
   } catch (error) {
-    console.error('Erro ao listar instâncias:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('❌ Erro ao listar/sincronizar instâncias:', error);
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      instances: []
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

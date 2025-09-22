@@ -70,17 +70,39 @@ export default function QRCodeManager({ instance, onClose, onStatusUpdate }: QRC
         return;
       }
 
-      const response = await supabase.functions.invoke('whatsapp-evolution', {
+      // Primeiro tentar através da função Supabase
+      let response = await supabase.functions.invoke('whatsapp-evolution', {
         body: {
           action: 'get_qr',
           instanceName: instance.instance_name,
-          workspaceId: currentWorkspace.id,
+          workspaceId: currentWorkspace?.id,
           apiKey: config.global_api_key,
           apiUrl: config.api_url
         }
       });
 
       if (response.error) {
+        console.warn('Supabase function failed, trying direct API call:', response.error);
+        
+        // Fallback: tentar buscar QR code diretamente da Evolution API
+        const directResponse = await fetch(`${config.api_url}/instance/connect/${instance.instance_name}`, {
+          method: 'GET',
+          headers: {
+            'apikey': config.global_api_key
+          }
+        });
+
+        if (directResponse.ok) {
+          const directData = await directResponse.json();
+          if (directData.qrcode || directData.qr_code || directData.base64) {
+            const qrData = directData.qrcode || directData.qr_code || directData.base64;
+            setQrCode(qrData);
+            setTimeLeft(300);
+            toast.success('QR Code obtido diretamente da API!');
+            return;
+          }
+        }
+        
         throw new Error(response.error.message || 'Erro ao obter QR Code');
       }
 
@@ -102,6 +124,32 @@ export default function QRCodeManager({ instance, onClose, onStatusUpdate }: QRC
     } catch (error) {
       console.error('Error getting QR code:', error);
       toast.error(`Erro ao obter QR Code: ${(error as Error).message}`);
+      
+      // Tentar método alternativo se o principal falhar
+      try {
+        const config = getEvolutionConfig();
+        if (config?.global_api_key) {
+          console.log('Trying alternative QR code endpoint...');
+          const altResponse = await fetch(`${config.api_url}/instance/qr/${instance.instance_name}`, {
+            method: 'GET',
+            headers: {
+              'apikey': config.global_api_key
+            }
+          });
+
+          if (altResponse.ok) {
+            const altData = await altResponse.json();
+            if (altData.qrcode || altData.qr_code || altData.base64) {
+              const qrData = altData.qrcode || altData.qr_code || altData.base64;
+              setQrCode(qrData);
+              setTimeLeft(300);
+              toast.success('QR Code obtido por método alternativo!');
+            }
+          }
+        }
+      } catch (altError) {
+        console.error('Alternative QR method also failed:', altError);
+      }
     } finally {
       setIsLoading(false);
     }

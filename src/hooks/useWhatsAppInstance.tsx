@@ -222,7 +222,7 @@ export function useSyncWhatsAppInstances() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['whatsapp-instances'] });
       
-      const { syncResults } = data;
+      const { syncResults, instances } = data;
       if (syncResults) {
         const { created, updated, removed, errors } = syncResults;
         

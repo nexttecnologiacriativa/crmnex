@@ -76,10 +76,80 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
         return;
       }
       
+      console.log('🔄 Starting sync with Evolution API...');
       await syncInstances.mutateAsync();
+      
+      // Após sincronização, verificar instâncias órfãs
+      await recoverOrphanInstances();
     } catch (error) {
       // Error handling is done in the mutation
       console.error('Auto sync error:', error);
+    }
+  };
+
+  const recoverOrphanInstances = async () => {
+    try {
+      const config = getEvolutionConfig();
+      if (!config?.global_api_key || !currentWorkspace) return;
+
+      console.log('🔍 Checking for orphan instances...');
+      
+      // Buscar instâncias diretamente da Evolution API
+      const response = await fetch(`${config.api_url}/instance/fetchInstances`, {
+        method: 'GET',
+        headers: {
+          'apikey': config.global_api_key
+        }
+      });
+
+      if (response.ok) {
+        const evolutionInstances = await response.json();
+        console.log('📋 Evolution API instances:', evolutionInstances);
+        
+        // Buscar instâncias no banco local
+        const { data: localInstances } = await supabase
+          .from('whatsapp_instances')
+          .select('instance_name')
+          .eq('workspace_id', currentWorkspace.id);
+
+        const localInstanceNames = (localInstances || []).map(i => i.instance_name);
+        
+        // Encontrar instâncias que existem na API mas não no banco
+        const orphanInstances = evolutionInstances.filter((apiInstance: any) => {
+          const instanceName = apiInstance.instance?.instanceName || apiInstance.instanceName;
+          return instanceName && !localInstanceNames.includes(instanceName);
+        });
+
+        if (orphanInstances.length > 0) {
+          console.log(`🔄 Found ${orphanInstances.length} orphan instances, recovering...`);
+          
+          for (const orphan of orphanInstances) {
+            const instanceName = orphan.instance?.instanceName || orphan.instanceName;
+            const status = orphan.instance?.state || orphan.state || 'close';
+            
+            try {
+              await supabase
+                .from('whatsapp_instances')
+                .insert({
+                  instance_name: instanceName,
+                  instance_key: instanceName,
+                  workspace_id: currentWorkspace.id,
+                  status: status,
+                  webhook_url: `https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/whatsapp-webhook`,
+                });
+              
+              console.log(`✅ Recovered orphan instance: ${instanceName}`);
+            } catch (error) {
+              console.error(`❌ Failed to recover orphan instance ${instanceName}:`, error);
+            }
+          }
+          
+          toast.success(`Recuperadas ${orphanInstances.length} instâncias órfãs!`);
+          refetch();
+        }
+      }
+    } catch (error) {
+      console.error('Error checking for orphan instances:', error);
     }
   };
 
@@ -119,6 +189,9 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
 
       toast.info('Sincronizando com a API Evolution...');
       await syncInstances.mutateAsync();
+      
+      // Também executar recuperação de instâncias órfãs
+      await recoverOrphanInstances();
     } catch (error) {
       console.error('Error syncing:', error);
       toast.error('Erro na sincronização: ' + (error as any)?.message);

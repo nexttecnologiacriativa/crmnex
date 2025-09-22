@@ -42,28 +42,34 @@ export default function UnifiedAtendimento() {
   const { data: leads = [] } = useLeads();
   const queryClient = useQueryClient();
 
-  // Force refresh data when component mounts and add debug logs (controlled execution)
+  // Controlled initialization - runs only once
+  const hasInitialized = useRef(false);
+  
   useEffect(() => {
-    console.log('🔄 Forçando refresh de conversas e mensagens');
-    console.log('Current workspace:', currentWorkspace?.id);
+    // Only run once per workspace change
+    if (hasInitialized.current || !currentWorkspace?.id) return;
     
-    // Only clear cache on mount or workspace change
-    queryClient.clear();
+    console.log('🔄 Inicializando dados do workspace:', currentWorkspace.id);
     
-    // Then refresh specific queries
-    refetchConversations();
-    queryClient.invalidateQueries({ queryKey: ['whatsapp-conversations'] });
+    // Mark as initialized for this workspace
+    hasInitialized.current = true;
+    
+    // Only invalidate specific queries instead of clearing entire cache
+    queryClient.invalidateQueries({ queryKey: ['whatsapp-conversations', currentWorkspace.id] });
     queryClient.invalidateQueries({ queryKey: ['whatsapp-messages'] });
     
-    // Debug auth context
-    if (currentWorkspace?.id) {
-      supabase.rpc('debug_auth_context').then(result => {
-        console.log('🔍 Auth context debug:', result.data);
-      }, err => {
-        console.error('❌ Auth context debug error:', err);
-      });
-    }
-  }, [refetchConversations, queryClient, currentWorkspace?.id]); // Removed conversations.length to prevent infinite loop
+    // Debug auth context once
+    supabase.rpc('debug_auth_context').then(result => {
+      console.log('🔍 Auth context debug:', result.data);
+    }, err => {
+      console.error('❌ Auth context debug error:', err);
+    });
+  }, [currentWorkspace?.id, queryClient]);
+
+  // Reset initialization flag when workspace changes
+  useEffect(() => {
+    hasInitialized.current = false;
+  }, [currentWorkspace?.id]);
 
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
   const [message, setMessage] = useState('');

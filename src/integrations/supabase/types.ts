@@ -1556,6 +1556,96 @@ export type Database = {
           },
         ]
       }
+      meta_integrations: {
+        Row: {
+          access_token: string
+          app_secret: string
+          created_at: string
+          field_mapping: Json
+          id: string
+          is_active: boolean
+          meta_app_id: string
+          name: string
+          selected_pipeline_id: string
+          selected_tag_ids: Json
+          updated_at: string
+          webhook_verify_token: string
+          workspace_id: string
+        }
+        Insert: {
+          access_token: string
+          app_secret: string
+          created_at?: string
+          field_mapping?: Json
+          id?: string
+          is_active?: boolean
+          meta_app_id: string
+          name: string
+          selected_pipeline_id: string
+          selected_tag_ids?: Json
+          updated_at?: string
+          webhook_verify_token?: string
+          workspace_id: string
+        }
+        Update: {
+          access_token?: string
+          app_secret?: string
+          created_at?: string
+          field_mapping?: Json
+          id?: string
+          is_active?: boolean
+          meta_app_id?: string
+          name?: string
+          selected_pipeline_id?: string
+          selected_tag_ids?: Json
+          updated_at?: string
+          webhook_verify_token?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      meta_lead_forms: {
+        Row: {
+          created_at: string
+          fields_schema: Json
+          form_name: string
+          id: string
+          integration_id: string
+          is_active: boolean
+          last_sync_at: string | null
+          meta_form_id: string
+          page_id: string
+          page_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          fields_schema?: Json
+          form_name: string
+          id?: string
+          integration_id: string
+          is_active?: boolean
+          last_sync_at?: string | null
+          meta_form_id: string
+          page_id: string
+          page_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          fields_schema?: Json
+          form_name?: string
+          id?: string
+          integration_id?: string
+          is_active?: boolean
+          last_sync_at?: string | null
+          meta_form_id?: string
+          page_id?: string
+          page_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       n8n_webhooks: {
         Row: {
           created_at: string

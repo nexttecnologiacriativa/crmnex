@@ -16,6 +16,7 @@ import { useWorkspace } from '@/hooks/useWorkspace';
 import { usePlatformIntegrations, useCreatePlatformIntegration, useUpdatePlatformIntegration, useDeletePlatformIntegration } from '@/hooks/usePlatformIntegrations';
 import FormWebhookSettings from '@/components/settings/FormWebhookSettings';
 import N8nWebhookSettings from '@/components/settings/N8nWebhookSettings';
+import MetaIntegrationsSettings from '@/components/settings/MetaIntegrationsSettings';
 
 
 interface IntegrationsSettingsProps {
@@ -173,6 +174,12 @@ export default function IntegrationsSettings({ currentUserRole }: IntegrationsSe
             className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-blue-600 data-[state=active]:text-white"
           >
             n8n Webhook
+          </TabsTrigger>
+          <TabsTrigger 
+            value="meta-integrations"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-800 data-[state=active]:text-white"
+          >
+            Meta Lead Ads
           </TabsTrigger>
         </TabsList>
         
@@ -460,6 +467,10 @@ export default function IntegrationsSettings({ currentUserRole }: IntegrationsSe
 
         <TabsContent value="n8n-webhook">
           <N8nWebhookSettings />
+        </TabsContent>
+
+        <TabsContent value="meta-integrations">
+          <MetaIntegrationsSettings currentUserRole={currentUserRole} />
         </TabsContent>
       </Tabs>
     </div>

@@ -19,7 +19,7 @@ import { normalizeForMatch, ensureCountryCode55, phonesMatch } from '@/lib/phone
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { MessageCircle, Search, Send, Users, Wifi, WifiOff, Plus, UserSearch, Image as ImageIcon, Trash2, Download } from 'lucide-react';
+import { MessageCircle, Search, Send, Users, Wifi, WifiOff, Plus, UserSearch, Image as ImageIcon, Trash2, Download, AlertCircle } from 'lucide-react';
 import CreateLeadFromConversationDialog from '@/components/whatsapp/CreateLeadFromConversationDialog';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -618,23 +618,33 @@ export default function UnifiedAtendimento() {
                               <WhatsAppImage mediaUrl={m.media_url} alt="Imagem enviada" className="max-w-48 rounded-lg" />
                             </div> : null}
                           
-                          {/* Audio Message Simplified */}
+                          {/* Audio Message */}
                           {m.message_type === 'audio' ? <div className="mb-2 space-y-2">
-                              {/* Use simple HTML5 audio if we have permanent URL */}
-                              {m.permanent_audio_url ? <div className="space-y-1">
-                                  <audio controls className="w-full max-w-xs" src={m.permanent_audio_url} preload="metadata">
-                                    Seu navegador não suporta o elemento de áudio.
-                                  </audio>
-                                  <div className="text-xs text-green-400">✅ Áudio processado</div>
-                                </div> : <div className="space-y-1">
-                                  
-                                </div>}
-                              
-                              {/* Debug Links */}
-                              
-                            </div> : null}
-                          
-                          <p className="text-sm whitespace-pre-wrap">{m.message_text}</p>
+                              {(m.permanent_audio_url || m.media_url) ? (
+                                m.permanent_audio_url ? (
+                                  <div className="space-y-1">
+                                    <audio controls className="w-full max-w-xs" src={m.permanent_audio_url} preload="metadata">
+                                      Seu navegador não suporta o elemento de áudio.
+                                    </audio>
+                                    <div className="text-xs text-green-400">✅ Áudio processado</div>
+                                  </div>
+                                ) : (
+                                  <AudioPlayer
+                                    audioUrl={m.media_url || ''}
+                                    permanentUrl={m.permanent_audio_url || undefined}
+                                    messageId={m.id}
+                                    isFromLead={m.is_from_lead}
+                                    className="max-w-xs"
+                                  />
+                                )
+                              ) : (
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <AlertCircle className="h-4 w-4" />
+                                  {m.message_text || 'Áudio não disponível'}
+                                </div>
+                              )}
+                            </div> : 
+                          <p className="text-sm whitespace-pre-wrap">{m.message_text}</p>}
                           <div className={`mt-2 text-[10px] ${m.is_from_lead ? 'text-muted-foreground' : 'text-primary-foreground/80'}`}>
                             {m.timestamp ? format(new Date(m.timestamp), 'dd/MM HH:mm', {
                         locale: ptBR

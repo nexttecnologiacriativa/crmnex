@@ -11,6 +11,7 @@ import {
   Download
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import AudioPlayer from './AudioPlayer';
 
 interface WhatsAppMessage {
   id: string;
@@ -109,8 +110,21 @@ export function MessageItem({ message, isFromCurrentUser }: MessageItemProps) {
 
       case 'audio':
         return (
-          <div className="text-sm">
-            {message.message_text}
+          <div className="space-y-2">
+            {(message.permanent_audio_url || message.media_url) ? (
+              <AudioPlayer
+                audioUrl={message.media_url || ''}
+                permanentUrl={message.permanent_audio_url || undefined}
+                messageId={message.id}
+                isFromLead={message.is_from_lead}
+                className="max-w-xs"
+              />
+            ) : (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <AlertCircle className="h-4 w-4" />
+                {message.message_text || 'Áudio não disponível'}
+              </div>
+            )}
           </div>
         );
         

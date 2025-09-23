@@ -98,7 +98,9 @@ export function useCreateMetaIntegration() {
           integrationId,
           name: data.name,
           appId: data.meta_app_id,
-          appSecret: data.app_secret
+          appSecret: data.app_secret,
+          selectedPipelineId: data.selected_pipeline_id,
+          selectedTagIds: data.selected_tag_ids
         }
       });
 

@@ -12,6 +12,8 @@ interface MetaOAuthRequest {
   name?: string
   appId?: string
   appSecret?: string
+  selectedPipelineId?: string
+  selectedTagIds?: string[]
   code?: string
   state?: string
 }
@@ -37,7 +39,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    const { data: requestData } = await req.json() as { data: MetaOAuthRequest }
+    const requestData = await req.json() as MetaOAuthRequest
     console.log('Meta OAuth request:', requestData)
 
     if (requestData.action === 'initiate') {
@@ -56,7 +58,9 @@ Deno.serve(async (req) => {
           app_secret: requestData.appSecret,
           access_token: 'pending',
           webhook_verify_token: crypto.randomUUID(),
-          selected_pipeline_id: requestData.workspaceId, // Will be updated later
+          selected_pipeline_id: requestData.selectedPipelineId || null,
+          selected_tag_ids: requestData.selectedTagIds || [],
+          field_mapping: {},
           is_active: false
         })
 

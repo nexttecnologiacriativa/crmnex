@@ -197,13 +197,20 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
             console.error('❌ Image download and save error:', error);
           }
         }
-      } else if (messageContent?.audioMessage) {
+      } else if (messageContent?.audioMessage || messageContent?.pttMessage) {
+        // Handle both regular audio and PTT (Push To Talk)
+        const audioMsg = messageContent.audioMessage || messageContent.pttMessage;
         messageText = !fromMe ? '[audio recebido]' : '[audio enviado]';
         msgType = 'audio';
-        mediaUrl = messageContent.audioMessage.url;
-        mediaBase64 = messageContent.audioMessage.base64 || '';
+        mediaUrl = audioMsg.url;
+        mediaBase64 = audioMsg.base64 || '';
         
-        console.log('🎵 Audio message received, saving as:', messageText);
+        console.log('🎵 Audio/PTT message received:', { 
+          type: messageContent.audioMessage ? 'audio' : 'ptt',
+          hasBase64: !!mediaBase64,
+          hasUrl: !!mediaUrl,
+          mimetype: audioMsg.mimetype
+        });
       } else if (messageContent?.videoMessage) {
         messageText = messageContent.videoMessage.caption || 'Vídeo';
         msgType = 'video';
@@ -245,29 +252,35 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
 
       console.log('Found instance:', instance);
 
-      // Process audio with base64 priority (no encryption handling needed)
+      // Process audio and upload to Supabase Storage
       let permanentAudioUrl = '';
+      let audioMimeType = '';
+      
       if (msgType === 'audio') {
         console.log('🎵 Processing audio message...');
         
-        // Priority: Use base64 from webhook (Evolution processes automatically)
+        const audioMsg = messageContent.audioMessage || messageContent.pttMessage;
+        audioMimeType = audioMsg?.mimetype || 'audio/ogg; codecs=opus';
+        
+        // Try to download and upload audio to our storage
         if (mediaBase64) {
-          console.log('🎵 Processing audio with base64 from webhook (no encryption)...');
+          console.log('🎵 Processing audio with base64 from webhook...');
           try {
             const byteArray = Uint8Array.from(atob(mediaBase64), c => c.charCodeAt(0));
-            const mime = messageContent.audioMessage.mimetype || 'audio/ogg; codecs=opus';
-            const isOgg = mime.includes('ogg');
-            const fileExt = isOgg ? 'ogg' : 'opus';
-            const blob = new Blob([byteArray], { type: mime });
+            const isOgg = audioMimeType.includes('ogg');
+            const isPtt = !!messageContent.pttMessage;
+            const fileExt = isOgg ? 'ogg' : (isPtt ? 'ogg' : 'opus');
             
-            const fileName = `audio/clean_${message.messageTimestamp}_${messageId}.${fileExt}`;
+            const timestamp = message.messageTimestamp || Date.now();
+            const fileName = `audio/${isPtt ? 'ptt' : 'audio'}_${timestamp}_${messageId}.${fileExt}`;
             const filePath = `${instance.workspace_id}/${fileName}`;
+            
+            console.log('📁 Uploading audio to storage:', { filePath, mimeType: audioMimeType, size: byteArray.length });
             
             const { error: uploadError } = await supabase.storage
               .from('whatsapp-media')
-              .upload(filePath, blob, {
-                // usa o mimetype real vindo do WhatsApp (ex.: 'audio/ogg; codecs=opus')
-                contentType: mime,
+              .upload(filePath, byteArray, {
+                contentType: audioMimeType,
                 cacheControl: '3600'
               });
 
@@ -277,15 +290,55 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
                 .getPublicUrl(filePath);
               
               permanentAudioUrl = urlData.publicUrl;
-              console.log('✅ Clean audio processed, URL:', permanentAudioUrl);
+              console.log('✅ Audio uploaded to Supabase Storage:', permanentAudioUrl);
             } else {
-              console.error('❌ Storage upload error:', uploadError);
+              console.error('❌ Audio upload error:', uploadError);
             }
           } catch (error) {
             console.error('❌ Audio processing error:', error);
           }
-        } else {
-          console.log('⚠️ No base64 audio data received - webhook may need reconfiguration');
+        } else if (mediaUrl) {
+          console.log('🎵 Processing audio from URL (attempting download)...');
+          try {
+            // Try to download the audio file from WhatsApp
+            const response = await fetch(mediaUrl);
+            if (response.ok) {
+              const audioBuffer = await response.arrayBuffer();
+              const byteArray = new Uint8Array(audioBuffer);
+              
+              const isOgg = audioMimeType.includes('ogg');
+              const isPtt = !!messageContent.pttMessage;
+              const fileExt = isOgg ? 'ogg' : (isPtt ? 'ogg' : 'opus');
+              
+              const timestamp = message.messageTimestamp || Date.now();
+              const fileName = `audio/${isPtt ? 'ptt' : 'audio'}_${timestamp}_${messageId}.${fileExt}`;
+              const filePath = `${instance.workspace_id}/${fileName}`;
+              
+              console.log('📁 Uploading downloaded audio to storage:', { filePath, mimeType: audioMimeType, size: byteArray.length });
+              
+              const { error: uploadError } = await supabase.storage
+                .from('whatsapp-media')
+                .upload(filePath, byteArray, {
+                  contentType: audioMimeType,
+                  cacheControl: '3600'
+                });
+
+              if (!uploadError) {
+                const { data: urlData } = supabase.storage
+                  .from('whatsapp-media')
+                  .getPublicUrl(filePath);
+                
+                permanentAudioUrl = urlData.publicUrl;
+                console.log('✅ Downloaded audio uploaded to Supabase Storage:', permanentAudioUrl);
+              } else {
+                console.error('❌ Downloaded audio upload error:', uploadError);
+              }
+            } else {
+              console.warn('⚠️ Could not download audio from URL:', response.status);
+            }
+          } catch (error) {
+            console.error('❌ Audio download error:', error);
+          }
         }
       }
 

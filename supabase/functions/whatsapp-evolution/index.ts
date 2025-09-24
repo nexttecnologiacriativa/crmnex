@@ -1011,6 +1011,39 @@ async function sendAudio(instanceName: string, number: string, audioBase64: stri
   });
 
   try {
+    // First, upload audio to Supabase Storage
+    let audioStorageUrl = null;
+    
+    if (workspaceId && cleanBase64) {
+      try {
+        console.log('📁 Uploading audio to Supabase Storage...');
+        const audioBuffer = Uint8Array.from(atob(cleanBase64), c => c.charCodeAt(0));
+        const timestamp = Date.now();
+        const fileName = `audio/sent_${timestamp}_${instanceName}.ogg`;
+        const filePath = `${workspaceId}/${fileName}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('whatsapp-media')
+          .upload(filePath, audioBuffer, {
+            contentType: 'audio/ogg',
+            cacheControl: '3600'
+          });
+
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage
+            .from('whatsapp-media')
+            .getPublicUrl(filePath);
+          
+          audioStorageUrl = urlData.publicUrl;
+          console.log('✅ Audio uploaded to Supabase Storage:', audioStorageUrl);
+        } else {
+          console.error('❌ Audio upload error:', uploadError);
+        }
+      } catch (storageError) {
+        console.error('❌ Audio storage error:', storageError);
+      }
+    }
+
     // Prepare request body according to Evolution API documentation
     const requestBody = {
       number: normalizedPhone,
@@ -1069,13 +1102,14 @@ async function sendAudio(instanceName: string, number: string, audioBase64: stri
               conversation_id: conversation.id,
               message_text: '[audio enviado]',
               message_type: 'audio',
+              media_type: 'audio/ogg',
               is_from_lead: false,
               sent_by: null,
               message_id: responseData.key?.id || `audio_${Date.now()}`,
               status: 'sent',
               timestamp: new Date().toISOString(),
-              media_url: null,
-              media_type: 'audio'
+              media_url: audioStorageUrl || null,
+              permanent_audio_url: audioStorageUrl || null
             });
 
           // Update conversation

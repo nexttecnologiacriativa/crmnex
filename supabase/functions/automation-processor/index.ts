@@ -134,7 +134,7 @@ serve(async (req) => {
           .from('automation_queue')
           .update({ 
             status: 'error',
-            error_message: itemError.message
+            error_message: (itemError as Error).message || 'Unknown error'
           })
           .eq('id', item.id);
       }
@@ -163,7 +163,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: 'Failed to process automations', 
-        details: error.message 
+        details: (error as Error).message || 'Unknown error' 
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

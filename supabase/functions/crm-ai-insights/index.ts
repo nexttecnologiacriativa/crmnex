@@ -233,7 +233,7 @@ serve(async (req) => {
     // Calculate time in negotiation for leads currently in negotiation
     const now = new Date();
     const leadsWithNegotiationTime = currentLeadsInNegotiation.map(lead => {
-      const stageUpdatedAt = lead.pipeline_stage_updated_at ? new Date(lead.pipeline_stage_updated_at) : new Date(lead.created_at);
+      const stageUpdatedAt = (lead as any).pipeline_stage_updated_at ? new Date((lead as any).pipeline_stage_updated_at) : new Date(lead.created_at);
       const daysInStage = Math.floor((now.getTime() - stageUpdatedAt.getTime()) / (1000 * 60 * 60 * 24));
       return { ...lead, daysInNegotiation: daysInStage };
     });
@@ -286,7 +286,7 @@ serve(async (req) => {
         return acc;
       }, {} as Record<string, number>),
       stageDistribution: currentPeriodLeads.reduce((acc, lead) => {
-        const stageName = lead.pipeline_stages?.name || 'Sem estágio';
+        const stageName = (lead.pipeline_stages as any)?.[0]?.name || 'Sem estágio';
         acc[stageName] = (acc[stageName] || 0) + 1;
         return acc;
       }, {} as Record<string, number>)
@@ -465,7 +465,7 @@ Forneça análise focada nos últimos 30 dias com comparação ao período anter
       console.error('OpenAI API fetch error:', openaiError);
       return new Response(JSON.stringify({
         error: 'Failed to connect to AI service',
-        details: openaiError.message
+        details: (openaiError as Error).message || 'Unknown error'
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -474,15 +474,15 @@ Forneça análise focada nos últimos 30 dias com comparação ao período anter
 
   } catch (error) {
     console.error('Critical error in crm-ai-insights function:', error);
-    console.error('Error stack:', error.stack);
-    console.error('Error name:', error.name);
-    console.error('Error message:', error.message);
+    console.error('Error stack:', (error as Error).stack || 'No stack');
+    console.error('Error name:', (error as Error).name || 'Unknown');
+    console.error('Error message:', (error as Error).message || 'Unknown');
     
     return new Response(JSON.stringify({
       error: 'Internal server error',
-      message: error.message,
-      type: error.name || 'Unknown',
-      details: `Function crashed: ${error.message}`
+      message: (error as Error).message || 'Unknown error',
+      type: (error as Error).name || 'Unknown',
+      details: `Function crashed: ${(error as Error).message || 'Unknown error'}`
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

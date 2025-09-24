@@ -55,7 +55,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: 'Failed to process automation', 
-        details: error.message 
+        details: (error as Error).message || 'Unknown error' 
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -117,7 +117,7 @@ async function processPipelineStageChanged(supabase: any, { lead_id, workspace_i
         lead_id,
         step_name: 'Execução do fluxo',
         status: 'error',
-        error_message: flowError.message
+        error_message: (flowError as Error).message || 'Unknown error'
       });
     }
   }
@@ -174,7 +174,7 @@ async function processLeadCreated(supabase: any, { lead_id, workspace_id }: any)
         lead_id,
         step_name: 'Execução do fluxo',
         status: 'error',
-        error_message: flowError.message
+        error_message: (flowError as Error).message || 'Unknown error'
       });
     }
   }
@@ -242,7 +242,7 @@ async function processLeadCreatedWithTag(supabase: any, { lead_id, tag_id, works
         lead_id,
         step_name: 'Execução do fluxo',
         status: 'error',
-        error_message: flowError.message
+        error_message: (flowError as Error).message || 'Unknown error'
       });
     }
   }
@@ -310,7 +310,7 @@ async function processTagApplied(supabase: any, { lead_id, tag_id, workspace_id 
         lead_id,
         step_name: 'Execução do fluxo',
         status: 'error',
-        error_message: flowError.message
+        error_message: (flowError as Error).message || 'Unknown error'
       });
     }
   }
@@ -423,7 +423,7 @@ async function executeFlowForLead(supabase: any, flow: any, lead_id: string, wor
     } catch (stepError) {
       console.error(`❌ Error in step ${i + 1}:`, stepError);
       executionSuccess = false;
-      lastError = stepError.message;
+      lastError = (stepError as Error).message || 'Unknown error';
 
       // Registrar log de erro
       await createAutomationLog(supabase, {
@@ -432,7 +432,7 @@ async function executeFlowForLead(supabase: any, flow: any, lead_id: string, wor
         lead_id,
         step_name: `${step.type} - Passo ${i + 1}`,
         status: 'error',
-        error_message: stepError.message
+        error_message: (stepError as Error).message || 'Unknown error'
       });
 
       break; // Parar execução em caso de erro
@@ -490,7 +490,7 @@ async function selectBestWhatsAppInstance(supabase: any, workspace_id: string, p
 
   // If preferred instance is specified and available, use it
   if (preferredInstance) {
-    const preferred = instances.find(i => i.instance_name === preferredInstance);
+    const preferred = instances.find((i: any) => i.instance_name === preferredInstance);
     if (preferred) {
       console.log(`✅ Using preferred instance: ${preferredInstance} (status: ${preferred.status})`);
       return preferred;
@@ -572,7 +572,7 @@ async function executeEvolutionMessageStep(supabase: any, step: any, lead: any, 
     instance = await selectBestWhatsAppInstance(supabase, workspace_id, preferredInstance);
   } catch (error) {
     console.error('❌ Failed to select WhatsApp instance:', error);
-    throw new Error(`No available WhatsApp instances: ${error.message}`);
+    throw new Error(`No available WhatsApp instances: ${(error as Error).message || 'Unknown error'}`);
   }
 
   // Try sending message with selected instance
@@ -997,7 +997,7 @@ async function processMarketingCampaign(supabase: any, { campaign_id, api_type, 
           .update({ status: 'failed' })
           .eq('id', campaign_id);
         return new Response(
-          JSON.stringify({ error: `No connected Evolution instances: ${error.message}` }),
+          JSON.stringify({ error: `No connected Evolution instances: ${(error as Error).message || 'Unknown error'}` }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -1020,7 +1020,7 @@ async function processMarketingCampaign(supabase: any, { campaign_id, api_type, 
               messageText = randomTemplate?.preview || messageText;
             }
           } catch (e) {
-            console.log('⚠️ Error parsing templates, using default message:', e.message);
+            console.log('⚠️ Error parsing templates, using default message:', (e as Error).message || 'Unknown error');
           }
 
           const phoneNumber = normalizePhoneForEvolution(recipient.phone_number);
@@ -1099,7 +1099,7 @@ async function processMarketingCampaign(supabase: any, { campaign_id, api_type, 
           console.error(`❌ Error sending to ${recipient.phone_number}:`, error);
           await supabase
             .from('marketing_campaign_recipients')
-            .update({ status: 'failed', failed_at: new Date().toISOString(), error_message: error.message })
+            .update({ status: 'failed', failed_at: new Date().toISOString(), error_message: (error as Error).message || 'Unknown error' })
             .eq('id', recipient.id);
 
           failedCount++;
@@ -1170,7 +1170,7 @@ async function processMarketingCampaign(supabase: any, { campaign_id, api_type, 
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message 
+        error: (error as Error).message || 'Unknown error'
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

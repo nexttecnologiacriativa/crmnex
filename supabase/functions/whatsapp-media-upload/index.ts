@@ -186,7 +186,9 @@ serve(async (req) => {
       
       const fileBuffer = await file.arrayBuffer();
       const fileName = `${Date.now()}_${mediaId}.${file.name.split('.').pop()}`;
-      const filePath = `${workspaceMember.workspace_id}/${mediaType}s/${fileName}`;
+      // Use consistent folder naming: audio/ and images/ (not audios/)
+      const folderName = mediaType === 'audio' ? 'audio' : mediaType === 'image' ? 'images' : `${mediaType}s`;
+      const filePath = `${workspaceMember.workspace_id}/${folderName}/${fileName}`;
       
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('whatsapp-media')

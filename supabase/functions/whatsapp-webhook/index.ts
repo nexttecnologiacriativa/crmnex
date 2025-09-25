@@ -91,8 +91,24 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
         messageContentType: typeof messageContent
       });
 
-      // Permitir mensagens enviadas por nós para sincronização
       console.log('Processing message - fromMe:', fromMe);
+
+      // Buscar instância pelo nome no banco primeiro para ter workspace_id
+      const { data: instance, error: instanceError } = await supabase
+        .from('whatsapp_instances')
+        .select('*')
+        .eq('instance_name', instanceName)
+        .maybeSingle();
+
+      if (instanceError) {
+        console.error('Error finding instance:', instanceError);
+        continue;
+      }
+
+      if (!instance) {
+        console.log('Instance not found in database:', instanceName);
+        continue;
+      }
 
       // Verificar se a mensagem tem conteúdo válido
       if (!messageContent) {
@@ -232,23 +248,6 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
         isFromLead: !fromMe,
         messageId
       });
-
-      // Buscar instância pelo nome no banco
-      const { data: instance, error: instanceError } = await supabase
-        .from('whatsapp_instances')
-        .select('*')
-        .eq('instance_name', instanceName)
-        .maybeSingle();
-
-      if (instanceError) {
-        console.error('Error finding instance:', instanceError);
-        continue;
-      }
-
-      if (!instance) {
-        console.log('Instance not found in database:', instanceName);
-        continue;
-      }
 
       console.log('Found instance:', instance);
 

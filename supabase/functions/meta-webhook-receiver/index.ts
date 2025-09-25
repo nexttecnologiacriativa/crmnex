@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { createHmac } from 'https://deno.land/std@0.177.0/crypto/crypto.ts'
+import { crypto } from 'https://deno.land/std@0.190.0/crypto/mod.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -58,9 +58,7 @@ Deno.serve(async (req) => {
 
       // Verify webhook signature
       if (signature) {
-        const expectedSignature = 'sha256=' + await createHmac('sha256', integration.app_secret)
-          .update(body)
-          .digest('hex')
+        const expectedSignature = 'sha256=' + new TextEncoder().encode(integration.app_secret + body).reduce((acc, byte) => acc + byte.toString(16).padStart(2, '0'), '')
 
         if (signature !== expectedSignature) {
           console.error('Invalid webhook signature')

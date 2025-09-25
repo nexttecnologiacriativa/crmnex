@@ -96,7 +96,17 @@ serve(async (req) => {
 
     } else if (action === 'create') {
       // Criar template
-      const { name, category, language, header, body, footer, buttons } = body;
+      const { name, category, language, header, bodyContent, footer, buttons } = body;
+      
+      console.log('Creating template with data:', {
+        name,
+        category,
+        language,
+        header,
+        body: bodyContent,
+        footer,
+        buttons
+      });
 
       const components = [];
 
@@ -110,7 +120,7 @@ serve(async (req) => {
 
       components.push({
         type: 'BODY',
-        text: body
+        text: bodyContent
       });
 
       if (footer) {

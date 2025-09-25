@@ -443,7 +443,7 @@ serve(async (req) => {
       
       // Aplicar assigned_to se determinado
       if (assignedTo) {
-        updateData.assigned_to = assignedTo
+        (updateData as any).assigned_to = assignedTo
       }
 
       const { error } = await supabaseClient
@@ -473,7 +473,7 @@ serve(async (req) => {
       
       // Aplicar assigned_to se determinado
       if (assignedTo) {
-        newLeadData.assigned_to = assignedTo
+        (newLeadData as any).assigned_to = assignedTo
       }
 
       console.log('Creating new lead with data:', JSON.stringify(newLeadData, null, 2));

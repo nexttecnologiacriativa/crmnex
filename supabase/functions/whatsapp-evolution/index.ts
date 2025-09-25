@@ -846,6 +846,42 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
       throw new Error('Número inválido');
     }
 
+    // First upload image to Supabase Storage to get a permanent URL
+    let permanentImageUrl = imageUrl;
+    try {
+      console.log('📁 Uploading image to Supabase Storage...');
+      
+      const imageResponse = await fetch(imageUrl);
+      if (!imageResponse.ok) {
+        throw new Error(`Failed to fetch image: ${imageResponse.status}`);
+      }
+      
+      const imageBuffer = await imageResponse.arrayBuffer();
+      const timestamp = Date.now();
+      const fileName = `sent_${timestamp}_${instanceName}.jpg`;
+      const filePath = `${workspaceId}/images/${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('whatsapp-media')
+        .upload(filePath, imageBuffer, {
+          contentType: 'image/jpeg',
+          cacheControl: '3600'
+        });
+
+      if (!uploadError) {
+        const { data: urlData } = supabase.storage
+          .from('whatsapp-media')
+          .getPublicUrl(filePath);
+        
+        permanentImageUrl = urlData.publicUrl;
+        console.log('✅ Image uploaded to Supabase Storage:', permanentImageUrl);
+      } else {
+        console.error('❌ Image upload error:', uploadError);
+      }
+    } catch (storageError) {
+      console.error('❌ Image storage error:', storageError);
+    }
+
     // Send media using official Evolution API format
     const response = await fetch(`${apiUrl}/message/sendMedia/${instanceName}`, {
       method: 'POST',
@@ -927,7 +963,7 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
             sent_by: null,
             message_text: caption || 'Imagem',
             message_type: 'image',
-            media_url: imageUrl,
+            media_url: permanentImageUrl,
             media_type: 'image',
             attachment_name: 'image.jpg',
             timestamp: new Date().toISOString(),
@@ -1223,7 +1259,9 @@ async function configureWebhook(instanceName: string, workspaceId: string, supab
 
     const data = await response.json();
     console.log(`✅ Webhook configurado com sucesso para ${instanceName}:`, data);
-    return { success: true, data };
+    return new Response(JSON.stringify({ success: true, data }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   } catch (error) {
     console.error('Erro ao configurar webhook:', error);
     throw error;
@@ -1253,7 +1291,9 @@ async function testWebhook(instanceName: string, workspaceId: string, supabase: 
 
     const data = await response.json();
     console.log(`✅ Teste de webhook enviado com sucesso para ${instanceName}:`, data);
-    return { success: true, data };
+    return new Response(JSON.stringify({ success: true, data }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   } catch (error) {
     console.error('Erro ao testar webhook:', error);
     throw error;
@@ -1680,12 +1720,14 @@ async function getWebhookStatus(instanceName: string, supabase: any, apiUrl: str
 
     if (!response.ok) {
       console.log(`⚠️ Webhook não encontrado para ${instanceName} - status: ${response.status}`);
-      return {
+      return new Response(JSON.stringify({
         success: true,
         configured: false,
         active: false,
         error: 'Webhook não configurado'
-      };
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     const data = await response.json();
@@ -1694,7 +1736,7 @@ async function getWebhookStatus(instanceName: string, supabase: any, apiUrl: str
     const expectedUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/whatsapp-webhook`;
     const isCorrectUrl = data.url === expectedUrl;
 
-    return {
+    return new Response(JSON.stringify({
       success: true,
       configured: true,
       active: data.enabled || false,
@@ -1704,15 +1746,20 @@ async function getWebhookStatus(instanceName: string, supabase: any, apiUrl: str
       events: data.events || [],
       webhook_base64: data.webhook_base64 || false,
       data
-    };
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   } catch (error) {
     console.error('❌ Erro ao verificar status do webhook:', error);
-    return {
+    return new Response(JSON.stringify({
       success: false,
       configured: false,
       active: false,
-      error: error.message
-    };
+      error: (error as Error).message
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500
+    });
   }
 }
 

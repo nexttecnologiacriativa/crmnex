@@ -181,6 +181,144 @@ serve(async (req) => {
           );
         }
       }
+      case 'sendMediaUrl': {
+        const mediaUrlInstanceName = bodyData.instanceName || instanceName;
+        const mediaUrlNumber = bodyData.number || phone;
+        const mediaUrl = bodyData.mediaUrl;
+        const mediaUrlType = bodyData.mediaType || 'image';
+        const mediaUrlFileName = bodyData.fileName || 'media';
+        const mediaUrlCaption = bodyData.caption || '';
+        const mediaUrlWorkspaceId = bodyData.workspaceId || workspaceId;
+        
+        console.log('📎 SendMediaUrl action received:', { 
+          mediaUrlInstanceName, 
+          mediaUrlNumber, 
+          mediaUrlType,
+          mediaUrl: mediaUrl?.substring(0, 100) + '...',
+          mediaUrlWorkspaceId,
+          apiUrl: currentApiUrl, 
+          hasApiKey: !!currentApiKey 
+        });
+        
+        if (!mediaUrlInstanceName || !mediaUrlNumber || !mediaUrl) {
+          console.log('❌ Missing required parameters for sendMediaUrl:', {
+            hasInstanceName: !!mediaUrlInstanceName,
+            hasNumber: !!mediaUrlNumber,
+            hasMediaUrl: !!mediaUrl,
+            instanceName: mediaUrlInstanceName,
+            number: mediaUrlNumber,
+            mediaUrl: mediaUrl?.substring(0, 50)
+          });
+          return new Response(
+            JSON.stringify({ 
+              error: 'Parâmetros obrigatórios ausentes para sendMediaUrl',
+              missing: {
+                instanceName: !mediaUrlInstanceName,
+                number: !mediaUrlNumber,
+                mediaUrl: !mediaUrl
+              },
+              received: {
+                instanceName: mediaUrlInstanceName,
+                number: mediaUrlNumber,
+                mediaUrl: mediaUrl?.substring(0, 50)
+              }
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        try {
+          // Find conversation
+          const { data: conversationRecord } = await supabase
+            .from('whatsapp_conversations')
+            .select('id, message_count')
+            .eq('workspace_id', mediaUrlWorkspaceId)
+            .eq('phone_number', mediaUrlNumber)
+            .single();
+          
+          let conversation = conversationRecord;
+          if (!conversation) {
+            const { data: newConversation, error: convError } = await supabase
+              .from('whatsapp_conversations')
+              .insert({
+                phone_number: mediaUrlNumber,
+                workspace_id: mediaUrlWorkspaceId,
+                contact_name: mediaUrlNumber,
+                last_message_at: new Date().toISOString(),
+                message_count: 0
+              })
+              .select()
+              .single();
+              
+            if (convError) {
+              console.error('❌ Error creating conversation:', convError);
+              throw new Error(`Failed to create conversation: ${convError.message}`);
+            }
+            
+            conversation = newConversation;
+          }
+
+          console.log('📎 Sending media via URL to Evolution API...');
+          const response = await fetch(`${currentApiUrl}/message/sendMedia/${mediaUrlInstanceName}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': currentApiKey,
+            },
+            body: JSON.stringify({
+              number: mediaUrlNumber.replace(/\D/g, ''),
+              mediaMessage: {
+                mediaUrl: mediaUrl,
+                fileName: mediaUrlFileName,
+                caption: mediaUrlCaption
+              }
+            })
+          });
+
+          const result = await response.json();
+          console.log('📎 Evolution API media URL send result:', result);
+
+          if (!response.ok) {
+            throw new Error(`Failed to send media: ${result.error?.message || result.message || 'Unknown error'}`);
+          }
+
+          // Save message record to database
+          const { error: saveError } = await supabase
+            .from('whatsapp_messages')
+            .insert({
+              conversation_id: conversation.id,
+              message_text: mediaUrlCaption || `[${mediaUrlType} enviado]`,
+              message_type: mediaUrlType,
+              is_from_lead: false,
+              status: 'sent',
+              media_url: mediaUrl,
+              media_type: mediaUrlType,
+              attachment_name: mediaUrlFileName,
+              message_id: result.key?.id,
+              timestamp: new Date().toISOString()
+            });
+
+          if (saveError) {
+            console.error('❌ Error saving media message to database:', saveError);
+          }
+
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: 'Media URL sent successfully',
+              messageId: result.key?.id,
+              conversationId: conversation.id
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error) {
+          console.error('❌ Error in sendMediaUrl case:', error);
+          return new Response(
+            JSON.stringify({ error: (error as Error).message }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
       case 'sendAudio': {
         const audioInstanceName = bodyData.instanceName || bodyData.instance;
         const audioNumber = bodyData.number || bodyData.phone;

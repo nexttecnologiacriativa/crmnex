@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useWorkspace } from './useWorkspace';
+import { useWhatsAppInstances } from './useWhatsAppInstance';
 
 interface SendMessageParams {
   conversationId: string;
@@ -15,61 +17,69 @@ interface SendMessageParams {
 
 export function useWhatsAppSendMessage() {
   const queryClient = useQueryClient();
+  const { currentWorkspace } = useWorkspace();
+  const { data: instances = [] } = useWhatsAppInstances();
 
   return useMutation({
     mutationFn: async (params: SendMessageParams) => {
       console.log('📨 Sending WhatsApp message:', params);
 
-      // Get session for authentication
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('No authentication token available');
+      // Get active instance
+      const activeInstance = instances.find(instance => instance.status === 'open') || instances[0];
+      if (!activeInstance) {
+        throw new Error('Nenhuma instância do WhatsApp conectada. Configure uma instância primeiro.');
       }
 
-      let payload: any = {
-        to: params.phoneNumber,
-        conversationId: params.conversationId,
-      };
+      // Get API configuration from localStorage
+      const configKey = `evolution_config_${currentWorkspace?.id}`;
+      const storedConfig = localStorage.getItem(configKey);
+      const config = storedConfig ? JSON.parse(storedConfig) : null;
+      
+      if (!config?.global_api_key) {
+        throw new Error('Configure a API Key da Evolution primeiro');
+      }
 
-      // Add message or attachment
-      if (params.mediaId && params.mediaType) {
-        console.log('📎 Sending media message:', params.mediaType, params.mediaId);
-        payload.attachment = {
-          type: params.mediaType,
-          mediaId: params.mediaId,
-          filename: params.fileName,
-          caption: params.caption,
-          permanentUrl: params.permanentUrl
-        };
-      } else if (params.message) {
+      if (params.message) {
+        // Send text message
         console.log('📝 Sending text message');
-        payload.message = params.message;
+        const { error } = await supabase.functions.invoke('whatsapp-evolution', {
+          body: {
+            action: 'send_message',
+            instanceName: activeInstance.instance_name,
+            phone: params.phoneNumber,
+            message: params.message,
+            workspaceId: currentWorkspace?.id,
+            apiKey: config.global_api_key,
+            apiUrl: config.api_url,
+          }
+        });
+        
+        if (error) throw error;
+      } else if (params.mediaId && params.mediaType && params.permanentUrl) {
+        // Send media message using permanent URL
+        console.log('📎 Sending media message:', params.mediaType, params.permanentUrl);
+        const { error } = await supabase.functions.invoke('whatsapp-evolution', {
+          body: {
+            action: 'sendMediaUrl',
+            instanceName: activeInstance.instance_name,
+            number: params.phoneNumber,
+            mediaUrl: params.permanentUrl,
+            mediaType: params.mediaType,
+            fileName: params.fileName,
+            caption: params.caption,
+            workspaceId: currentWorkspace?.id,
+            apiKey: config.global_api_key,
+            apiUrl: config.api_url,
+          }
+        });
+        
+        if (error) throw error;
+      } else {
+        throw new Error('Parâmetros inválidos para envio de mensagem');
       }
 
-      console.log('📤 Sending to WhatsApp Official API...');
-
-      // Send through our edge function
-      const response = await fetch(
-        'https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/whatsapp-official-send',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        console.error('❌ Message send failed:', result);
-        throw new Error(result.error || 'Failed to send message');
-      }
-
-      console.log('✅ Message sent successfully:', result);
-      return result;
+      console.log('✅ Message sent successfully');
+      return { success: true };
     },
     onSuccess: () => {
       // Invalidate queries to refresh messages and conversations

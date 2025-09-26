@@ -146,7 +146,7 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
             
             const timestamp = Date.now();
             const extension = mime.includes('png') ? 'png' : 'jpg';
-            const fileName = `image_${message.messageTimestamp}_${messageId}.${extension}`;
+            const fileName = `image_${message.messageTimestamp || timestamp}_${messageId}.${extension}`;
             const filePath = `${instance.workspace_id}/images/${fileName}`;
             
             const { error: uploadError } = await supabase.storage
@@ -271,8 +271,8 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
             const fileExt = isOgg ? 'ogg' : (isPtt ? 'ogg' : 'opus');
             
             const timestamp = message.messageTimestamp || Date.now();
-            const fileName = `audio/${isPtt ? 'ptt' : 'audio'}_${timestamp}_${messageId}.${fileExt}`;
-            const filePath = `${instance.workspace_id}/${fileName}`;
+            const fileName = `${isPtt ? 'ptt' : 'audio'}_${timestamp}_${messageId}.${fileExt}`;
+            const filePath = `${instance.workspace_id}/audio/${fileName}`;
             
             console.log('📁 Uploading audio to storage:', { filePath, mimeType: audioMimeType, size: byteArray.length });
             
@@ -310,8 +310,8 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
               const fileExt = isOgg ? 'ogg' : (isPtt ? 'ogg' : 'opus');
               
               const timestamp = message.messageTimestamp || Date.now();
-              const fileName = `audio/${isPtt ? 'ptt' : 'audio'}_${timestamp}_${messageId}.${fileExt}`;
-              const filePath = `${instance.workspace_id}/${fileName}`;
+              const fileName = `${isPtt ? 'ptt' : 'audio'}_${timestamp}_${messageId}.${fileExt}`;
+              const filePath = `${instance.workspace_id}/audio/${fileName}`;
               
               console.log('📁 Uploading downloaded audio to storage:', { filePath, mimeType: audioMimeType, size: byteArray.length });
               

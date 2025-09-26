@@ -47,7 +47,7 @@ export default function CreateCampaignDialog({ open, onOpenChange }: CreateCampa
   const [leadsCount, setLeadsCount] = useState(0);
   
   // Novos estados para funcionalidades expandidas
-  const [apiType, setApiType] = useState<'whatsapp_official' | 'evolution'>('whatsapp_official');
+  const [apiType, setApiType] = useState<'evolution'>('evolution');
   const [recipientType, setRecipientType] = useState<'leads' | 'custom_numbers' | 'csv_upload'>('leads');
   const [customNumbers, setCustomNumbers] = useState('');
   const [messageInterval, setMessageInterval] = useState(2);
@@ -141,7 +141,7 @@ export default function CreateCampaignDialog({ open, onOpenChange }: CreateCampa
 
   const getEstimatedCost = () => {
     const totalLeads = getTotalLeadsCount();
-    const costPerMessage = apiType === 'whatsapp_official' ? 0.0625 : 0.05; // USD
+    const costPerMessage = 0.05; // Evolution API cost
     const usdToBrl = 5.5;
     return (totalLeads * costPerMessage * usdToBrl).toFixed(2);
   };
@@ -168,13 +168,7 @@ export default function CreateCampaignDialog({ open, onOpenChange }: CreateCampa
       return;
     }
 
-    // Validar campos obrigatórios baseado no tipo de API e destinatário
-    if (apiType === 'whatsapp_official' && !templateId) {
-      toast({ title: 'Selecione um template aprovado', variant: 'destructive' });
-      return;
-    }
-
-    if (apiType === 'evolution' && !selectedInstance) {
+    // Evolution API sempre pronta - sem validação de template necessária
       toast({ title: 'Selecione uma instância Evolution conectada', variant: 'destructive' });
       return;
     }
@@ -281,19 +275,11 @@ export default function CreateCampaignDialog({ open, onOpenChange }: CreateCampa
                 </div>
 
                 <div>
-                  <Label>Tipo de API *</Label>
-                  <RadioGroup value={apiType} onValueChange={(value: 'whatsapp_official' | 'evolution') => setApiType(value)}>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="whatsapp_official" id="api-official" />
-                      <Label htmlFor="api-official">WhatsApp API Oficial</Label>
-                      <Badge variant="outline">Recomendado</Badge>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="evolution" id="api-evolution" />
-                      <Label htmlFor="api-evolution">Evolution API</Label>
-                      <Badge variant="secondary">Experimental</Badge>
-                    </div>
-                  </RadioGroup>
+                  <Label>API Configurada</Label>
+                  <div className="text-sm text-muted-foreground p-2 bg-green-50 rounded border border-green-200">
+                    <p className="text-green-800 font-medium">✅ Evolution API Exclusiva</p>
+                    <p className="text-green-700">Sistema configurado para uso exclusivo da Evolution API</p>
+                  </div>
                 </div>
 
                 {apiType === 'evolution' && (
@@ -449,92 +435,76 @@ export default function CreateCampaignDialog({ open, onOpenChange }: CreateCampa
           </TabsContent>
 
           <TabsContent value="messages" className="space-y-6">
-            {apiType === 'whatsapp_official' && (
-              <div>
-                <Label htmlFor="template">Template WhatsApp *</Label>
-                <Select value={templateId} onValueChange={setTemplateId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um template aprovado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {templates?.filter(t => t.status === 'APPROVED').map((template) => (
-                      <SelectItem key={template.id} value={template.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{template.name}</span>
-                          <Badge variant="outline">Aprovado</Badge>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            {/* Evolution API configurada - sistema simplificado */}
+            <div className="text-sm text-muted-foreground p-3 bg-green-50 rounded-lg border border-green-200">
+              <p className="font-medium text-green-800">✅ Evolution API Configurada</p>
+              <p className="text-green-700">Sistema configurado para uso exclusivo da Evolution API.</p>
+              <p className="text-green-700">Mídia, templates e envios gerenciados automaticamente.</p>
+            </div>
 
-            {apiType === 'evolution' && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>Mensagens Múltiplas (recomendado)</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addTemplate}
-                    className="flex items-center gap-1"
-                  >
-                    <Plus className="h-3 w-3" />
-                    Adicionar Mensagem
-                  </Button>
-                </div>
-
-                <div className="space-y-3">
-                  {multipleTemplates.map((template, index) => (
-                    <Card key={template.id}>
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-sm">Mensagem {index + 1}</CardTitle>
-                          {multipleTemplates.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeTemplate(template.id)}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div>
-                          <Label>Nome da Mensagem</Label>
-                          <Input
-                            value={template.name}
-                            onChange={(e) => updateTemplate(template.id, 'name', e.target.value)}
-                            placeholder="Ex: Saudação inicial"
-                          />
-                        </div>
-                        <div>
-                          <Label>Conteúdo da Mensagem</Label>
-                          <Textarea
-                            value={template.preview}
-                            onChange={(e) => updateTemplate(template.id, 'preview', e.target.value)}
-                            placeholder="Digite o conteúdo da mensagem..."
-                            rows={4}
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                  
-                  {multipleTemplates.length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p>Adicione pelo menos uma mensagem para continuar</p>
-                    </div>
-                  )}
-                </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label>Mensagens da Campanha</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addTemplate}
+                  className="flex items-center gap-1"
+                >
+                  <Plus className="h-3 w-3" />
+                  Adicionar Mensagem
+                </Button>
               </div>
-            )}
+
+              <div className="space-y-3">
+                {multipleTemplates.map((template, index) => (
+                  <Card key={template.id}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm">Mensagem {index + 1}</CardTitle>
+                        {multipleTemplates.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeTemplate(template.id)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <Label>Nome da Mensagem</Label>
+                        <Input
+                          value={template.name}
+                          onChange={(e) => updateTemplate(template.id, 'name', e.target.value)}
+                          placeholder="Ex: Saudação inicial"
+                        />
+                      </div>
+                      <div>
+                        <Label>Conteúdo da Mensagem</Label>
+                        <Textarea
+                          value={template.preview}
+                          onChange={(e) => updateTemplate(template.id, 'preview', e.target.value)}
+                          placeholder="Digite o conteúdo da mensagem..."
+                          rows={4}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                
+                {multipleTemplates.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>Adicione pelo menos uma mensagem para continuar</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">

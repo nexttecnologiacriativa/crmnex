@@ -1,9 +1,9 @@
-import WhatsAppOfficialInterface from './WhatsAppOfficialInterface';
+import WhatsAppEvolutionInterface from './WhatsAppEvolutionInterface';
 
 export default function WhatsAppWebInterface() {
   return (
     <div className="h-full">
-      <WhatsAppOfficialInterface />
+      <WhatsAppEvolutionInterface />
     </div>
   );
 }

@@ -17,7 +17,7 @@ export default function MarketingSettingsDialog({ open, onOpenChange }: Marketin
   const { data: settings } = useMarketingSettings();
   const updateSettings = useUpdateMarketingSettings();
   
-  const [defaultApiType, setDefaultApiType] = useState<'whatsapp_official' | 'evolution'>('whatsapp_official');
+  const [defaultApiType, setDefaultApiType] = useState<'evolution'>('evolution');
   const [evolutionInterval, setEvolutionInterval] = useState(2);
   const [maxMessagesPerMinute, setMaxMessagesPerMinute] = useState(30);
 
@@ -61,15 +61,13 @@ export default function MarketingSettingsDialog({ open, onOpenChange }: Marketin
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Select value={defaultApiType} onValueChange={(value: 'whatsapp_official' | 'evolution') => setDefaultApiType(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="whatsapp_official">WhatsApp API Oficial</SelectItem>
-                  <SelectItem value="evolution">Evolution API</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="grid gap-3">
+                <Label>API Configurada</Label>
+                <div className="text-sm text-muted-foreground">
+                  <p>✅ Evolution API - Sistema configurado para uso exclusivo</p>
+                  <p>Mídia, mensagens e templates gerenciados automaticamente</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
 

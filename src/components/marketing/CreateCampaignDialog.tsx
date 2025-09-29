@@ -622,8 +622,10 @@ export default function CreateCampaignDialog({ open, onOpenChange }: CreateCampa
           >
             {createCampaign.isPending ? 'Criando...' : 'Criar e Executar Campanha'}
           </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
+         </div>
+       </DialogContent>
+     </Dialog>
+   );
 }
+
+export default CreateCampaignDialog;

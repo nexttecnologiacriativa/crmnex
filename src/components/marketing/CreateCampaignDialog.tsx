@@ -626,6 +626,5 @@ export default function CreateCampaignDialog({ open, onOpenChange }: CreateCampa
        </DialogContent>
      </Dialog>
    );
-}
 
 export default CreateCampaignDialog;

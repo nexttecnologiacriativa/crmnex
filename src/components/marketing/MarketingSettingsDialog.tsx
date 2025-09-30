@@ -17,7 +17,7 @@ export default function MarketingSettingsDialog({ open, onOpenChange }: Marketin
   const { data: settings } = useMarketingSettings();
   const updateSettings = useUpdateMarketingSettings();
   
-  const [defaultApiType, setDefaultApiType] = useState<'evolution'>('evolution');
+  const [defaultApiType, setDefaultApiType] = useState<'evolution' | 'whatsapp_official'>('evolution');
   const [evolutionInterval, setEvolutionInterval] = useState(2);
   const [maxMessagesPerMinute, setMaxMessagesPerMinute] = useState(30);
 

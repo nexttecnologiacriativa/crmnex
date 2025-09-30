@@ -54,7 +54,7 @@ function CreateCampaignDialog({ open, onOpenChange }: CreateCampaignDialogProps)
 
   const { currentWorkspace } = useWorkspace();
   const { data: leadTags = [] } = useLeadTags();
-  const { data: pipelines = [] } = usePipelines();
+  const { data: pipelines = [] } = usePipelines(currentWorkspace?.id);
   const { data: leads = [] } = useLeads();
   const { data: instances = [] } = useWhatsAppInstances();
   const { data: settings } = useMarketingSettings();

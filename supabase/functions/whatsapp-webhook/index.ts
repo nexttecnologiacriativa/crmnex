@@ -74,10 +74,34 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
       console.log('=== PROCESSING INDIVIDUAL MESSAGE ===');
       console.log('Message object:', JSON.stringify(message, null, 2));
       
+      const remoteJid = message.key?.remoteJid || '';
+      
+      // FILTRAR MENSAGENS DE GRUPOS - Ignorar JIDs que terminam em @g.us
+      if (remoteJid.endsWith('@g.us')) {
+        console.log('⏭️ Skipping group message:', remoteJid);
+        continue;
+      }
+      
+      // Função para normalizar número de telefone (remover sufixos e caracteres especiais)
+      const normalizePhoneNumber = (phone: string): string => {
+        if (!phone) return '';
+        
+        // Remove sufixos após : (ex: 5512974012534:57 -> 5512974012534)
+        phone = phone.replace(/:[0-9]+$/g, '');
+        
+        // Remove @s.whatsapp.net se existir
+        phone = phone.replace('@s.whatsapp.net', '');
+        
+        // Remove todos os caracteres não numéricos
+        phone = phone.replace(/\D/g, '');
+        
+        return phone;
+      };
+      
       const messageContent = message.message;
       const messageType = message.messageType || 'text';
       const fromMe = message.key?.fromMe || false;
-      const phoneNumber = message.key?.remoteJid?.replace('@s.whatsapp.net', '').replace('@g.us', '');
+      const phoneNumber = normalizePhoneNumber(remoteJid);
       const pushName = message.pushName || 'Usuário';
       const messageId = message.key?.id;
 
@@ -85,6 +109,7 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
         messageType,
         fromMe,
         phoneNumber,
+        remoteJid,
         pushName,
         messageId,
         hasMessageContent: !!messageContent,

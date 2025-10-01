@@ -1,9 +1,16 @@
 /**
  * Normalizes phone number for matching by removing all non-digits and country codes
  * Handles both DDI formats (55 prefix) and local numbers
+ * Also removes Evolution API suffixes like :57
  */
 export function normalizeForMatch(phone: string): string {
   if (!phone) return '';
+  
+  // Remove Evolution API suffixes (ex: 5512974012534:57 -> 5512974012534)
+  phone = phone.replace(/:[0-9]+$/g, '');
+  
+  // Remove WhatsApp JID suffixes
+  phone = phone.replace('@s.whatsapp.net', '').replace('@g.us', '');
   
   // Remove all non-digits
   const digitsOnly = phone.replace(/\D/g, '');
@@ -26,9 +33,16 @@ export function normalizeForMatch(phone: string): string {
 
 /**
  * Ensures phone number has Brazil country code (55) for sending messages
+ * Also removes Evolution API suffixes
  */
 export function ensureCountryCode55(phone: string): string {
   if (!phone) return '';
+  
+  // Remove Evolution API suffixes (ex: 5512974012534:57 -> 5512974012534)
+  phone = phone.replace(/:[0-9]+$/g, '');
+  
+  // Remove WhatsApp JID suffixes
+  phone = phone.replace('@s.whatsapp.net', '').replace('@g.us', '');
   
   const digitsOnly = phone.replace(/\D/g, '');
   

@@ -61,13 +61,32 @@ export function useAddLeadToPipeline() {
 
   return useMutation({
     mutationFn: async (data: AddLeadToPipelineData) => {
+      // Primeiro, verificar se o lead já tem algum relacionamento
+      const { data: existingRelations } = await supabase
+        .from('lead_pipeline_relations')
+        .select('*')
+        .eq('lead_id', data.lead_id);
+
+      // Se não tiver nenhum relacionamento e is_primary não foi especificado, criar como primário
+      const isPrimary = existingRelations?.length === 0 ? true : (data.is_primary || false);
+
+      // Inserir o novo relacionamento
       const { data: result, error } = await supabase
         .from('lead_pipeline_relations')
-        .insert(data)
+        .insert({ ...data, is_primary: isPrimary })
         .select()
         .single();
 
       if (error) throw error;
+
+      // Se for primário, atualizar a tabela leads também
+      if (isPrimary) {
+        await supabase
+          .from('leads')
+          .update({ pipeline_id: data.pipeline_id, stage_id: data.stage_id })
+          .eq('id', data.lead_id);
+      }
+
       return result;
     },
     onSuccess: (_, variables) => {
@@ -140,13 +159,23 @@ export function useSetPrimaryPipeline() {
 
   return useMutation({
     mutationFn: async ({ lead_id, pipeline_id }: { lead_id: string; pipeline_id: string }) => {
-      // Primeiro, remover is_primary de todos os outros relacionamentos
+      // Primeiro, obter o stage_id do relacionamento que será primário
+      const { data: relationData } = await supabase
+        .from('lead_pipeline_relations')
+        .select('stage_id')
+        .eq('lead_id', lead_id)
+        .eq('pipeline_id', pipeline_id)
+        .single();
+
+      if (!relationData) throw new Error('Relacionamento não encontrado');
+
+      // Remover is_primary de todos os outros relacionamentos
       await supabase
         .from('lead_pipeline_relations')
         .update({ is_primary: false })
         .eq('lead_id', lead_id);
 
-      // Depois, definir o novo como primário
+      // Definir o novo como primário
       const { data, error } = await supabase
         .from('lead_pipeline_relations')
         .update({ is_primary: true })
@@ -160,7 +189,10 @@ export function useSetPrimaryPipeline() {
       // Atualizar também a tabela leads para manter sincronizado
       await supabase
         .from('leads')
-        .update({ pipeline_id })
+        .update({ 
+          pipeline_id,
+          stage_id: relationData.stage_id 
+        })
         .eq('id', lead_id);
 
       return data;

@@ -32,11 +32,23 @@ export default function ConversationCard({
   
   // Initials for avatar
   const getInitials = (name: string) => {
-    const parts = name.split(' ');
-    if (parts.length >= 2) {
+    if (!name || name.trim().length === 0) return '?';
+    
+    const parts = name.trim().split(' ').filter(part => part.length > 0);
+    
+    if (parts.length >= 2 && parts[0][0] && parts[1][0]) {
       return parts[0][0].toUpperCase() + parts[1][0].toUpperCase();
     }
-    return name.substring(0, 2).toUpperCase();
+    
+    if (parts.length > 0 && parts[0].length >= 2) {
+      return parts[0].substring(0, 2).toUpperCase();
+    }
+    
+    if (parts.length > 0 && parts[0].length === 1) {
+      return parts[0][0].toUpperCase();
+    }
+    
+    return '?';
   };
 
   return (

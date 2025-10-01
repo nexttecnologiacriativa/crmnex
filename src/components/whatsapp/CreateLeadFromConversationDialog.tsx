@@ -13,6 +13,7 @@ import { useCreateLead } from '@/hooks/useLeads';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { usePipelines } from '@/hooks/usePipeline';
 import { useLeadTags, useCreateLeadTag, useAddTagToLead } from '@/hooks/useLeadTags';
+import { useAddLeadToPipeline } from '@/hooks/useLeadPipelineRelations';
 import { toast } from 'sonner';
 import { Plus, X } from 'lucide-react';
 import { useEffect } from 'react';
@@ -54,6 +55,7 @@ export default function CreateLeadFromConversationDialog({
   const { data: allTags = [] } = useLeadTags();
   const createTag = useCreateLeadTag();
   const addTagToLead = useAddTagToLead();
+  const addLeadToPipeline = useAddLeadToPipeline();
 
   const defaultPipeline = pipelines.find(p => p.is_default) || pipelines[0];
   const selectedPipeline = pipelines.find(p => p.id === selectedPipelineId);
@@ -124,8 +126,20 @@ export default function CreateLeadFromConversationDialog({
 
       const newLead = await createLead.mutateAsync(leadData);
       
-      // Atualizar a conversa com o lead_id
+      // Criar relacionamento no pipeline (garantir sincronização)
       if (newLead.id) {
+        try {
+          await addLeadToPipeline.mutateAsync({
+            lead_id: newLead.id,
+            pipeline_id: selectedPipeline.id,
+            stage_id: selectedStage.id,
+            is_primary: true
+          });
+        } catch (pipelineError) {
+          console.error('Erro ao adicionar lead ao pipeline:', pipelineError);
+        }
+        
+        // Atualizar a conversa com o lead_id
         const { supabase } = await import('@/integrations/supabase/client');
         await supabase
           .from('whatsapp_conversations')

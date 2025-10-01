@@ -41,14 +41,15 @@ export function useLeadTimeline(leadId: string, enabled: boolean = true) {
           .from('leads')
           .select('phone')
           .eq('id', leadId)
-          .single()
+          .maybeSingle()
       ]);
 
       if (activitiesResult.error) throw activitiesResult.error;
       if (leadResult.error) throw leadResult.error;
 
       const activities = activitiesResult.data || [];
-      const leadPhone = leadResult.data?.phone;
+      // leadResult.data pode ser null se o lead não existir
+      const leadPhone = leadResult.data?.phone || null;
 
       // Se tiver telefone, buscar conversas do WhatsApp
       let whatsappConversations = [];

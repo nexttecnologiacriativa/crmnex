@@ -117,7 +117,7 @@ serve(async (req) => {
     const buffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
 
     const { error: uploadError } = await supabase.storage
-      .from('whatsapp-audio')
+      .from('whatsapp-media')
       .upload(filePath, buffer, {
         contentType: mediaData.mimetype || 'audio/ogg',
         cacheControl: '3600'
@@ -133,7 +133,7 @@ serve(async (req) => {
 
     // Get public URL
     const { data: urlData } = supabase.storage
-      .from('whatsapp-audio')
+      .from('whatsapp-media')
       .getPublicUrl(filePath);
 
     const permanentUrl = urlData.publicUrl;

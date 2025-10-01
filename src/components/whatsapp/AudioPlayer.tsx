@@ -429,7 +429,7 @@ export default function AudioPlayer({ audioUrl, originalUrl, permanentUrl, durat
       }
 
       // If it's a permanent Supabase URL, use it directly
-      if (permanentUrl && permanentUrl.includes('supabase.co/storage/v1/object/public/whatsapp-audio/')) {
+      if (permanentUrl && permanentUrl.includes('supabase.co/storage/v1/object/public/whatsapp-media/')) {
         console.log('✅ Using permanent URL directly:', permanentUrl);
         const success = await tryLoadAudio(permanentUrl);
         if (success) {

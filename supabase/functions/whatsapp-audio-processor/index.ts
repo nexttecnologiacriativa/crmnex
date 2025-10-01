@@ -53,11 +53,11 @@ serve(async (req) => {
       mediaUrl: message.media_url?.substring(0, 50) + '...'
     });
 
-    // Check if message is audio and from lead
-    if (message.message_type !== 'audio' || !message.is_from_lead) {
-      console.log('❌ Not a received audio message');
+    // Check if message is audio (aceita enviados e recebidos)
+    if (message.message_type !== 'audio') {
+      console.log('❌ Not an audio message');
       return new Response(
-        JSON.stringify({ error: 'Not a received audio message' }),
+        JSON.stringify({ error: 'Not an audio message' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -217,7 +217,7 @@ serve(async (req) => {
 
     // Upload to Supabase storage
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('whatsapp-audio')
+      .from('whatsapp-media')
       .upload(fileName, audioBuffer, {
         // preferível para WhatsApp/Opus
         contentType: 'audio/ogg; codecs=opus',
@@ -238,7 +238,7 @@ serve(async (req) => {
 
     // Get public URL
     const { data: publicUrlData } = supabase.storage
-      .from('whatsapp-audio')
+      .from('whatsapp-media')
       .getPublicUrl(uploadData.path);
 
     if (!publicUrlData.publicUrl) {

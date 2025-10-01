@@ -423,7 +423,33 @@ export default function UnifiedAtendimento() {
 
   // Enriquecer conversas com dados de leads, responsável e tags
   const enrichedConversations = useMemo(() => {
-    return conversations.map((conv: any) => {
+    // First, group conversations by normalized phone number to eliminate duplicates
+    const conversationsByNormalizedPhone = new Map<string, any[]>();
+    
+    conversations.forEach((conv: any) => {
+      const normalizedPhone = normalizeForMatch(conv.phone_number || '');
+      if (!normalizedPhone) return;
+      
+      if (!conversationsByNormalizedPhone.has(normalizedPhone)) {
+        conversationsByNormalizedPhone.set(normalizedPhone, []);
+      }
+      conversationsByNormalizedPhone.get(normalizedPhone)!.push(conv);
+    });
+    
+    // For each group, keep only the most recent conversation
+    const uniqueConversations: any[] = [];
+    conversationsByNormalizedPhone.forEach((convGroup) => {
+      // Sort by last_message_at descending and take the first one
+      const sortedGroup = convGroup.sort((a, b) => {
+        const dateA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+        const dateB = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+        return dateB - dateA;
+      });
+      uniqueConversations.push(sortedGroup[0]);
+    });
+    
+    // Now enrich the unique conversations
+    return uniqueConversations.map((conv: any) => {
       const foundLead = findLeadByPhone(conv.phone_number || '');
       const assignee = foundLead?.assigned_to ? profiles.find(p => p.id === foundLead.assigned_to) : null;
       

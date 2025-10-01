@@ -367,17 +367,23 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
       }
 
       // Buscar conversa existente ou criar nova
-      let { data: conversation, error: convError } = await supabase
+      // CRITICAL: Search by normalized phone to avoid duplicates with suffixes
+      const { data: existingConversations, error: convError } = await supabase
         .from('whatsapp_conversations')
         .select('*')
-        .eq('phone_number', phone)
-        .eq('workspace_id', instance.workspace_id)
-        .maybeSingle();
+        .eq('workspace_id', instance.workspace_id);
 
       if (convError) {
-        console.error('Error finding conversation:', convError);
+        console.error('Error finding conversations:', convError);
         continue;
       }
+
+      // Find conversation by matching normalized phone numbers
+      let conversation = existingConversations?.find((conv: any) => {
+        const convNormalized = normalizePhoneNumber(conv.phone_number || '');
+        const phoneNormalized = normalizePhoneNumber(phone);
+        return convNormalized === phoneNormalized;
+      });
 
       if (!conversation) {
         console.log('Creating new conversation for phone:', phone);
@@ -408,7 +414,7 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
         const { data: newConversation, error: createError } = await supabase
           .from('whatsapp_conversations')
           .insert({
-            phone_number: phone,
+            phone_number: normalizePhoneNumber(phone), // Use normalized phone to prevent duplicates
             contact_name: lead?.name || pushName || phone,
             instance_id: instance.id,
             workspace_id: instance.workspace_id,

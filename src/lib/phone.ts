@@ -7,8 +7,8 @@
 export function normalizeForMatch(phone: string): string {
   if (!phone) return '';
   
-  // Remove Evolution API suffixes (ex: 5512974012534:57 -> 5512974012534)
-  // These suffixes are added by WhatsApp Web/Desktop clients
+  // First, remove Evolution API suffixes (ex: 5512974012534:57 -> 5512974012534)
+  // CRITICAL: Do this BEFORE any other processing
   phone = phone.replace(/:[0-9]+$/g, '');
   
   // Remove WhatsApp JID suffixes
@@ -17,8 +17,10 @@ export function normalizeForMatch(phone: string): string {
   // Remove all non-digits
   const digitsOnly = phone.replace(/\D/g, '');
   
+  if (!digitsOnly) return '';
+  
   // Handle Brazil DDI (55) and occasional trunk prefix '0'
-  if (digitsOnly.startsWith('55') && digitsOnly.length > 11) {
+  if (digitsOnly.startsWith('55')) {
     let rest = digitsOnly.substring(2);
     // Some sources include a trunk '0' after the country code, strip it
     if (rest.startsWith('0')) rest = rest.substring(1);
@@ -26,7 +28,7 @@ export function normalizeForMatch(phone: string): string {
   }
   
   // If number starts with a trunk '0' locally (e.g., 0XX...), strip it for matching
-  if (digitsOnly.length > 11 && digitsOnly.startsWith('0')) {
+  if (digitsOnly.startsWith('0')) {
     return digitsOnly.substring(1);
   }
   

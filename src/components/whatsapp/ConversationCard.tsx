@@ -1,8 +1,9 @@
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { MessageCircle, User } from 'lucide-react';
+import { MessageCircle, User, Phone } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { formatPhoneDisplay } from '@/lib/phone';
 
 interface ConversationCardProps {
   conversation: any;
@@ -64,6 +65,12 @@ export default function ConversationCard({
             <span className="text-xs text-muted-foreground flex-shrink-0">
               {formatTime(conversation.last_message_at)}
             </span>
+          </div>
+
+          {/* Phone Number */}
+          <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+            <Phone className="h-3 w-3" />
+            <span className="truncate">{formatPhoneDisplay(conversation.phone_number)}</span>
           </div>
 
           {/* Responsável */}

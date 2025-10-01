@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, Volume2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { Play, Pause, Volume2, AlertCircle } from 'lucide-react';
 
 interface AudioPlayerProps {
   audioUrl: string;
@@ -9,65 +8,77 @@ interface AudioPlayerProps {
   duration?: number;
   className?: string;
   messageId?: string;
-  isFromLead?: boolean;
 }
 
 export default function AudioPlayer({ 
   audioUrl, 
   permanentUrl, 
   duration, 
-  className = '', 
-  messageId
+  className = ''
 }: AudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(duration || 0);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [finalAudioUrl, setFinalAudioUrl] = useState<string | null>(null);
+  const [isFormatSupported, setIsFormatSupported] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Usar URL permanente ou audioUrl do Supabase Storage
+  // Detectar formato e verificar suporte do navegador
+  const getAudioFormat = (url: string): string => {
+    const extension = url.split('.').pop()?.toLowerCase() || '';
+    if (extension.includes('ogg')) return 'audio/ogg';
+    if (extension.includes('mp3')) return 'audio/mpeg';
+    if (extension.includes('wav')) return 'audio/wav';
+    if (extension.includes('m4a')) return 'audio/mp4';
+    if (extension.includes('opus')) return 'audio/opus';
+    return 'audio/ogg'; // default
+  };
+
+  const checkFormatSupport = (url: string): boolean => {
+    const audio = document.createElement('audio');
+    const format = getAudioFormat(url);
+    const canPlay = audio.canPlayType(format);
+    return canPlay === 'probably' || canPlay === 'maybe';
+  };
+
+  // Determinar URL final do áudio
   useEffect(() => {
-    console.log('🎵 AudioPlayer props:', { permanentUrl, audioUrl, messageId });
-
-    // Prioridade 1: permanentUrl do Supabase Storage
-    if (permanentUrl && permanentUrl.includes('supabase.co/storage/v1/object/public/whatsapp-media/')) {
-      console.log('✅ Using permanentUrl:', permanentUrl);
-      setFinalAudioUrl(permanentUrl);
-      setError(null);
+    const finalUrl = permanentUrl || audioUrl;
+    
+    if (!finalUrl) {
+      setError('Áudio não disponível');
+      setIsLoading(false);
       return;
     }
 
-    // Prioridade 2: audioUrl (media_url) do Supabase Storage
-    if (audioUrl && audioUrl.includes('supabase.co/storage/v1/object/public/whatsapp-media/')) {
-      console.log('✅ Using audioUrl:', audioUrl);
-      setFinalAudioUrl(audioUrl);
-      setError(null);
+    // Verificar se o formato é suportado
+    const supported = checkFormatSupport(finalUrl);
+    setIsFormatSupported(supported);
+
+    if (!supported) {
+      setError('Formato de áudio não suportado pelo navegador');
+      setIsLoading(false);
       return;
     }
 
-    // Se não tem URL válida, mostrar erro
-    console.warn('⚠️ No valid audio URL found');
-    setError('Áudio não disponível');
-  }, [audioUrl, permanentUrl, messageId]);
+    setIsLoading(false);
+  }, [audioUrl, permanentUrl]);
 
   // Gerenciar eventos do elemento de áudio
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !finalAudioUrl) return;
+    if (!audio) return;
 
     const handleLoadedMetadata = () => {
       setAudioDuration(audio.duration);
-      setIsLoading(false);
       setError(null);
-      console.log('🎵 Audio ready:', { duration: audio.duration, url: finalAudioUrl });
     };
 
-    const handleError = (e: ErrorEvent) => {
-      console.error('🎵 Audio load error:', e, 'URL:', finalAudioUrl);
-      setError('Erro ao carregar áudio');
-      setIsLoading(false);
+    const handleError = () => {
+      console.error('🎵 Audio load error');
+      setError('Não foi possível carregar o áudio');
+      setIsFormatSupported(false);
     };
 
     const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
@@ -77,32 +88,43 @@ export default function AudioPlayer({
       setCurrentTime(0);
     };
 
+    const handleCanPlay = () => {
+      setIsLoading(false);
+    };
+
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
     audio.addEventListener('error', handleError);
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('canplay', handleCanPlay);
 
     return () => {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('error', handleError);
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('canplay', handleCanPlay);
     };
-  }, [finalAudioUrl]);
+  }, []);
 
   const togglePlayPause = () => {
     const audio = audioRef.current;
-    if (!audio || !finalAudioUrl) return;
+    if (!audio || !isFormatSupported) return;
 
     if (isPlaying) {
       audio.pause();
       setIsPlaying(false);
     } else {
-      audio.play().catch(err => {
-        console.error('🎵 Play error:', err);
-        setError('Erro ao reproduzir áudio');
-      });
-      setIsPlaying(true);
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => setIsPlaying(true))
+          .catch(err => {
+            console.error('🎵 Play error:', err);
+            setError('Não foi possível reproduzir o áudio');
+            setIsFormatSupported(false);
+          });
+      }
     }
   };
 
@@ -121,67 +143,92 @@ export default function AudioPlayer({
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // Estados de carregamento e erro
+  // Estado de carregamento
   if (isLoading) {
     return (
-      <div className={`flex items-center gap-2 p-3 rounded-lg bg-muted ${className}`}>
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-        <span className="text-sm text-muted-foreground">Processando áudio...</span>
+      <div className={`flex items-center gap-2 p-3 rounded-lg bg-muted/50 ${className}`}>
+        <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent"></div>
+        <span className="text-sm text-muted-foreground">Carregando áudio...</span>
       </div>
     );
   }
 
-  if (error) {
+  // Estado de erro ou formato não suportado
+  if (error || !isFormatSupported) {
     return (
-      <div className={`flex items-center gap-2 p-3 rounded-lg bg-destructive/10 ${className}`}>
-        <span className="text-sm text-destructive">{error}</span>
+      <div className={`flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 ${className}`}>
+        <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
+        <div className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-destructive">
+            {error || 'Formato não suportado'}
+          </span>
+          {!isFormatSupported && (
+            <span className="text-xs text-muted-foreground">
+              Seu navegador não suporta este formato de áudio
+            </span>
+          )}
+        </div>
       </div>
     );
   }
 
-  if (!finalAudioUrl) {
+  const finalUrl = permanentUrl || audioUrl;
+  if (!finalUrl) {
     return (
       <div className={`flex items-center gap-2 p-3 rounded-lg bg-muted ${className}`}>
+        <AlertCircle className="h-5 w-5 text-muted-foreground" />
         <span className="text-sm text-muted-foreground">Áudio não disponível</span>
       </div>
     );
   }
 
-  // Renderizar player
+  // Renderizar player funcional
   return (
-    <div className={`flex flex-col gap-2 ${className}`}>
+    <div className={`flex flex-col gap-1 ${className}`}>
       <audio
         ref={audioRef}
-        src={finalAudioUrl}
+        src={finalUrl}
         preload="metadata"
         crossOrigin="anonymous"
-      />
+      >
+        <source src={finalUrl} type={getAudioFormat(finalUrl)} />
+        <source src={finalUrl} type="audio/ogg" />
+        <source src={finalUrl} type="audio/mpeg" />
+        <source src={finalUrl} type="audio/wav" />
+      </audio>
 
-      <div className="flex items-center gap-3 p-3 rounded-lg bg-muted">
+      <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/50 border border-border/50">
         <Button
           variant="ghost"
           size="sm"
           onClick={togglePlayPause}
-          className="flex-shrink-0"
+          disabled={!isFormatSupported}
+          className="h-8 w-8 p-0 flex-shrink-0 hover:bg-primary/10"
         >
-          {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+          {isPlaying ? (
+            <Pause className="h-4 w-4" />
+          ) : (
+            <Play className="h-4 w-4" />
+          )}
         </Button>
 
-        <div className="flex-1 flex items-center gap-2">
+        <div className="flex-1 flex items-center gap-2 min-w-0">
           <input
             type="range"
             min="0"
             max={audioDuration || 0}
+            step="0.1"
             value={currentTime}
             onChange={handleSeek}
-            className="flex-1 h-1 bg-primary/20 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary"
+            disabled={!isFormatSupported}
+            className="flex-1 h-1 bg-primary/20 rounded-full appearance-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer"
           />
-          <span className="text-xs text-muted-foreground whitespace-nowrap">
+          <span className="text-xs text-muted-foreground whitespace-nowrap font-mono tabular-nums">
             {formatTime(currentTime)} / {formatTime(audioDuration)}
           </span>
         </div>
 
-        <Volume2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+        <Volume2 className="h-3.5 w-3.5 text-muted-foreground/70 flex-shrink-0" />
       </div>
     </div>
   );

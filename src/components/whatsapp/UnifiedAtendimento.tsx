@@ -766,7 +766,6 @@ export default function UnifiedAtendimento() {
                                     audioUrl={m.media_url || ''}
                                     permanentUrl={m.permanent_audio_url || undefined}
                                     messageId={m.id}
-                                    isFromLead={m.is_from_lead}
                                     className="max-w-xs"
                                   />
                                 )

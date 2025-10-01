@@ -116,7 +116,6 @@ export function MessageItem({ message, isFromCurrentUser }: MessageItemProps) {
                 audioUrl={message.media_url || ''}
                 permanentUrl={message.permanent_audio_url || undefined}
                 messageId={message.id}
-                isFromLead={message.is_from_lead}
                 className="max-w-xs"
               />
             ) : (

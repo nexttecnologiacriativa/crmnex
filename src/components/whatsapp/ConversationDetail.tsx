@@ -150,7 +150,6 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
             audioUrl={audioUrl || ''} 
             messageId={message.message_id}
             permanentUrl={message.permanent_audio_url}
-            isFromLead={message.is_from_lead}
           />
           
           {/* Informações adicionais de debug */}

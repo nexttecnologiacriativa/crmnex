@@ -1,4 +1,29 @@
 /**
+ * Detects and removes incorporated suffixes from phone numbers
+ * Brazilian numbers should have 11 digits (DDD + 9 digits for mobile)
+ * If a number has 13+ digits after DDI, it likely has an incorporated suffix
+ */
+function detectAndRemoveIncorporatedSuffix(digitsOnly: string): string {
+  // Brazilian format: 55 (DDI) + 11 digits (DDD + number)
+  // Total expected: 13 digits
+  if (digitsOnly.startsWith('55') && digitsOnly.length > 13) {
+    // Try removing last 2 digits (common suffixes like :57, :18)
+    const withoutLast2 = digitsOnly.slice(0, -2);
+    if (withoutLast2.length === 13) {
+      return withoutLast2;
+    }
+    
+    // Try removing last 3 digits
+    const withoutLast3 = digitsOnly.slice(0, -3);
+    if (withoutLast3.length === 13) {
+      return withoutLast3;
+    }
+  }
+  
+  return digitsOnly;
+}
+
+/**
  * Normalizes phone number for matching by removing all non-digits and country codes
  * Handles both DDI formats (55 prefix) and local numbers
  * Also removes Evolution API suffixes like :57, :18, etc.
@@ -15,9 +40,12 @@ export function normalizeForMatch(phone: string): string {
   phone = phone.replace('@s.whatsapp.net', '').replace('@g.us', '');
   
   // Remove all non-digits
-  const digitsOnly = phone.replace(/\D/g, '');
+  let digitsOnly = phone.replace(/\D/g, '');
   
   if (!digitsOnly) return '';
+  
+  // Detect and remove incorporated suffixes (e.g., 551297401253457 -> 5512974012534)
+  digitsOnly = detectAndRemoveIncorporatedSuffix(digitsOnly);
   
   // Handle Brazil DDI (55) and occasional trunk prefix '0'
   if (digitsOnly.startsWith('55')) {

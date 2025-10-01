@@ -93,6 +93,24 @@ export default function PipelineKanban({
     queryFn: async () => {
       if (!selectedPipelineId || !workspace?.id) return [];
       
+      // Buscar os IDs dos leads que estão neste pipeline através da tabela de relações
+      const { data: relations, error: relationsError } = await supabase
+        .from('lead_pipeline_relations')
+        .select('lead_id, stage_id')
+        .eq('pipeline_id', selectedPipelineId);
+
+      if (relationsError) {
+        console.error("Erro ao buscar relações de leads:", relationsError);
+        toast.error("Erro ao buscar leads do pipeline.");
+        return [];
+      }
+
+      if (!relations || relations.length === 0) return [];
+
+      const leadIds = relations.map(r => r.lead_id);
+      const stageMap = new Map(relations.map(r => [r.lead_id, r.stage_id]));
+
+      // Buscar os leads completos
       const { data, error } = await supabase
         .from('leads')
         .select(`
@@ -107,7 +125,7 @@ export default function PipelineKanban({
           )
         `)
         .eq('workspace_id', workspace.id)
-        .eq('pipeline_id', selectedPipelineId)
+        .in('id', leadIds)
         .order('updated_at', { ascending: false });
 
       if (error) {
@@ -116,7 +134,11 @@ export default function PipelineKanban({
         return [];
       }
       
-      return data || [];
+      // Atualizar o stage_id de cada lead com o da relação específica deste pipeline
+      return (data || []).map(lead => ({
+        ...lead,
+        stage_id: stageMap.get(lead.id) || lead.stage_id
+      }));
     },
     enabled: !!selectedPipelineId && !!workspace?.id
   });
@@ -203,17 +225,42 @@ export default function PipelineKanban({
       pipelineTag: pipelineTag
     });
     
-    const {
-      error
-    } = await supabase.from('leads').update({
-      stage_id: newStageId,
-      status: newStatus,
-      pipeline_tag: pipelineTag
-    }).eq('id', draggableId);
-    if (error) {
-      console.error("Erro ao atualizar o lead:", error);
+    // Atualizar a relação do lead com este pipeline específico
+    const { error: relationError } = await supabase
+      .from('lead_pipeline_relations')
+      .update({ stage_id: newStageId })
+      .eq('lead_id', draggableId)
+      .eq('pipeline_id', selectedPipelineId);
+
+    if (relationError) {
+      console.error("Erro ao atualizar relação do lead:", relationError);
       toast.error("Erro ao atualizar o lead.");
       return;
+    }
+
+    // Se este for o pipeline primário, atualizar também a tabela leads
+    const { data: isPrimary } = await supabase
+      .from('lead_pipeline_relations')
+      .select('is_primary')
+      .eq('lead_id', draggableId)
+      .eq('pipeline_id', selectedPipelineId)
+      .single();
+
+    if (isPrimary?.is_primary) {
+      const { error: leadError } = await supabase
+        .from('leads')
+        .update({
+          stage_id: newStageId,
+          status: newStatus,
+          pipeline_tag: pipelineTag
+        })
+        .eq('id', draggableId);
+
+      if (leadError) {
+        console.error("Erro ao atualizar o lead:", leadError);
+        toast.error("Erro ao atualizar o lead.");
+        return;
+      }
     }
 
     // Mostrar toast com informações da mudança

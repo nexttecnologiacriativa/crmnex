@@ -4,15 +4,18 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Trash2, ArrowLeft } from 'lucide-react';
+import { Trash2, ArrowLeft, UserPlus } from 'lucide-react';
 import { useDeleteWhatsAppMessage } from '@/hooks/useWhatsAppOfficial';
 import { useWhatsAppMessages } from '@/hooks/useWhatsApp';
 import { MessageInput } from './MessageInput';
 import AttachmentPreview from './AttachmentPreview';
 import AudioPlayer from './AudioPlayer';
 import WhatsAppImage from './WhatsAppImage';
+import CreateLeadFromConversationDialog from './CreateLeadFromConversationDialog';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useLeads } from '@/hooks/useLeads';
+import { phonesMatch } from '@/lib/phone';
 
 interface Message {
   id: string;
@@ -37,6 +40,8 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const deleteMessage = useDeleteWhatsAppMessage();
   const { data: messages = [], isLoading } = useWhatsAppMessages(conversationId);
+  const { data: leads = [] } = useLeads();
+  const [createLeadOpen, setCreateLeadOpen] = useState(false);
 
   // Get conversation details for phone number
   const { data: conversation } = useQuery({
@@ -44,7 +49,7 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
     queryFn: async () => {
       const { data, error } = await supabase
         .from('whatsapp_conversations')
-        .select('phone_number')
+        .select('phone_number, contact_name')
         .eq('id', conversationId)
         .single();
       
@@ -53,6 +58,11 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
     },
     enabled: !!conversationId,
   });
+
+  // Find if lead exists for this conversation
+  const leadForConversation = conversation?.phone_number 
+    ? leads.find(lead => lead.phone && phonesMatch(lead.phone, conversation.phone_number))
+    : null;
 
   // Auto scroll to bottom when new messages arrive
   useEffect(() => {
@@ -212,16 +222,30 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
   return (
     <div className="flex flex-col h-full">
       {/* Header with back button */}
-      <div className="flex items-center gap-2 p-4 border-b">
-        <Button 
-          onClick={onBack}
-          variant="ghost"
-          size="sm"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Voltar
-        </Button>
-        <h2 className="font-semibold">Conversa</h2>
+      <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center gap-2">
+          <Button 
+            onClick={onBack}
+            variant="ghost"
+            size="sm"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Voltar
+          </Button>
+          <h2 className="font-semibold">{conversation?.contact_name || 'Conversa'}</h2>
+        </div>
+        
+        {!leadForConversation && conversation && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700"
+            onClick={() => setCreateLeadOpen(true)}
+          >
+            <UserPlus className="h-4 w-4" />
+            Cadastrar Lead
+          </Button>
+        )}
       </div>
 
       {messages.length === 0 ? (
@@ -298,6 +322,20 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
         phoneNumber={conversation?.phone_number || 'unknown'}
         disabled={false}
       />
+
+      {/* Create Lead Dialog */}
+      {conversation && (
+        <CreateLeadFromConversationDialog
+          open={createLeadOpen}
+          onOpenChange={setCreateLeadOpen}
+          phoneNumber={conversation.phone_number}
+          contactName={conversation.contact_name || ''}
+          conversationId={conversationId}
+          onLeadCreated={() => {
+            setCreateLeadOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

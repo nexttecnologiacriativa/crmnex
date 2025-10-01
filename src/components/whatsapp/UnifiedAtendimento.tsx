@@ -19,7 +19,7 @@ import { normalizeForMatch, ensureCountryCode55, phonesMatch } from '@/lib/phone
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { MessageCircle, Search, Send, Users, Wifi, WifiOff, Plus, UserSearch, Image as ImageIcon, Trash2, Download, AlertCircle } from 'lucide-react';
+import { MessageCircle, Search, Send, Users, Wifi, WifiOff, Plus, UserSearch, UserPlus, Image as ImageIcon, Trash2, Download, AlertCircle } from 'lucide-react';
 import CreateLeadFromConversationDialog from '@/components/whatsapp/CreateLeadFromConversationDialog';
 import ConversationCard from '@/components/whatsapp/ConversationCard';
 import { toast } from 'sonner';
@@ -680,6 +680,10 @@ export default function UnifiedAtendimento() {
                         return newSet;
                       });
                     }}
+                    onCreateLead={() => {
+                      setSelectedConvForLead(conv);
+                      setCreateLeadOpen(true);
+                    }}
                   />;
               })}
                </div>
@@ -691,16 +695,32 @@ export default function UnifiedAtendimento() {
             {selectedConv ? <>
                 <div className="border-b p-4 bg-card">
                   <div className="flex items-center justify-between gap-4">
-                    <div className="min-w-0">
-                      <h3 className="font-medium truncate">
-                        {(() => {
-                      const lead = findLeadByPhone(selectedConv.phone_number || '');
-                      return lead ? getLeadDisplayName(lead) : selectedConv.contact_name || selectedConv.phone_number || 'Contato';
-                    })()}
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        {selectedConv.phone_number}
-                      </p>
+                    <div className="min-w-0 flex-1 flex items-center gap-3">
+                      <div className="flex-1">
+                        <h3 className="font-medium truncate">
+                          {(() => {
+                        const lead = findLeadByPhone(selectedConv.phone_number || '');
+                        return lead ? getLeadDisplayName(lead) : selectedConv.contact_name || selectedConv.phone_number || 'Contato';
+                      })()}
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          {selectedConv.phone_number}
+                        </p>
+                      </div>
+                      {!findLeadByPhone(selectedConv.phone_number || '') && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700"
+                          onClick={() => {
+                            setSelectedConvForLead(selectedConv);
+                            setCreateLeadOpen(true);
+                          }}
+                        >
+                          <UserPlus className="h-4 w-4" />
+                          Cadastrar Lead
+                        </Button>
+                      )}
                     </div>
                     {/* Instance picker */}
                     <div className="flex items-center gap-4">

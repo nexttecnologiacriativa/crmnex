@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { MessageCircle, User, Phone } from 'lucide-react';
+import { MessageCircle, User, Phone, UserPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatPhoneDisplay } from '@/lib/phone';
@@ -13,6 +14,7 @@ interface ConversationCardProps {
   isSelected: boolean;
   onClick: () => void;
   unread?: boolean;
+  onCreateLead?: () => void;
 }
 
 export default function ConversationCard({
@@ -22,7 +24,8 @@ export default function ConversationCard({
   tags = [],
   isSelected,
   onClick,
-  unread = false
+  unread = false,
+  onCreateLead
 }: ConversationCardProps) {
   const displayName = lead?.name || conversation.contact_name || conversation.phone_number || 'Contato';
   const formatTime = (iso?: string) => iso ? format(new Date(iso), 'HH:mm', { locale: ptBR }) : '';
@@ -56,10 +59,23 @@ export default function ConversationCard({
           <div className="flex items-center justify-between gap-2 mb-1">
             <div className="flex items-center gap-2 min-w-0">
               <span className="font-medium truncate">{displayName}</span>
-              {lead && (
+              {lead ? (
                 <Badge variant="secondary" className="text-xs px-1.5 py-0 h-5 flex-shrink-0">
                   Lead
                 </Badge>
+              ) : onCreateLead && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-5 px-2 text-xs gap-1 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCreateLead();
+                  }}
+                >
+                  <UserPlus className="h-3 w-3" />
+                  +LEAD
+                </Button>
               )}
             </div>
             <span className="text-xs text-muted-foreground flex-shrink-0">

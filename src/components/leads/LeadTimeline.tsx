@@ -1,6 +1,4 @@
-import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useMemo, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,16 +24,38 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useLeadTimeline } from '@/hooks/useLeadTimeline';
+
+// Hook para debounce
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
 
 interface TimelineEvent {
   id: string;
-  type: string;
+  type: 'activity' | 'whatsapp';
   title: string;
   description: string;
   metadata?: any;
   created_at: string;
-  user_id?: string;
-  user_name?: string;
+  activity_type?: string;
+  user?: {
+    full_name: string;
+    avatar_url?: string;
+  };
 }
 
 interface LeadTimelineProps {
@@ -61,103 +81,37 @@ export default function LeadTimeline({ leadId, onEditActivity }: LeadTimelinePro
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   
-  // Buscar todas as atividades do lead
-  const { data: activities = [], isLoading } = useQuery({
-    queryKey: ['lead-timeline', leadId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('lead_activities')
-        .select(`
-          *,
-          profiles:user_id(full_name)
-        `)
-        .eq('lead_id', leadId)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data as any[];
-    },
-    enabled: !!leadId,
-  });
+  // Debounce na busca para melhor performance
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-  // Buscar contagem de mensagens WhatsApp agrupadas
-  const { data: whatsappSummary = [] } = useQuery({
-    queryKey: ['lead-whatsapp-summary', leadId],
-    queryFn: async () => {
-      // Primeiro, buscar conversas do lead
-      const { data: lead } = await supabase
-        .from('leads')
-        .select('phone')
-        .eq('id', leadId)
-        .single();
-      
-      if (!lead?.phone) return [];
-      
-      const { data, error } = await supabase
-        .from('whatsapp_conversations')
-        .select('id, message_count, last_message_at, created_at')
-        .eq('phone_number', lead.phone)
-        .order('created_at', { ascending: false })
-        .limit(10);
-      
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!leadId,
-  });
+  // Usar hook otimizado
+  const { events: rawEvents, isLoading, error } = useLeadTimeline(leadId, true);
 
-  // Combinar e filtrar eventos
+  // Filtrar eventos com debounced search
   const timelineEvents = useMemo(() => {
-    const events: TimelineEvent[] = [];
-    
-    // Adicionar atividades manuais e automáticas
-    activities.forEach(activity => {
-      events.push({
-        id: activity.id,
-        type: activity.activity_type,
-        title: activity.title,
-        description: activity.description || '',
-        metadata: activity.metadata,
-        created_at: activity.created_at,
-        user_id: activity.user_id,
-        user_name: activity.profiles?.full_name,
-      });
-    });
-    
-    // Adicionar resumos de WhatsApp
-    whatsappSummary.forEach(conv => {
-      if (conv.message_count > 0) {
-        events.push({
-          id: `whatsapp-${conv.id}`,
-          type: 'whatsapp_message',
-          title: 'Interação WhatsApp',
-          description: `${conv.message_count} mensagens trocadas`,
-          metadata: { conversation_id: conv.id, last_message_at: conv.last_message_at },
-          created_at: conv.created_at,
-        });
-      }
-    });
+    let filtered = rawEvents;
     
     // Filtrar por tipo
-    let filtered = events;
     if (filterType !== 'all') {
-      filtered = events.filter(e => e.type === filterType);
+      filtered = filtered.filter(event => {
+        if (filterType === 'whatsapp_message') {
+          return event.type === 'whatsapp';
+        }
+        return event.activity_type === filterType;
+      });
     }
     
-    // Filtrar por termo de busca
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(e => 
-        e.title.toLowerCase().includes(term) ||
-        e.description.toLowerCase().includes(term)
+    // Filtrar por termo de busca (usando debounced)
+    if (debouncedSearchTerm) {
+      const term = debouncedSearchTerm.toLowerCase();
+      filtered = filtered.filter(event => 
+        event.title.toLowerCase().includes(term) ||
+        event.description.toLowerCase().includes(term)
       );
     }
     
-    // Ordenar por data (mais recentes primeiro)
-    return filtered.sort((a, b) => 
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
-  }, [activities, whatsappSummary, filterType, searchTerm]);
+    return filtered;
+  }, [rawEvents, debouncedSearchTerm, filterType]);
 
   // Agrupar por data
   const groupedEvents = useMemo(() => {
@@ -175,7 +129,8 @@ export default function LeadTimeline({ leadId, onEditActivity }: LeadTimelinePro
   }, [timelineEvents]);
 
   const renderEventContent = (event: TimelineEvent) => {
-    const config = activityTypeConfig[event.type as keyof typeof activityTypeConfig] || activityTypeConfig.note;
+    const eventType = event.type === 'whatsapp' ? 'whatsapp_message' : event.activity_type || 'note';
+    const config = activityTypeConfig[eventType as keyof typeof activityTypeConfig] || activityTypeConfig.note;
     const Icon = config.icon;
     
     return (
@@ -206,10 +161,10 @@ export default function LeadTimeline({ leadId, onEditActivity }: LeadTimelinePro
                   <Clock className="h-3 w-3" />
                   {format(new Date(event.created_at), "HH:mm", { locale: ptBR })}
                 </span>
-                {event.user_name && (
+                {event.user && (
                   <span className="flex items-center gap-1">
                     <User className="h-3 w-3" />
-                    {event.user_name}
+                    {event.user.full_name}
                   </span>
                 )}
                 <span className="text-muted-foreground/60">
@@ -222,7 +177,7 @@ export default function LeadTimeline({ leadId, onEditActivity }: LeadTimelinePro
             </div>
             
             {/* Botão de editar para atividades manuais */}
-            {['note', 'call', 'email', 'meeting'].includes(event.type) && onEditActivity && (
+            {event.type === 'activity' && ['note', 'call', 'email', 'meeting'].includes(event.activity_type || '') && onEditActivity && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -287,8 +242,33 @@ export default function LeadTimeline({ leadId, onEditActivity }: LeadTimelinePro
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="space-y-4 p-4">
+        <div className="flex gap-2">
+          <Skeleton className="h-10 flex-1" />
+          <Skeleton className="h-10 w-40" />
+        </div>
+        {[1, 2, 3].map(i => (
+          <Card key={i}>
+            <CardContent className="p-4">
+              <div className="flex gap-3">
+                <Skeleton className="h-10 w-10 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-1/3" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-2/3" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center p-8 text-red-500">
+        Erro ao carregar histórico. Tente novamente.
       </div>
     );
   }
@@ -343,15 +323,17 @@ export default function LeadTimeline({ leadId, onEditActivity }: LeadTimelinePro
               </div>
               
               <div className="space-y-4">
-                {events.map((event) => (
+                {events.map((event) => {
+                  const eventType = event.type === 'whatsapp' ? 'whatsapp_message' : event.activity_type || 'note';
+                  return (
                   <Card key={event.id} className="border-l-4" style={{
-                    borderLeftColor: activityTypeConfig[event.type as keyof typeof activityTypeConfig]?.color.replace('text-', '') || 'hsl(var(--primary))'
+                    borderLeftColor: activityTypeConfig[eventType as keyof typeof activityTypeConfig]?.color.replace('text-', '') || 'hsl(var(--primary))'
                   }}>
                     <CardContent className="p-4">
                       {renderEventContent(event)}
                     </CardContent>
                   </Card>
-                ))}
+                )})}
               </div>
             </div>
           ))}

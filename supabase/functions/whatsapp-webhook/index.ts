@@ -83,19 +83,40 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
       }
       
       // Função para normalizar número de telefone (remover sufixos e caracteres especiais)
+      // CRITICAL: Detecta e remove sufixos incorporados (ex: 551297401253457 -> 5512974012534)
       const normalizePhoneNumber = (phone: string): string => {
         if (!phone) return '';
         
         // Remove sufixos após : (ex: 5512974012534:57 -> 5512974012534)
         phone = phone.replace(/:[0-9]+$/g, '');
         
-        // Remove @s.whatsapp.net se existir
-        phone = phone.replace('@s.whatsapp.net', '');
+        // Remove @s.whatsapp.net e @g.us se existir
+        phone = phone.replace('@s.whatsapp.net', '').replace('@g.us', '');
         
         // Remove todos os caracteres não numéricos
-        phone = phone.replace(/\D/g, '');
+        let digitsOnly = phone.replace(/\D/g, '');
         
-        return phone;
+        // Detectar e remover sufixos incorporados
+        // Números brasileiros devem ter 13 dígitos total (55 + 11 dígitos)
+        if (digitsOnly.startsWith('55') && digitsOnly.length > 13) {
+          console.log('🔍 Detected potential incorporated suffix:', digitsOnly);
+          
+          // Tentar remover últimos 2 dígitos (sufixos comuns como :57, :18)
+          const withoutLast2 = digitsOnly.slice(0, -2);
+          if (withoutLast2.length === 13) {
+            console.log('✂️ Removed 2-digit incorporated suffix:', digitsOnly, '->', withoutLast2);
+            return withoutLast2;
+          }
+          
+          // Tentar remover últimos 3 dígitos
+          const withoutLast3 = digitsOnly.slice(0, -3);
+          if (withoutLast3.length === 13) {
+            console.log('✂️ Removed 3-digit incorporated suffix:', digitsOnly, '->', withoutLast3);
+            return withoutLast3;
+          }
+        }
+        
+        return digitsOnly;
       };
       
       const messageContent = message.message;

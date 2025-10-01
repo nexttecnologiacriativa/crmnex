@@ -151,6 +151,20 @@ export default function UnifiedAtendimento() {
     },
     enabled: !!currentWorkspace?.id && !!leads?.length
   });
+  
+  // Instance selection - DEVE VIR ANTES DOS useEffect QUE USAM ESTAS VARIÁVEIS
+  const connectedInstances = (instances || []).filter(i => i.status === 'open');
+  const firstInstance = connectedInstances[0]?.instance_name || '';
+  const [selectedInstanceName, setSelectedInstanceName] = useState<string>(firstInstance);
+
+  // Auto-select first connected instance when available
+  useEffect(() => {
+    if (!selectedInstanceName && firstInstance) {
+      console.log('🔌 Auto-selecionando primeira instância conectada:', firstInstance);
+      setSelectedInstanceName(firstInstance);
+    }
+  }, [firstInstance, selectedInstanceName]);
+  
   useEffect(() => {
     if (hasProcessedNavRef.current) return;
 
@@ -159,6 +173,12 @@ export default function UnifiedAtendimento() {
       const leadId = location.state.leadId;
       const phone = location.state.phone;
       const normalizedPhone = normalizeForMatch(phone);
+
+      // Garantir que uma instância está selecionada
+      if (!selectedInstanceName && firstInstance) {
+        console.log('🔌 Selecionando instância automaticamente ao abrir conversa de lead:', firstInstance);
+        setSelectedInstanceName(firstInstance);
+      }
 
       // Buscar o lead nos dados
       const lead = leads.find(l => l.id === leadId);
@@ -188,6 +208,13 @@ export default function UnifiedAtendimento() {
         companyName,
         companyPhone
       } = location.state;
+      
+      // Garantir que uma instância está selecionada
+      if (!selectedInstanceName && firstInstance) {
+        console.log('🔌 Selecionando instância automaticamente ao abrir conversa de outbound:', firstInstance);
+        setSelectedInstanceName(firstInstance);
+      }
+      
       if (companyPhone) {
         const normalizedPhone = normalizeForMatch(companyPhone);
 
@@ -209,9 +236,16 @@ export default function UnifiedAtendimento() {
       hasProcessedNavRef.current = true;
       window.history.replaceState(null, '', location.pathname);
     }
-  }, [location.state, leads, conversations]);
+  }, [location.state, leads, conversations, selectedInstanceName, firstInstance]);
   const handleCreateConversationForLead = async (leadId: string, phoneDigits: string, lead: any) => {
     if (!currentWorkspace?.id) return;
+    
+    // Garantir que uma instância está selecionada
+    if (!selectedInstanceName && firstInstance) {
+      console.log('🔌 Selecionando instância automaticamente para lead:', firstInstance);
+      setSelectedInstanceName(firstInstance);
+    }
+    
     try {
       const created = await createConversation.mutateAsync({
         workspace_id: currentWorkspace.id,
@@ -234,6 +268,13 @@ export default function UnifiedAtendimento() {
   };
   const handleCreateConversationForCompany = async (companyName: string, phoneDigits: string) => {
     if (!currentWorkspace?.id) return;
+    
+    // Garantir que uma instância está selecionada
+    if (!selectedInstanceName && firstInstance) {
+      console.log('🔌 Selecionando instância automaticamente para empresa:', firstInstance);
+      setSelectedInstanceName(firstInstance);
+    }
+    
     try {
       const created = await createConversation.mutateAsync({
         workspace_id: currentWorkspace.id,
@@ -255,10 +296,6 @@ export default function UnifiedAtendimento() {
     }
   };
 
-  // Instance selection
-  const connectedInstances = (instances || []).filter(i => i.status === 'open');
-  const firstInstance = connectedInstances[0]?.instance_name || '';
-  const [selectedInstanceName, setSelectedInstanceName] = useState<string>(firstInstance);
 
   // New message dialog state
   const [newMsgOpen, setNewMsgOpen] = useState(false);

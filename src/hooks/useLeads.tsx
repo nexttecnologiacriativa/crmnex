@@ -80,6 +80,7 @@ interface UpdateLeadData {
   value?: number | null;
   notes?: string | null;
   source?: string | null;
+  pipeline_id?: string;
   stage_id?: string;
   assigned_to?: string | null;
   status?: "new" | "contacted" | "qualified" | "proposal" | "negotiation" | "closed_won" | "closed_lost";

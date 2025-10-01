@@ -7,11 +7,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getLeadDisplayName } from '@/lib/leadUtils';
 import { User, Mail, Phone, Building, DollarSign, Calendar, Save, Edit, X } from 'lucide-react';
 import { useUpdateLead } from '@/hooks/useLeads';
 import { useLeadActivities, useCreateLeadActivity } from '@/hooks/useLeadActivities';
-import { usePipelines } from '@/hooks/usePipeline';
+import { usePipelines, usePipelineStages } from '@/hooks/usePipeline';
+import { useUpdateLeadPipeline } from '@/hooks/useLeadPipelineRelations';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +21,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import LeadMultiplePipelinesManager from '@/components/leads/LeadMultiplePipelinesManager';
 
 interface LeadDataModalProps {
   leadId: string | null;
@@ -34,9 +37,12 @@ export default function LeadDataModal({ leadId, open, onOpenChange }: LeadDataMo
   
   const { currentWorkspace } = useWorkspace();
   const updateLead = useUpdateLead();
+  const updateLeadPipeline = useUpdateLeadPipeline();
   const createActivity = useCreateLeadActivity();
   const { data: activities = [] } = useLeadActivities(leadId || '');
   const { data: pipelines = [] } = usePipelines(currentWorkspace?.id);
+  const [selectedPipelineId, setSelectedPipelineId] = useState<string>('');
+  const { data: stages } = usePipelineStages(selectedPipelineId);
 
   // Buscar dados do lead
   const { data: leadData } = useQuery({
@@ -77,6 +83,7 @@ export default function LeadDataModal({ leadId, open, onOpenChange }: LeadDataMo
     if (leadData) {
       setEditedLead(leadData);
       setNotes(leadData.notes || '');
+      setSelectedPipelineId(leadData.pipeline_id || '');
       setIsEditing(false);
     }
   }, [leadData]);
@@ -179,7 +186,15 @@ export default function LeadDataModal({ leadId, open, onOpenChange }: LeadDataMo
         </DialogHeader>
 
         <ScrollArea className="flex-1 pr-4">
-          <div className="space-y-6">
+          <Tabs defaultValue="info" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="info">Informações</TabsTrigger>
+              <TabsTrigger value="pipelines">Pipelines</TabsTrigger>
+              <TabsTrigger value="activities">Atividades</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="info" className="mt-4">
+              <div className="space-y-6">
             {/* Status e Pipeline */}
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -378,63 +393,71 @@ export default function LeadDataModal({ leadId, open, onOpenChange }: LeadDataMo
                 className="w-full mt-1"
               />
             </div>
+          </div>
+        </TabsContent>
 
-            <Separator />
+        <TabsContent value="pipelines">
+          <LeadMultiplePipelinesManager
+            leadId={leadId!}
+            workspaceId={currentWorkspace?.id || ''}
+          />
+        </TabsContent>
 
-            {/* Atividades */}
-            <div>
-              <h3 className="font-semibold mb-3">Atividades</h3>
-              
-              {/* Adicionar nova atividade */}
-              <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                <h4 className="font-medium mb-2">Nova Atividade</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                  <Select value={newActivity.type} onValueChange={(value) => setNewActivity({...newActivity, type: value})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="call">Ligação</SelectItem>
-                      <SelectItem value="email">Email</SelectItem>
-                      <SelectItem value="meeting">Reunião</SelectItem>
-                      <SelectItem value="note">Anotação</SelectItem>
-                      <SelectItem value="task">Tarefa</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    placeholder="Descrição da atividade..."
-                    value={newActivity.description}
-                    onChange={(e) => setNewActivity({...newActivity, description: e.target.value})}
-                  />
-                  <Button onClick={handleAddActivity} disabled={!newActivity.type || !newActivity.description.trim()}>
-                    Adicionar
-                  </Button>
-                </div>
-              </div>
-
-              {/* Lista de atividades */}
-              <div className="space-y-3 max-h-60 overflow-y-auto">
-                {activities.map((activity) => (
-                  <div key={activity.id} className="bg-white p-3 rounded border">
-                    <div className="flex items-center justify-between mb-1">
-                      <Badge variant="outline">{activity.activity_type}</Badge>
-                      <span className="text-xs text-gray-500">
-                        {format(new Date(activity.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-700">{activity.description}</p>
-                  </div>
-                ))}
-                
-                {activities.length === 0 && (
-                  <p className="text-sm text-gray-500 text-center py-4">
-                    Nenhuma atividade registrada ainda.
-                  </p>
-                )}
+        <TabsContent value="activities">
+          <div>
+            <h3 className="font-semibold mb-3">Atividades</h3>
+          
+            {/* Adicionar nova atividade */}
+            <div className="bg-gray-50 p-4 rounded-lg mb-4">
+              <h4 className="font-medium mb-2">Nova Atividade</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <Select value={newActivity.type} onValueChange={(value) => setNewActivity({...newActivity, type: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="call">Ligação</SelectItem>
+                    <SelectItem value="email">Email</SelectItem>
+                    <SelectItem value="meeting">Reunião</SelectItem>
+                    <SelectItem value="note">Anotação</SelectItem>
+                    <SelectItem value="task">Tarefa</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  placeholder="Descrição da atividade..."
+                  value={newActivity.description}
+                  onChange={(e) => setNewActivity({...newActivity, description: e.target.value})}
+                />
+                <Button onClick={handleAddActivity} disabled={!newActivity.type || !newActivity.description.trim()}>
+                  Adicionar
+                </Button>
               </div>
             </div>
+
+            {/* Lista de atividades */}
+            <div className="space-y-3 max-h-60 overflow-y-auto">
+              {activities.map((activity) => (
+                <div key={activity.id} className="bg-white p-3 rounded border">
+                  <div className="flex items-center justify-between mb-1">
+                    <Badge variant="outline">{activity.activity_type}</Badge>
+                    <span className="text-xs text-gray-500">
+                      {format(new Date(activity.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-700">{activity.description}</p>
+                </div>
+              ))}
+              
+              {activities.length === 0 && (
+                <p className="text-sm text-gray-500 text-center py-4">
+                  Nenhuma atividade registrada ainda.
+                </p>
+              )}
+            </div>
           </div>
-        </ScrollArea>
+        </TabsContent>
+      </Tabs>
+    </ScrollArea>
       </DialogContent>
     </Dialog>
   );

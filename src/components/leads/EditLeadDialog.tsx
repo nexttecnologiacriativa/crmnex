@@ -10,6 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useUpdateLead } from '@/hooks/useLeads';
+import { usePipelines, usePipelineStages } from '@/hooks/usePipeline';
+import { useUpdateLeadPipeline } from '@/hooks/useLeadPipelineRelations';
 import CustomFieldsForm from './CustomFieldsForm';
 import PhoneInput from './PhoneInput';
 
@@ -22,6 +24,8 @@ const editLeadSchema = z.object({
   value: z.string().optional(),
   notes: z.string().optional(),
   source: z.string().optional(),
+  pipeline_id: z.string().optional(),
+  stage_id: z.string().optional(),
   custom_fields: z.record(z.any()).optional(),
 });
 
@@ -35,6 +39,10 @@ interface EditLeadDialogProps {
 
 export default function EditLeadDialog({ lead, open, onOpenChange }: EditLeadDialogProps) {
   const updateLead = useUpdateLead();
+  const updateLeadPipeline = useUpdateLeadPipeline();
+  const { data: pipelines } = usePipelines(lead?.workspace_id);
+  const [selectedPipelineId, setSelectedPipelineId] = useState<string>('');
+  const { data: stages } = usePipelineStages(selectedPipelineId || lead?.pipeline_id);
 
   const form = useForm<EditLeadFormData>({
     resolver: zodResolver(editLeadSchema),
@@ -47,12 +55,15 @@ export default function EditLeadDialog({ lead, open, onOpenChange }: EditLeadDia
       value: '',
       notes: '',
       source: '',
+      pipeline_id: '',
+      stage_id: '',
       custom_fields: {},
     },
   });
 
   useEffect(() => {
     if (lead && open) {
+      setSelectedPipelineId(lead.pipeline_id || '');
       form.reset({
         name: lead.name || '',
         email: lead.email || '',
@@ -62,6 +73,8 @@ export default function EditLeadDialog({ lead, open, onOpenChange }: EditLeadDia
         value: lead.value ? lead.value.toString() : '',
         notes: lead.notes || '',
         source: lead.source || '',
+        pipeline_id: lead.pipeline_id || '',
+        stage_id: lead.stage_id || '',
         custom_fields: lead.custom_fields || {},
       });
     }
@@ -83,7 +96,27 @@ export default function EditLeadDialog({ lead, open, onOpenChange }: EditLeadDia
       custom_fields: data.custom_fields || {},
     };
 
+    // Atualizar dados básicos do lead
     await updateLead.mutateAsync(updateData);
+
+    // Se mudou pipeline ou stage, atualizar também
+    if (data.pipeline_id && data.stage_id) {
+      if (data.pipeline_id !== lead.pipeline_id || data.stage_id !== lead.stage_id) {
+        await updateLeadPipeline.mutateAsync({
+          lead_id: lead.id,
+          pipeline_id: data.pipeline_id,
+          stage_id: data.stage_id,
+        });
+
+        // Atualizar também na tabela leads (pipeline principal)
+        await updateLead.mutateAsync({
+          id: lead.id,
+          pipeline_id: data.pipeline_id,
+          stage_id: data.stage_id,
+        });
+      }
+    }
+
     onOpenChange(false);
   };
 
@@ -204,6 +237,73 @@ export default function EditLeadDialog({ lead, open, onOpenChange }: EditLeadDia
                           <SelectItem value="cold_call">Ligação Fria</SelectItem>
                           <SelectItem value="event">Evento</SelectItem>
                           <SelectItem value="other">Outro</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="pipeline_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Pipeline Principal</FormLabel>
+                    <FormControl>
+                      <Select
+                        value={field.value}
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          setSelectedPipelineId(value);
+                          form.setValue('stage_id', '');
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o pipeline" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {pipelines?.map((pipeline) => (
+                            <SelectItem key={pipeline.id} value={pipeline.id}>
+                              {pipeline.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="stage_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Estágio</FormLabel>
+                    <FormControl>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={!selectedPipelineId}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o estágio" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {stages?.map((stage) => (
+                            <SelectItem key={stage.id} value={stage.id}>
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-3 h-3 rounded-full"
+                                  style={{ backgroundColor: stage.color }}
+                                />
+                                {stage.name}
+                              </div>
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </FormControl>

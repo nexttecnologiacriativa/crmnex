@@ -1203,6 +1203,58 @@ export type Database = {
           },
         ]
       }
+      lead_pipeline_relations: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_primary: boolean
+          lead_id: string
+          pipeline_id: string
+          stage_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean
+          lead_id: string
+          pipeline_id: string
+          stage_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean
+          lead_id?: string
+          pipeline_id?: string
+          stage_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_pipeline_relations_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_pipeline_relations_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_pipeline_relations_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_tag_relations: {
         Row: {
           created_at: string

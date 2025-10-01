@@ -2665,6 +2665,10 @@ export type Database = {
         Args: { user_id: string }
         Returns: boolean
       }
+      normalize_phone_number: {
+        Args: { phone: string }
+        Returns: string
+      }
       reset_workspace: {
         Args: { p_workspace_id: string }
         Returns: undefined

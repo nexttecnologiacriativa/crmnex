@@ -16,6 +16,7 @@ import EditActivityDialog from './EditActivityDialog';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import LeadTasks from './LeadTasks';
 import LeadMultiplePipelinesManager from './LeadMultiplePipelinesManager';
+import LeadTimeline from './LeadTimeline';
 import { useDeleteLead } from '@/hooks/useLeads';
 import { getLeadDisplayName } from '@/lib/leadUtils';
 
@@ -195,11 +196,12 @@ export default function LeadDetailPage() {
               <Card className="border-0 shadow-lg">
                 <CardContent className="p-6">
                   <Tabs defaultValue="info" className="w-full">
-                    <TabsList className="grid w-full grid-cols-4">
+                    <TabsList className="grid w-full grid-cols-5">
                       <TabsTrigger value="info">Informações</TabsTrigger>
                       <TabsTrigger value="pipelines">Pipelines</TabsTrigger>
                       <TabsTrigger value="tasks">Tarefas</TabsTrigger>
                       <TabsTrigger value="activities">Atividades</TabsTrigger>
+                      <TabsTrigger value="timeline">Histórico</TabsTrigger>
                     </TabsList>
 
                     {/* Tab: Informações */}
@@ -350,6 +352,14 @@ export default function LeadDetailPage() {
                           </p>
                         )}
                       </div>
+                    </TabsContent>
+
+                    {/* Tab: Histórico Completo */}
+                    <TabsContent value="timeline" className="mt-4">
+                      <LeadTimeline 
+                        leadId={lead.id}
+                        onEditActivity={handleEditActivity}
+                      />
                     </TabsContent>
                   </Tabs>
                 </CardContent>

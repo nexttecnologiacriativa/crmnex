@@ -21,6 +21,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MessageCircle, Search, Send, Users, Wifi, WifiOff, Plus, UserSearch, Image as ImageIcon, Trash2, Download, AlertCircle } from 'lucide-react';
 import CreateLeadFromConversationDialog from '@/components/whatsapp/CreateLeadFromConversationDialog';
+import ConversationCard from '@/components/whatsapp/ConversationCard';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import AudioPlayer from '@/components/whatsapp/AudioPlayer';
@@ -30,6 +31,7 @@ import { useDeleteConversation } from '@/hooks/useWhatsApp';
 import { useWhatsAppSyncStatus } from '@/hooks/useWhatsAppSync';
 import { useClearAllConversations } from '@/hooks/useWhatsAppClear';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useQuery } from '@tanstack/react-query';
 
 // Audio functionality has been removed from this component
 export default function UnifiedAtendimento() {
@@ -112,15 +114,43 @@ export default function UnifiedAtendimento() {
   const location = useLocation();
 
   // Função para encontrar lead por telefone usando normalização avançada
+  // CRITICAL: Esta função garante que números com formatos diferentes sejam encontrados
   const findLeadByPhone = (phone: string) => {
     if (!phone || !leads?.length) return null;
 
-    // const normalizedPhone = normalizeForMatch(phone);
+    // Buscar lead usando phonesMatch que trata sufixos e DDI
     return leads.find(lead => {
       if (!lead.phone) return false;
       return phonesMatch(lead.phone, phone);
     });
   };
+
+  // Buscar perfis dos responsáveis (assigned_to) dos leads
+  const { data: profiles = [] } = useQuery({
+    queryKey: ['profiles-for-leads', currentWorkspace?.id],
+    queryFn: async () => {
+      if (!currentWorkspace?.id || !leads?.length) return [];
+      
+      const assigneeIds = leads
+        .map(l => l.assigned_to)
+        .filter(Boolean) as string[];
+      
+      if (assigneeIds.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, avatar_url')
+        .in('id', assigneeIds);
+      
+      if (error) {
+        console.error('Error fetching profiles:', error);
+        return [];
+      }
+      
+      return data || [];
+    },
+    enabled: !!currentWorkspace?.id && !!leads?.length
+  });
   useEffect(() => {
     if (hasProcessedNavRef.current) return;
 
@@ -391,14 +421,50 @@ export default function UnifiedAtendimento() {
     e.currentTarget.value = '';
   };
 
-  // Enriquecer conversas com dados de leads e nome de exibição
-  const enrichedConversations = conversations.map((conv: any) => {
-    const foundLead = findLeadByPhone(conv.phone_number || '');
-    return {
-      ...conv,
-      leads: foundLead,
-      displayName: foundLead ? getLeadDisplayName(foundLead) : conv.contact_name || conv.phone_number || 'Contato'
-    };
+  // Enriquecer conversas com dados de leads, responsável e tags
+  const enrichedConversations = useMemo(() => {
+    return conversations.map((conv: any) => {
+      const foundLead = findLeadByPhone(conv.phone_number || '');
+      const assignee = foundLead?.assigned_to ? profiles.find(p => p.id === foundLead.assigned_to) : null;
+      
+      return {
+        ...conv,
+        leads: foundLead,
+        assignee: assignee,
+        displayName: foundLead ? getLeadDisplayName(foundLead) : conv.contact_name || conv.phone_number || 'Contato'
+      };
+    });
+  }, [conversations, leads, profiles]);
+
+  // Buscar todas as tags dos leads nas conversas
+  const leadIds = enrichedConversations.filter(c => c.leads?.id).map(c => c.leads.id);
+  const { data: leadTagsData = [] } = useQuery({
+    queryKey: ['lead-tags-for-conversations', currentWorkspace?.id, leadIds],
+    queryFn: async () => {
+      if (!currentWorkspace?.id || leadIds.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from('lead_tag_relations')
+        .select(`
+          id,
+          lead_id,
+          tag_id,
+          lead_tags (
+            id,
+            name,
+            color
+          )
+        `)
+        .in('lead_id', leadIds);
+      
+      if (error) {
+        console.error('Error fetching lead tags:', error);
+        return [];
+      }
+      
+      return data || [];
+    },
+    enabled: !!currentWorkspace?.id && leadIds.length > 0
   });
 
   // Filters and helpers
@@ -528,46 +594,30 @@ export default function UnifiedAtendimento() {
               <div className="divide-y">
                   {filteredConversations.map((conv: any) => {
                 const hasNewMessages = unreadConversations.has(conv.id);
-                return <button key={conv.id} onClick={() => {
-                  setSelectedConvId(conv.id);
-                  // Remove from unread when user opens the conversation
-                  setUnreadConversations(prev => {
-                    const newSet = new Set(prev);
-                    newSet.delete(conv.id);
-                    return newSet;
-                  });
-                }} className={`w-full text-left p-3 hover:bg-accent transition-colors relative ${selectedConvId === conv.id ? 'bg-accent' : hasNewMessages ? 'bg-green-50 border-l-4 border-green-500 hover:bg-green-100' : ''}`}>
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Users className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-medium truncate">
-                            {conv.displayName}
-                          </h3>
-                          <span className="text-xs text-muted-foreground">{formatTime(conv.last_message_at)}</span>
-                        </div>
-                        <div className="mt-1 flex items-center justify-between">
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <LeadTagsDisplay leadId={conv.leads?.id} />
-                            {!conv.leads && <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-primary" onClick={e => {
-                            e.stopPropagation();
-                            setSelectedConvForLead({
-                              ...conv,
-                              contact_name: conv.contact_name || conv.phone_number
-                            });
-                            setCreateLeadOpen(true);
-                          }} title="Criar lead para este contato">
-                                <Plus className="h-3 w-3" />
-                              </Button>}
-                            <span className="text-xs text-muted-foreground truncate">{conv.phone_number}</span>
-                          </div>
-                          {!conv.is_read && <div className="w-2 h-2 bg-primary rounded-full" />}
-                        </div>
-                      </div>
-                    </div>
-                      </button>;
+                const leadTags = conv.leads?.id 
+                  ? leadTagsData
+                      .filter((r: any) => r.lead_id === conv.leads.id)
+                      .map((r: any) => r.lead_tags)
+                      .filter(Boolean)
+                  : [];
+                
+                return <ConversationCard
+                    key={conv.id}
+                    conversation={conv}
+                    lead={conv.leads}
+                    assignee={conv.assignee}
+                    tags={leadTags}
+                    isSelected={selectedConvId === conv.id}
+                    unread={hasNewMessages || !conv.is_read}
+                    onClick={() => {
+                      setSelectedConvId(conv.id);
+                      setUnreadConversations(prev => {
+                        const newSet = new Set(prev);
+                        newSet.delete(conv.id);
+                        return newSet;
+                      });
+                    }}
+                  />;
               })}
                </div>
             </ScrollArea>

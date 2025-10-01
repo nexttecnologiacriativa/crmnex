@@ -1,12 +1,14 @@
 /**
  * Normalizes phone number for matching by removing all non-digits and country codes
  * Handles both DDI formats (55 prefix) and local numbers
- * Also removes Evolution API suffixes like :57
+ * Also removes Evolution API suffixes like :57, :18, etc.
+ * CRITICAL: This function ensures all phone numbers are compared in the same format
  */
 export function normalizeForMatch(phone: string): string {
   if (!phone) return '';
   
   // Remove Evolution API suffixes (ex: 5512974012534:57 -> 5512974012534)
+  // These suffixes are added by WhatsApp Web/Desktop clients
   phone = phone.replace(/:[0-9]+$/g, '');
   
   // Remove WhatsApp JID suffixes
@@ -79,19 +81,29 @@ export function formatPhoneDisplay(phone: string): string {
 /**
  * Compares two phone numbers for equality ignoring formatting and DDI.
  * First compares normalized numbers, then falls back to safe suffix matching
- * using 11, 10, and 9 trailing digits.
+ * using 11, 10, 9, and 8 trailing digits.
+ * CRITICAL: This ensures numbers with different formats (with/without DDI, with/without suffixes) match correctly
  */
 export function phonesMatch(a: string, b: string): boolean {
   if (!a || !b) return false;
+  
+  // Normalize both numbers first (removes suffixes, DDI, etc.)
   const na = normalizeForMatch(a);
   const nb = normalizeForMatch(b);
+  
   if (!na || !nb) return false;
+  
+  // Direct match after normalization
   if (na === nb) return true;
+  
+  // Fallback: compare last N digits (handles edge cases)
+  // This is important for cases where one number has DDI and the other doesn't
   const tryLens = [11, 10, 9, 8];
   for (const len of tryLens) {
     if (na.length >= len && nb.length >= len) {
       if (na.slice(-len) === nb.slice(-len)) return true;
     }
   }
+  
   return false;
 }

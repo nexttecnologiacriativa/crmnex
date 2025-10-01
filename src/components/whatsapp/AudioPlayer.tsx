@@ -27,75 +27,29 @@ export default function AudioPlayer({
   const [finalAudioUrl, setFinalAudioUrl] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Inicializar áudio: ordem de prioridade simples
+  // Usar URL permanente ou audioUrl do Supabase Storage
   useEffect(() => {
-    const initializeAudio = async () => {
-      console.log('🎵 Initializing audio:', { permanentUrl, audioUrl, messageId });
+    console.log('🎵 AudioPlayer props:', { permanentUrl, audioUrl, messageId });
 
-      // 1. Se temos permanentUrl do Supabase Storage, usar diretamente
-      if (permanentUrl && permanentUrl.includes('supabase.co/storage/v1/object/public/whatsapp-media/')) {
-        console.log('✅ Using permanent URL from storage');
-        setFinalAudioUrl(permanentUrl);
-        setError(null);
-        return;
-      }
+    // Prioridade 1: permanentUrl do Supabase Storage
+    if (permanentUrl && permanentUrl.includes('supabase.co/storage/v1/object/public/whatsapp-media/')) {
+      console.log('✅ Using permanentUrl:', permanentUrl);
+      setFinalAudioUrl(permanentUrl);
+      setError(null);
+      return;
+    }
 
-      // 2. Se temos audioUrl que já é do storage, usar
-      if (audioUrl && audioUrl.includes('supabase.co/storage/v1/object/public/whatsapp-media/')) {
-        console.log('✅ Using audioUrl from storage');
-        setFinalAudioUrl(audioUrl);
-        setError(null);
-        return;
-      }
-
-      // 3. Se temos messageId mas não temos URL permanente, processar
-      if (messageId && !permanentUrl) {
-        console.log('🔄 No permanent URL, processing audio via edge function');
-        setIsLoading(true);
-        setError('Processando áudio...');
-        
-        try {
-          const { data, error: procError } = await supabase.functions.invoke('whatsapp-audio-processor', {
-            body: { messageId }
-          });
-
-          if (procError) {
-            console.error('❌ Audio processor error:', procError);
-            setError('Áudio temporariamente indisponível');
-            setIsLoading(false);
-            return;
-          }
-
-          if (data?.permanentUrl) {
-            console.log('✅ Got permanent URL:', data.permanentUrl);
-            setFinalAudioUrl(data.permanentUrl);
-            setError(null);
-          } else {
-            console.warn('⚠️ Processor returned no URL');
-            setError('Áudio não disponível');
-          }
-        } catch (err) {
-          console.error('❌ Error calling processor:', err);
-          setError('Erro ao processar áudio');
-        }
-        
-        setIsLoading(false);
-        return;
-      }
-
-      // 4. Se não temos nada utilizável
-      if (!audioUrl || audioUrl === 'null' || audioUrl === 'undefined' || audioUrl === 'none') {
-        console.warn('⚠️ No valid audio URL available');
-        setError('Áudio não disponível');
-        return;
-      }
-
-      // 5. Última opção: usar a URL fornecida (pode ser temporária)
-      console.log('⚠️ Using provided URL (may be temporary):', audioUrl.substring(0, 50));
+    // Prioridade 2: audioUrl (media_url) do Supabase Storage
+    if (audioUrl && audioUrl.includes('supabase.co/storage/v1/object/public/whatsapp-media/')) {
+      console.log('✅ Using audioUrl:', audioUrl);
       setFinalAudioUrl(audioUrl);
-    };
+      setError(null);
+      return;
+    }
 
-    initializeAudio();
+    // Se não tem URL válida, mostrar erro
+    console.warn('⚠️ No valid audio URL found');
+    setError('Áudio não disponível');
   }, [audioUrl, permanentUrl, messageId]);
 
   // Gerenciar eventos do elemento de áudio

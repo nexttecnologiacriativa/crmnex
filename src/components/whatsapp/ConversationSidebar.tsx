@@ -19,6 +19,7 @@ interface WhatsAppConversation {
   is_read: boolean;
   message_count: number;
   workspace_id: string;
+  assigned_to_name?: string;
 }
 
 interface ConversationSidebarProps {
@@ -41,7 +42,22 @@ export function ConversationSidebar({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('whatsapp_conversations')
-        .select('*')
+        .select(`
+          id,
+          phone_number,
+          contact_name,
+          last_message_at,
+          is_read,
+          message_count,
+          workspace_id,
+          lead_id,
+          leads!left (
+            assigned_to,
+            profiles!left (
+              full_name
+            )
+          )
+        `)
         .eq('workspace_id', workspaceId)
         .order('last_message_at', { ascending: false });
 
@@ -50,10 +66,16 @@ export function ConversationSidebar({
         throw error;
       }
 
-      return data as WhatsAppConversation[];
+      // Mapear dados para incluir o nome do responsável
+      const conversationsWithAssignee = data.map((conv: any) => ({
+        ...conv,
+        assigned_to_name: conv.leads?.profiles?.full_name || null
+      }));
+
+      return conversationsWithAssignee as WhatsAppConversation[];
     },
     enabled: !!workspaceId,
-    refetchInterval: 5000, // Atualizar a cada 5 segundos
+    staleTime: 30000, // Cache por 30 segundos
   });
 
   const filteredConversations = conversations.filter(conv =>
@@ -169,12 +191,20 @@ export function ConversationSidebar({
                         </span>
                       </div>
                       
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs text-muted-foreground truncate">
-                          {conversation.phone_number}
-                        </p>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-muted-foreground truncate">
+                            {conversation.phone_number}
+                          </p>
+                          {conversation.assigned_to_name && (
+                            <p className="text-xs text-muted-foreground/70 truncate flex items-center gap-1">
+                              <span>👤</span>
+                              {conversation.assigned_to_name}
+                            </p>
+                          )}
+                        </div>
                         {conversation.message_count > 0 && !conversation.is_read && (
-                          <Badge variant="default" className="h-5 min-w-5 text-xs px-1.5">
+                          <Badge variant="default" className="h-5 min-w-5 text-xs px-1.5 shrink-0">
                             {conversation.message_count > 99 ? '99+' : conversation.message_count}
                           </Badge>
                         )}

@@ -47,7 +47,6 @@ export default function AudioTestComponent() {
             <AudioPlayer
               audioUrl={test.audioUrl || test.permanentUrl || ''}
               permanentUrl={test.permanentUrl || undefined}
-              debugMode={true}
             />
           </div>
         ))}

@@ -54,55 +54,18 @@ export default function QRCodeManager({ instance, onClose, onStatusUpdate }: QRC
     };
   }, []);
 
-  const getEvolutionConfig = () => {
-    if (!currentWorkspace) return null;
-    const configKey = `evolution_config_${currentWorkspace.id}`;
-    const stored = localStorage.getItem(configKey);
-    return stored ? JSON.parse(stored) : null;
-  };
-
   const getQRCode = async () => {
     setIsLoading(true);
     try {
-      const config = getEvolutionConfig();
-      if (!config?.global_api_key) {
-        toast.error('Configure a API key primeiro');
-        return;
-      }
-
-      // Primeiro tentar através da função Supabase
-      let response = await supabase.functions.invoke('whatsapp-evolution', {
+      const response = await supabase.functions.invoke('whatsapp-evolution', {
         body: {
           action: 'get_qr',
           instanceName: instance.instance_name,
-          workspaceId: currentWorkspace?.id,
-          apiKey: config.global_api_key,
-          apiUrl: config.api_url
+          workspaceId: currentWorkspace?.id
         }
       });
 
       if (response.error) {
-        console.warn('Supabase function failed, trying direct API call:', response.error);
-        
-        // Fallback: tentar buscar QR code diretamente da Evolution API
-        const directResponse = await fetch(`${config.api_url}/instance/connect/${instance.instance_name}`, {
-          method: 'GET',
-          headers: {
-            'apikey': config.global_api_key
-          }
-        });
-
-        if (directResponse.ok) {
-          const directData = await directResponse.json();
-          if (directData.qrcode || directData.qr_code || directData.base64) {
-            const qrData = directData.qrcode || directData.qr_code || directData.base64;
-            setQrCode(qrData);
-            setTimeLeft(300);
-            toast.success('QR Code obtido diretamente da API!');
-            return;
-          }
-        }
-        
         throw new Error(response.error.message || 'Erro ao obter QR Code');
       }
 
@@ -116,7 +79,7 @@ export default function QRCodeManager({ instance, onClose, onStatusUpdate }: QRC
 
       if (response.data?.qr_code) {
         setQrCode(response.data.qr_code);
-        setTimeLeft(300); // Reset timer
+        setTimeLeft(300);
         toast.success('QR Code atualizado!');
       } else {
         toast.warning('QR Code não disponível - instância pode já estar conectada');
@@ -124,32 +87,6 @@ export default function QRCodeManager({ instance, onClose, onStatusUpdate }: QRC
     } catch (error) {
       console.error('Error getting QR code:', error);
       toast.error(`Erro ao obter QR Code: ${(error as Error).message}`);
-      
-      // Tentar método alternativo se o principal falhar
-      try {
-        const config = getEvolutionConfig();
-        if (config?.global_api_key) {
-          console.log('Trying alternative QR code endpoint...');
-          const altResponse = await fetch(`${config.api_url}/instance/qr/${instance.instance_name}`, {
-            method: 'GET',
-            headers: {
-              'apikey': config.global_api_key
-            }
-          });
-
-          if (altResponse.ok) {
-            const altData = await altResponse.json();
-            if (altData.qrcode || altData.qr_code || altData.base64) {
-              const qrData = altData.qrcode || altData.qr_code || altData.base64;
-              setQrCode(qrData);
-              setTimeLeft(300);
-              toast.success('QR Code obtido por método alternativo!');
-            }
-          }
-        }
-      } catch (altError) {
-        console.error('Alternative QR method also failed:', altError);
-      }
     } finally {
       setIsLoading(false);
     }
@@ -175,16 +112,11 @@ export default function QRCodeManager({ instance, onClose, onStatusUpdate }: QRC
     
     monitoringRef.current = setInterval(async () => {
       try {
-        const config = getEvolutionConfig();
-        if (!config?.global_api_key) return;
-
         const response = await supabase.functions.invoke('whatsapp-evolution', {
           body: {
             action: 'get_status',
             instanceName: instance.instance_name,
-            workspaceId: currentWorkspace.id,
-            apiKey: config.global_api_key,
-            apiUrl: config.api_url
+            workspaceId: currentWorkspace?.id
           }
         });
 
@@ -196,7 +128,7 @@ export default function QRCodeManager({ instance, onClose, onStatusUpdate }: QRC
       } catch (error) {
         console.error('Error monitoring status:', error);
       }
-    }, 3000); // Check every 3 seconds
+    }, 3000);
   };
 
   const formatTime = (seconds: number) => {

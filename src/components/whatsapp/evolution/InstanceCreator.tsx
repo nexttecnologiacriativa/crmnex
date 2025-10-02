@@ -45,20 +45,6 @@ export default function InstanceCreator({ onSuccess, onCancel }: InstanceCreator
     setInstanceName(uniqueName);
   };
 
-  const getEvolutionConfig = () => {
-    if (!currentWorkspace) return null;
-    const configKey = `evolution_config_${currentWorkspace.id}`;
-    const stored = localStorage.getItem(configKey);
-    if (!stored) return null;
-    
-    try {
-      return JSON.parse(stored);
-    } catch (error) {
-      console.error('Error parsing evolution config:', error);
-      return null;
-    }
-  };
-
   const createInstance = async () => {
     if (!instanceName.trim()) {
       toast.error('Digite um nome para a instância');
@@ -70,24 +56,15 @@ export default function InstanceCreator({ onSuccess, onCancel }: InstanceCreator
       return;
     }
 
-    const config = getEvolutionConfig();
-    
-    // Usar configuração padrão se não houver configuração personalizada
-    const apiKey = config?.global_api_key || 'B6D711FCDE4D4FD5936544120E713976';
-    const apiUrl = config?.api_url || 'https://api.nextcrm.com.br';
-
     setIsCreating(true);
     setCreationStep('creating');
 
     try {
-      // Criar instância via API Evolution
       const response = await supabase.functions.invoke('whatsapp-evolution', {
         body: {
           action: 'create_instance',
           instanceName: instanceName.trim(),
-          workspaceId: currentWorkspace.id,
-          apiKey: apiKey,
-          apiUrl: apiUrl
+          workspaceId: currentWorkspace.id
         }
       });
 

@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { 
   MessageSquare, 
@@ -13,11 +11,9 @@ import {
   AlertCircle,
   Clock,
   RefreshCw,
-  Settings,
   Users,
   Zap,
-  Trash2,
-  RotateCcw
+  Trash2
 } from 'lucide-react';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { toast } from 'sonner';
@@ -25,8 +21,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useWhatsAppInstances, useSyncWhatsAppInstances } from '@/hooks/useWhatsAppInstance';
 import QRCodeManager from './QRCodeManager';
 import InstanceCreator from './InstanceCreator';
-import HistorySyncManager from './HistorySyncManager';
-import WebhookManager from './WebhookManager';
 
 interface WhatsAppInstance {
   id: string;
@@ -286,7 +280,7 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
             <div>
               <CardTitle className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5 text-green-600" />
-                WhatsApp Evolution API
+                Conexão com WhatsApp (Beta)
               </CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
                 Gerencie até {maxInstances} instâncias do WhatsApp
@@ -504,72 +498,7 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
                             className="text-blue-600 hover:text-blue-700"
                           >
                             <QrCode className="h-4 w-4 mr-1" />
-                            QR Code
-                          </Button>
-                        )}
-                        
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => updateInstanceStatus(instance.instance_name)}
-                          className="text-gray-600 hover:text-gray-700"
-                        >
-                          <RefreshCw className="h-4 w-4" />
-                        </Button>
-                        
-                        {/* Botão para corrigir sincronização se mostrar como órfã */}
-                        {(!instance.status || instance.status === 'unknown') && isAllowedToEdit && (
-                          <>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => handleFixSync(instance.instance_name)}
-                              className="text-green-600 hover:text-green-700 border-green-200 hover:border-green-300"
-                            >
-                              <RefreshCw className="h-4 w-4 mr-1" />
-                              Corrigir
-                            </Button>
-                          </>
-                        )}
-                        
-                        {/* Migration button for instances without workspace prefix */}
-                        {currentWorkspace && !instance.instance_name.startsWith(`ws_${currentWorkspace.id.substring(0, 8)}_`) && isAllowedToEdit && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={async () => {
-                              const workspacePrefix = `ws_${currentWorkspace.id.substring(0, 8)}_`;
-                              const oldName = instance.instance_name;
-                              const newName = `${workspacePrefix}${oldName}`;
-                              
-                              const confirmed = window.confirm(
-                                `Esta instância precisa ser migrada para garantir segurança.\n\nNome atual: ${oldName}\nNovo nome: ${newName}\n\nDeseja prosseguir?`
-                              );
-                              
-                              if (confirmed) {
-                                try {
-                                  const { error } = await supabase.functions.invoke('migrate-whatsapp-instances', {
-                                    body: {
-                                      workspaceId: currentWorkspace.id,
-                                      instanceName: oldName,
-                                      newInstanceName: newName
-                                    }
-                                  });
-                                  
-                                  if (error) throw error;
-                                  
-                                  toast.success(`Instância migrada: ${oldName} → ${newName}`);
-                                  refetch();
-                                } catch (error) {
-                                  console.error('Migration error:', error);
-                                  toast.error('Erro na migração: ' + (error as Error).message);
-                                }
-                              }
-                            }}
-                            className="text-orange-600 hover:text-orange-700 border-orange-300"
-                          >
-                            <Zap className="h-4 w-4 mr-1" />
-                            Migrar
+                            Gerar QR Code
                           </Button>
                         )}
                         
@@ -585,24 +514,6 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
                          )}
                        </div>
                      </div>
-
-                      {/* Webhook Manager */}
-                      <div className="mt-4 pt-4 border-t border-gray-200">
-                        <WebhookManager 
-                          instanceName={instance.instance_name}
-                          workspaceId={currentWorkspace?.id || ''}
-                        />
-                      </div>
-
-                      {/* History Sync Manager para instâncias conectadas */}
-                      {instance.status === 'open' && (
-                        <div className="mt-4 pt-4 border-t border-gray-200">
-                          <HistorySyncManager 
-                            instanceName={instance.instance_name}
-                            isConnected={instance.status === 'open'}
-                          />
-                        </div>
-                      )}
                    </CardContent>
                  </Card>
                ))}

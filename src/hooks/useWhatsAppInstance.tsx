@@ -65,22 +65,11 @@ export function useCreateWhatsAppInstance() {
     mutationFn: async (instanceName: string) => {
       if (!currentWorkspace) throw new Error('No workspace selected');
       
-      // Get API key from localStorage
-      const configKey = `evolution_config_${currentWorkspace.id}`;
-      const storedConfig = localStorage.getItem(configKey);
-      const config = storedConfig ? JSON.parse(storedConfig) : null;
-      
-      if (!config?.global_api_key) {
-        throw new Error('Configure a API Key da Evolution primeiro');
-      }
-      
       const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
         body: {
           action: 'create_instance',
           instanceName: instanceName, // Send original name, edge function will add prefix
           workspaceId: currentWorkspace.id,
-          apiKey: config.global_api_key,
-          apiUrl: config.api_url,
         },
       });
       
@@ -104,22 +93,11 @@ export function useGetQRCode() {
     mutationFn: async (instanceName: string) => {
       if (!currentWorkspace) throw new Error('No workspace selected');
       
-      // Get API key from localStorage
-      const configKey = `evolution_config_${currentWorkspace.id}`;
-      const storedConfig = localStorage.getItem(configKey);
-      const config = storedConfig ? JSON.parse(storedConfig) : null;
-      
-      if (!config?.global_api_key) {
-        throw new Error('Configure a API Key da Evolution primeiro');
-      }
-      
       const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
         body: {
           action: 'get_qr',
           instanceName: instanceName, // Use the name as stored (with prefix)
           workspaceId: currentWorkspace.id,
-          apiKey: config.global_api_key,
-          apiUrl: config.api_url,
         },
       });
       
@@ -139,21 +117,10 @@ export function useGetInstanceStatus() {
     mutationFn: async (instanceName: string) => {
       if (!currentWorkspace) throw new Error('No workspace selected');
       
-      // Get API key from localStorage
-      const configKey = `evolution_config_${currentWorkspace.id}`;
-      const storedConfig = localStorage.getItem(configKey);
-      const config = storedConfig ? JSON.parse(storedConfig) : null;
-      
-      if (!config?.global_api_key) {
-        throw new Error('Configure a API Key da Evolution primeiro');
-      }
-      
       const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
         body: {
           action: 'get_status',
           instanceName: instanceName, // Use the name as stored (with prefix)
-          apiKey: config.global_api_key,
-          apiUrl: config.api_url,
         },
       });
       
@@ -175,15 +142,6 @@ export function useSendWhatsAppMessage() {
     }) => {
       if (!currentWorkspace) throw new Error('No workspace selected');
       
-      // Get API key from localStorage
-      const configKey = `evolution_config_${currentWorkspace.id}`;
-      const storedConfig = localStorage.getItem(configKey);
-      const config = storedConfig ? JSON.parse(storedConfig) : null;
-      
-      if (!config?.global_api_key) {
-        throw new Error('Configure a API Key da Evolution primeiro');
-      }
-      
       const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
         body: {
           action: 'send_message',
@@ -191,8 +149,6 @@ export function useSendWhatsAppMessage() {
           phone,
           message,
           workspaceId: workspaceId || currentWorkspace.id,
-          apiKey: config.global_api_key,
-          apiUrl: config.api_url,
         },
       });
       
@@ -216,21 +172,10 @@ export function useSyncWhatsAppInstances() {
     mutationFn: async () => {
       if (!currentWorkspace) throw new Error('No workspace selected');
       
-      // Get API key from localStorage
-      const configKey = `evolution_config_${currentWorkspace.id}`;
-      const storedConfig = localStorage.getItem(configKey);
-      const config = storedConfig ? JSON.parse(storedConfig) : null;
-      
-      if (!config?.global_api_key) {
-        throw new Error('Configure a API Key da Evolution primeiro');
-      }
-      
       const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
         body: {
           action: 'list_instances',
           workspaceId: currentWorkspace.id,
-          apiKey: config.global_api_key,
-          apiUrl: config.api_url,
         },
       });
       

@@ -23,7 +23,6 @@ import { useWorkspace } from '@/hooks/useWorkspace';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useWhatsAppInstances, useSyncWhatsAppInstances } from '@/hooks/useWhatsAppInstance';
-import EvolutionAPIConfig from './EvolutionAPIConfig';
 import QRCodeManager from './QRCodeManager';
 import InstanceCreator from './InstanceCreator';
 import HistorySyncManager from './HistorySyncManager';
@@ -48,7 +47,6 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
   const { currentWorkspace } = useWorkspace();
   const { data: instances = [], isLoading, refetch } = useWhatsAppInstances();
   const syncInstances = useSyncWhatsAppInstances();
-  const [showConfig, setShowConfig] = useState(false);
   const [showCreator, setShowCreator] = useState(false);
   const [selectedInstance, setSelectedInstance] = useState<WhatsAppInstance | null>(null);
   const [showQRCode, setShowQRCode] = useState(false);
@@ -72,11 +70,6 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
 
   const handleSyncInstances = async () => {
     try {
-      const config = getEvolutionConfig();
-      if (!config?.global_api_key) {
-        return;
-      }
-      
       console.log('🔄 Starting sync with Evolution API...');
       await syncInstances.mutateAsync();
       
@@ -90,24 +83,25 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
 
   const recoverOrphanInstances = async () => {
     try {
-      const config = getEvolutionConfig();
-      if (!config?.global_api_key || !currentWorkspace) return;
+      if (!currentWorkspace) return;
 
       console.log('🔍 Checking for orphan instances...');
       
       // Generate workspace prefix for security
       const workspacePrefix = `ws_${currentWorkspace.id.substring(0, 8)}_`;
       
-      // Buscar instâncias diretamente da Evolution API
-      const response = await fetch(`${config.api_url}/instance/fetchInstances`, {
-        method: 'GET',
-        headers: {
-          'apikey': config.global_api_key
+      // Buscar instâncias diretamente da Evolution API via edge function
+      const { data: apiData, error: apiError } = await supabase.functions.invoke('whatsapp-evolution', {
+        body: {
+          action: 'list_instances',
+          workspaceId: currentWorkspace.id
         }
       });
 
-      if (response.ok) {
-        const allEvolutionInstances = await response.json();
+      if (apiError) throw apiError;
+
+      if (apiData?.instances) {
+        const allEvolutionInstances = apiData.instances;
         // SECURITY: Filter only instances belonging to this workspace
         const evolutionInstances = allEvolutionInstances.filter((apiInstance: any) => {
           const instanceName = apiInstance.instance?.instanceName || apiInstance.instanceName;
@@ -168,19 +162,8 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
     setShowCreator(false);
   };
 
-  const handleConfigSaved = () => {
-    setShowConfig(false);
-    refetch();
-  };
-
   const updateInstanceStatus = async (instanceName: string) => {
     try {
-      const config = getEvolutionConfig();
-      if (!config?.global_api_key) {
-        toast.error('Configure a API key primeiro');
-        return;
-      }
-
       await handleSyncInstances();
       toast.success('Status sincronizado com a API!');
     } catch (error) {
@@ -191,12 +174,6 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
 
   const forceSyncWithAPI = async () => {
     try {
-      const config = getEvolutionConfig();
-      if (!config?.global_api_key) {
-        toast.error('Configure a API key primeiro');
-        return;
-      }
-
       toast.info('Sincronizando com a API Evolution...');
       await syncInstances.mutateAsync();
       
@@ -257,13 +234,6 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
     }
   };
 
-  const getEvolutionConfig = () => {
-    if (!currentWorkspace) return null;
-    const configKey = `evolution_config_${currentWorkspace.id}`;
-    const stored = localStorage.getItem(configKey);
-    return stored ? JSON.parse(stored) : null;
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'open':
@@ -292,8 +262,7 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
     }
   };
 
-  const config = getEvolutionConfig();
-  const canCreateInstance = instances.length < maxInstances && config?.global_api_key;
+  const canCreateInstance = instances.length < maxInstances;
 
   if (isLoading) {
     return (
@@ -325,14 +294,6 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
             </div>
            {isAllowedToEdit && (
              <div className="flex gap-2">
-               <Button
-                 variant="outline"
-                 onClick={() => setShowConfig(!showConfig)}
-                 className="text-blue-600 hover:text-blue-700"
-               >
-                 <Settings className="h-4 w-4 mr-2" />
-                 Configurar API
-               </Button>
                <Button
                  variant="outline"
                  onClick={forceSyncWithAPI}
@@ -445,36 +406,8 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
               </p>
             </div>
           )}
-
-          {!config?.global_api_key && isAllowedToEdit && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertCircle className="h-5 w-5 text-yellow-600" />
-                <h3 className="font-semibold text-yellow-900">Configuração Necessária</h3>
-              </div>
-              <p className="text-sm text-yellow-800 mb-3">
-                Configure a Global API Key para gerenciar instâncias do WhatsApp.
-              </p>
-              <Button
-                variant="outline"
-                onClick={() => setShowConfig(true)}
-                className="text-yellow-700 border-yellow-300"
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Configurar Agora
-              </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
-
-      {/* Configuração da API */}
-      {showConfig && (
-        <EvolutionAPIConfig
-          onSave={handleConfigSaved}
-          onCancel={() => setShowConfig(false)}
-        />
-      )}
 
       {/* Criador de Instância */}
       {showCreator && canCreateInstance && (

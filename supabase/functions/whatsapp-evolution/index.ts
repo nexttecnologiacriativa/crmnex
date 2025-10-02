@@ -26,8 +26,8 @@ function ensureCountryCode55(phone: string): string {
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const evolutionApiUrl = 'https://api.glav.com.br';
-const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY') || 'B6D711FCDE4D4FD5936544120E713976';
+const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL')!;
+const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY')!;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -51,68 +51,17 @@ serve(async (req) => {
       });
     }
     
-    const { action, instanceName, workspaceId, phone, message, apiKey, apiUrl, originalName } = bodyData;
+    const { action, instanceName, workspaceId, phone, message, originalName } = bodyData;
     
-    console.log('🚀 Edge Function called:', { action, instanceName, workspaceId, hasApiKey: !!apiKey, hasApiUrl: !!apiUrl });
+    console.log('🚀 Edge Function called:', { action, instanceName, workspaceId });
 
-    // Buscar credenciais do banco se não fornecidas
-    let currentApiKey = apiKey || evolutionApiKey;
-    let currentApiUrl = apiUrl || evolutionApiUrl;
-    let credentialsSource = 'defaults';
-
-    if (workspaceId && (!apiKey || !apiUrl)) {
-      console.log('🔍 Fetching Evolution API credentials from database for workspace:', workspaceId);
-      
-      const { data: evolutionConfig, error: configError } = await supabase
-        .from('whatsapp_evolution_configs')
-        .select('api_url, global_api_key')
-        .eq('workspace_id', workspaceId)
-        .maybeSingle();
-
-      if (configError) {
-        console.warn('⚠️ Error fetching Evolution config from database:', configError);
-      } else if (evolutionConfig) {
-        if (!apiUrl && evolutionConfig.api_url) {
-          currentApiUrl = evolutionConfig.api_url;
-          credentialsSource = 'database';
-        }
-        if (!apiKey && evolutionConfig.global_api_key) {
-          currentApiKey = evolutionConfig.global_api_key;
-          credentialsSource = 'database';
-        }
-        console.log('✅ Using credentials from database');
-      } else {
-        console.warn('⚠️ No Evolution API config found in database for workspace, using defaults');
-      }
-    }
+    // Use global Evolution API credentials from Supabase secrets
+    const currentApiKey = evolutionApiKey;
+    const currentApiUrl = evolutionApiUrl;
     
-    // Se credenciais foram fornecidas no body, persistir no banco para unificar com automações
-    if (workspaceId && (apiKey || apiUrl)) {
-      try {
-        const toSave = {
-          workspace_id: workspaceId,
-          api_url: currentApiUrl,
-          global_api_key: currentApiKey,
-          updated_at: new Date().toISOString()
-        };
-        const { error: upsertErr } = await supabase
-          .from('whatsapp_evolution_configs')
-          .upsert(toSave, { onConflict: 'workspace_id' });
-        if (upsertErr) {
-          console.warn('⚠️ Failed to persist Evolution credentials:', upsertErr);
-        } else {
-          console.log('💾 Evolution credentials persisted for workspace');
-        }
-      } catch (e) {
-        console.warn('⚠️ Exception persisting Evolution credentials:', e?.message || e);
-      }
-    }
-    
-    console.log('🔧 Using API config:', { 
+    console.log('🔧 Using global API config:', { 
       currentApiUrl, 
-      hasCurrentApiKey: !!currentApiKey, 
-      credentialsSource,
-      workspaceId 
+      hasCurrentApiKey: !!currentApiKey 
     });
 
     switch (action) {
@@ -123,7 +72,7 @@ serve(async (req) => {
       case 'get_status':
         return await getInstanceStatus(instanceName, supabase, currentApiUrl, currentApiKey);
       case 'send_message':
-        return await sendMessage(instanceName, phone, message, supabase, currentApiUrl, currentApiKey, workspaceId, credentialsSource);
+        return await sendMessage(instanceName, phone, message, supabase, currentApiUrl, currentApiKey, workspaceId);
       case 'send_image':
         return await sendImage(instanceName, phone, bodyData?.imageUrl, bodyData?.caption || '', supabase, currentApiUrl, currentApiKey, workspaceId);
       case 'sendMedia': {

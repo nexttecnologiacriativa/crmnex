@@ -7,6 +7,35 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Detectar tipo de imagem pelos magic bytes
+const detectImageType = (buffer: ArrayBuffer): string => {
+  const bytes = new Uint8Array(buffer);
+  
+  // PNG: 89 50 4E 47
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+    return 'image/png';
+  }
+  
+  // JPEG: FF D8 FF
+  if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
+    return 'image/jpeg';
+  }
+  
+  // WebP: 52 49 46 46 ... 57 45 42 50
+  if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+      bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
+    return 'image/webp';
+  }
+  
+  // GIF: 47 49 46 38
+  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
+    return 'image/gif';
+  }
+  
+  // Fallback para JPEG se não detectar
+  return 'image/jpeg';
+};
+
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -252,15 +281,17 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
             
             if (imageResponse.ok) {
               const imageBuffer = await imageResponse.arrayBuffer();
-              const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
-              const extension = getExtensionFromMime(contentType);
+              const headerContentType = imageResponse.headers.get('content-type');
+              const detectedType = detectImageType(imageBuffer);
+              const extension = getExtensionFromMime(detectedType);
               
               const timestamp = Date.now();
               const fileName = `image_${message.messageTimestamp}_${messageId}.${extension}`;
               const filePath = `${instance.workspace_id}/images/${fileName}`;
               
               console.log('🖼️ Image details:', { 
-                contentType, 
+                headerContentType,
+                detectedType,
                 extension, 
                 fileName 
               });
@@ -268,7 +299,7 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
               const { error: uploadError } = await supabase.storage
                 .from('whatsapp-media')
                 .upload(filePath, imageBuffer, {
-                  contentType: contentType,
+                  contentType: detectedType,
                   cacheControl: '3600'
                 });
 

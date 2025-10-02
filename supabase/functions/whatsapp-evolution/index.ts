@@ -366,13 +366,18 @@ serve(async (req) => {
       cause: error?.cause
     });
     
+    // Extract full error message including all details
+    const fullErrorMessage = error instanceof Error ? error.message : String(error);
+    
     return new Response(JSON.stringify({ 
-      error: error?.message || 'Erro interno da função',
-      details: error?.name || 'Unknown error',
+      error: fullErrorMessage,
+      name: error?.name || 'UnknownError',
+      details: error instanceof Error ? error.stack : undefined,
       timestamp: new Date().toISOString()
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
     });
   }
 });
@@ -974,7 +979,20 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
     if (!response.ok) {
       const errorText = await response.text();
       console.error('❌ API Error Response:', errorText);
-      throw new Error(`Failed to send image: ${response.status} - ${errorText}`);
+      
+      // Try to parse error as JSON for more details
+      let errorDetails;
+      try {
+        errorDetails = JSON.parse(errorText);
+      } catch {
+        errorDetails = errorText;
+      }
+      
+      const errorMessage = typeof errorDetails === 'object' 
+        ? JSON.stringify(errorDetails, null, 2)
+        : errorDetails;
+        
+      throw new Error(`Failed to send image: ${response.status} - ${errorMessage}`);
     }
 
     const data = await response.json();
@@ -1062,7 +1080,15 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
     });
   } catch (error) {
     console.error('❌ Error sending image:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    
+    // Extract full error message
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    return new Response(JSON.stringify({ 
+      error: errorMessage,
+      details: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString()
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

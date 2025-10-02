@@ -89,7 +89,25 @@ export function useWhatsAppSendMessage() {
     },
     onError: (error: any) => {
       console.error('❌ Send message error:', error);
-      toast.error(`Erro ao enviar mensagem: ${error.message}`);
+      
+      // Extract detailed error information
+      let errorMessage = 'Erro desconhecido';
+      
+      if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      // If there's additional context in the error object
+      if (error?.context) {
+        errorMessage += `\n\nDetalhes: ${JSON.stringify(error.context, null, 2)}`;
+      }
+      
+      // Show full error details
+      console.error('📋 Full error details:', JSON.stringify(error, null, 2));
+      
+      toast.error(`Erro ao enviar mensagem:\n${errorMessage}`, {
+        duration: 8000,
+      });
     },
   });
 }

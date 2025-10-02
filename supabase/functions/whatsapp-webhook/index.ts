@@ -302,7 +302,6 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
             console.error('❌ Image processing error:', error);
           }
         }
-      }
       } else if (messageContent?.audioMessage || messageContent?.pttMessage) {
         // Handle both regular audio and PTT (Push To Talk)
         const audioMsg = messageContent.audioMessage || messageContent.pttMessage;

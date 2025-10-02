@@ -144,6 +144,21 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
       const phoneNumber = normalizePhoneNumber(remoteJid);
       const pushName = message.pushName || 'Usuário';
       const messageId = message.key?.id;
+      const messageStatus = message.status;
+
+      console.log('📨 Webhook received:', { 
+        messageId, 
+        status: messageStatus,
+        fromMe,
+        phoneNumber,
+        messageType
+      });
+
+      // 🔥 FASE 1: Filtrar status - processar apenas mensagens recebidas
+      if (!['RECEIVED', 'PENDING'].includes(messageStatus) && !fromMe) {
+        console.log(`⏭️ Skipping message with status: ${messageStatus}`);
+        continue;
+      }
 
       console.log('Message details:', {
         messageType,
@@ -185,7 +200,8 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
         .maybeSingle();
 
       if (existingMessage) {
-        console.log('⚠️ Message already exists, skipping:', messageId);
+        console.log('🔄 DUPLICATA DETECTADA - Message already exists:', messageId);
+        console.log('✅ Pulando processamento para evitar duplicação');
         continue;
       }
 
@@ -215,92 +231,104 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
         mediaUrl = messageContent.imageMessage.url;
         mediaBase64 = messageContent.imageMessage.base64 || '';
         
+        const originalMimetype = messageContent.imageMessage?.mimetype || 'image/jpeg';
+        const isEncryptedUrl = mediaUrl?.includes('.enc');
+        
         console.log('🖼️ Image processing:', {
           messageId,
           hasBase64: !!mediaBase64,
           hasUrl: !!mediaUrl,
-          originalMimetype: messageContent.imageMessage?.mimetype,
+          isEncryptedUrl,
+          originalMimetype: originalMimetype,
           timestamp: message.messageTimestamp
         });
         
-        // 🎯 USAR MIMETYPE ORIGINAL (não detectar)
-        const originalMimetype = messageContent.imageMessage?.mimetype || 'image/jpeg';
+        // 🎯 FASE 3: SEMPRE usar MIMETYPE ORIGINAL do webhook
         const extension = getExtensionFromMime(originalMimetype);
         const timestamp = message.messageTimestamp || Date.now();
         const fileName = `image_${timestamp}_${messageId}.${extension}`;
         const filePath = `${instance.workspace_id}/images/${fileName}`;
         
-        // ✅ Verificar se arquivo já existe no storage
-        const { data: existingFiles } = await supabase.storage
-          .from('whatsapp-media')
-          .list(`${instance.workspace_id}/images`, {
-            search: `image_${timestamp}_${messageId}`
-          });
-
-        if (existingFiles && existingFiles.length > 0) {
-          console.log('📁 Image file already exists, using existing URL');
-          const { data: urlData } = supabase.storage
-            .from('whatsapp-media')
-            .getPublicUrl(`${instance.workspace_id}/images/${existingFiles[0].name}`);
-          mediaUrl = urlData.publicUrl;
-          console.log('✅ Using existing image URL:', mediaUrl);
-        } else {
-          // Processar imagem (base64 ou download)
-          try {
-            let imageData: Uint8Array | ArrayBuffer;
+        // Processar imagem
+        try {
+          let imageData: Uint8Array | ArrayBuffer;
+          
+          // 🔥 FASE 2: Priorizar Base64
+          if (mediaBase64) {
+            console.log('✅ Processing image from base64...');
+            imageData = Uint8Array.from(atob(mediaBase64), c => c.charCodeAt(0));
+          } 
+          // 🔥 FASE 2: Se não tiver base64 e URL for .enc, usar API Evolution
+          else if (isEncryptedUrl) {
+            console.log('🔐 Encrypted URL detected - downloading via Evolution API...');
+            const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
+            const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY');
             
-            if (mediaBase64) {
-              console.log('🖼️ Processing image from base64...');
-              imageData = Uint8Array.from(atob(mediaBase64), c => c.charCodeAt(0));
-            } else if (mediaUrl) {
-              console.log('🖼️ Processing image from URL...');
-              const imageResponse = await fetch(mediaUrl, {
-                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
-              });
-              
-              if (!imageResponse.ok) {
-                throw new Error(`Failed to fetch image: ${imageResponse.status}`);
-              }
-              
-              imageData = await imageResponse.arrayBuffer();
-            } else {
-              throw new Error('No image data available (no base64 or URL)');
+            if (!evolutionApiUrl || !evolutionApiKey) {
+              throw new Error('Evolution API credentials not configured');
             }
             
-            console.log('📤 Uploading image:', { 
-              fileName, 
-              contentType: originalMimetype,
-              size: imageData.byteLength || imageData.length 
+            const downloadUrl = `${evolutionApiUrl}/message/downloadMedia/${messageId}`;
+            console.log('📥 Downloading from Evolution:', downloadUrl);
+            
+            const response = await fetch(downloadUrl, {
+              headers: { 
+                'apikey': evolutionApiKey,
+                'Content-Type': 'application/json'
+              }
             });
             
-            const { error: uploadError } = await supabase.storage
-              .from('whatsapp-media')
-              .upload(filePath, imageData, {
-                contentType: originalMimetype,
-                cacheControl: '3600'
-              });
-
-            if (!uploadError) {
-              const { data: urlData } = supabase.storage
-                .from('whatsapp-media')
-                .getPublicUrl(filePath);
-              
-              mediaUrl = urlData.publicUrl;
-              console.log('✅ Image uploaded successfully:', mediaUrl);
-            } else {
-              console.error('❌ Storage upload error:', uploadError);
-              // Se erro de "resource already exists", tentar pegar URL
-              if (uploadError.message?.includes('already exists')) {
-                const { data: urlData } = supabase.storage
-                  .from('whatsapp-media')
-                  .getPublicUrl(filePath);
-                mediaUrl = urlData.publicUrl;
-                console.log('✅ Using existing image URL after conflict:', mediaUrl);
-              }
+            if (!response.ok) {
+              throw new Error(`Evolution API error: ${response.status}`);
             }
-          } catch (error) {
-            console.error('❌ Image processing error:', error);
+            
+            imageData = await response.arrayBuffer();
+            console.log('✅ Downloaded via Evolution API:', imageData.byteLength, 'bytes');
           }
+          // Se não for .enc, tentar download direto
+          else if (mediaUrl) {
+            console.log('📥 Downloading image from URL...');
+            const imageResponse = await fetch(mediaUrl, {
+              headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+            });
+            
+            if (!imageResponse.ok) {
+              throw new Error(`Failed to fetch image: ${imageResponse.status}`);
+            }
+            
+            imageData = await imageResponse.arrayBuffer();
+            console.log('✅ Downloaded from URL:', imageData.byteLength, 'bytes');
+          } else {
+            throw new Error('No image data available');
+          }
+          
+          console.log('📤 Uploading image:', { 
+            fileName, 
+            contentType: originalMimetype,
+            size: imageData.byteLength || imageData.length 
+          });
+          
+          // 🔥 FASE 1 & 3: Usar upsert: true + contentType correto
+          const { error: uploadError } = await supabase.storage
+            .from('whatsapp-media')
+            .upload(filePath, imageData, {
+              contentType: originalMimetype, // SEMPRE usar mimetype do webhook
+              upsert: true, // Evitar erro 409
+              cacheControl: '3600'
+            });
+
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage
+              .from('whatsapp-media')
+              .getPublicUrl(filePath);
+            
+            mediaUrl = urlData.publicUrl;
+            console.log('✅ Image uploaded successfully:', mediaUrl);
+          } else {
+            console.error('❌ Storage upload error:', uploadError);
+          }
+        } catch (error) {
+          console.error('❌ Image processing error:', error);
         }
       } else if (messageContent?.audioMessage || messageContent?.pttMessage) {
         // Handle both regular audio and PTT (Push To Talk)

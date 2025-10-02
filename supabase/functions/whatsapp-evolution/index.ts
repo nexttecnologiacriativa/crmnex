@@ -963,6 +963,7 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
       body: JSON.stringify({
         number: normalizedPhone,
         mediaMessage: {
+          mediatype: "image",
           mediaUrl: imageUrl,
           fileName: "image.jpg",
           caption: caption || ''

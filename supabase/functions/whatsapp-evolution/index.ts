@@ -950,77 +950,20 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
       throw new Error('Número inválido');
     }
 
-    // Download image and convert to base64 for Evolution API
-    console.log('🔄 [SENDIMAGE] Starting image processing for Evolution API');
-    let permanentImageUrl = imageUrl;
-    let base64Image = '';
+    // Use URL directly - Evolution API will download from Supabase Storage
+    console.log('📤 [SENDIMAGE] Sending image to Evolution API using URL:', imageUrl);
+    console.log('🔍 [SENDIMAGE] Using optimized payload with URL parameter');
     
-    try {
-      console.log('📥 [SENDIMAGE] Downloading image from URL:', imageUrl);
-      
-      const imageResponse = await fetch(imageUrl);
-      if (!imageResponse.ok) {
-        throw new Error(`Failed to fetch image: ${imageResponse.status}`);
-      }
-      
-      const imageBuffer = await imageResponse.arrayBuffer();
-      
-      // Convert to base64 for Evolution API
-      console.log('🔄 [SENDIMAGE] Converting image to base64...');
-      const base64 = btoa(
-        new Uint8Array(imageBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-      );
-      base64Image = `data:image/jpeg;base64,${base64}`;
-      console.log('✅ [SENDIMAGE] Image converted to base64, size:', base64.length);
-      
-      // Also save to Supabase Storage for permanent URL
-      const timestamp = Date.now();
-      const fileName = `sent_${timestamp}_${instanceName}.jpg`;
-      const filePath = `${workspaceId}/images/${fileName}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('whatsapp-media')
-        .upload(filePath, imageBuffer, {
-          contentType: 'image/jpeg',
-          cacheControl: '3600'
-        });
-
-      if (!uploadError) {
-        const { data: urlData } = supabase.storage
-          .from('whatsapp-media')
-          .getPublicUrl(filePath);
-        
-        permanentImageUrl = urlData.publicUrl;
-        console.log('✅ Image uploaded to Supabase Storage:', permanentImageUrl);
-      } else {
-        console.error('❌ Image upload error:', uploadError);
-      }
-    } catch (downloadError) {
-      console.error('❌ Image download/conversion error:', downloadError);
-      throw new Error(`Falha ao processar imagem: ${downloadError.message}`);
-    }
-
-    // Send media using official Evolution API format with base64
-    console.log('📤 [SENDIMAGE] Sending image to Evolution API with base64 content...');
-    console.log('🔍 [SENDIMAGE] Payload structure: mediatype (lowercase), base64 content');
-    const response = await fetch(`${apiUrl}/message/sendMedia/${instanceName}`, {
+    const response = await fetch(`${apiUrl}/message/sendMedia/${normalizedPhone}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': apiKey,
       },
       body: JSON.stringify({
-        number: normalizedPhone,
-        options: {
-          delay: 1200,
-          presence: "composing"
-        },
-        mediaMessage: {
-          mediatype: "image",  // Lowercase as required by Evolution API
-          fileName: "image.jpg",
-          caption: caption || '',
-          media: base64Image  // Base64 content instead of URL
-        }
+        fileName: "image.jpg",
+        url: imageUrl,
+        caption: caption || ''
       }),
     });
 
@@ -1083,7 +1026,7 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
             sent_by: null,
             message_text: caption || 'Imagem',
             message_type: 'image',
-            media_url: permanentImageUrl,
+            media_url: imageUrl,
             media_type: 'image',
             attachment_name: 'image.jpg',
             timestamp: new Date().toISOString(),

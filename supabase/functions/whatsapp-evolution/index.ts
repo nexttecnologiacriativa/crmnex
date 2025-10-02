@@ -950,10 +950,12 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
       throw new Error('Número inválido');
     }
 
-    // First upload image to Supabase Storage to get a permanent URL
+    // Download image and convert to base64 for Evolution API
     let permanentImageUrl = imageUrl;
+    let base64Image = '';
+    
     try {
-      console.log('📁 Uploading image to Supabase Storage...');
+      console.log('📥 Downloading image from URL:', imageUrl);
       
       const imageResponse = await fetch(imageUrl);
       if (!imageResponse.ok) {
@@ -961,6 +963,15 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
       }
       
       const imageBuffer = await imageResponse.arrayBuffer();
+      
+      // Convert to base64 for Evolution API
+      const base64 = btoa(
+        new Uint8Array(imageBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+      );
+      base64Image = `data:image/jpeg;base64,${base64}`;
+      console.log('✅ Image converted to base64, size:', base64.length);
+      
+      // Also save to Supabase Storage for permanent URL
       const timestamp = Date.now();
       const fileName = `sent_${timestamp}_${instanceName}.jpg`;
       const filePath = `${workspaceId}/images/${fileName}`;
@@ -982,11 +993,13 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
       } else {
         console.error('❌ Image upload error:', uploadError);
       }
-    } catch (storageError) {
-      console.error('❌ Image storage error:', storageError);
+    } catch (downloadError) {
+      console.error('❌ Image download/conversion error:', downloadError);
+      throw new Error(`Falha ao processar imagem: ${downloadError.message}`);
     }
 
-    // Send media using official Evolution API format
+    // Send media using official Evolution API format with base64
+    console.log('📤 Sending image to Evolution API...');
     const response = await fetch(`${apiUrl}/message/sendMedia/${instanceName}`, {
       method: 'POST',
       headers: {
@@ -1000,10 +1013,10 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
           presence: "composing"
         },
         mediaMessage: {
-          mediaType: "image",
+          mediatype: "image",  // Lowercase as required by Evolution API
           fileName: "image.jpg",
           caption: caption || '',
-          media: imageUrl
+          media: base64Image  // Base64 content instead of URL
         }
       }),
     });

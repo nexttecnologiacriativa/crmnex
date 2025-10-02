@@ -278,18 +278,28 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
               throw new Error('Evolution API credentials not configured');
             }
             
-            const downloadUrl = `${evolutionApiUrl}/message/downloadMedia/${messageId}`;
+            const downloadUrl = `${evolutionApiUrl}/message/downloadMedia/${instance.instance_name}`;
             console.log('📥 Downloading from Evolution:', downloadUrl);
             
             const response = await fetch(downloadUrl, {
+              method: 'POST',
               headers: { 
                 'apikey': evolutionApiKey,
                 'Content-Type': 'application/json'
-              }
+              },
+              body: JSON.stringify({
+                key: {
+                  id: messageId,
+                  remoteJid: phoneNumber,
+                  fromMe: false
+                }
+              })
             });
             
             if (!response.ok) {
-              throw new Error(`Evolution API error: ${response.status}`);
+              const errorText = await response.text();
+              console.error('❌ Evolution API error:', response.status, errorText);
+              throw new Error(`Evolution API error: ${response.status} - ${errorText}`);
             }
             
             imageData = await response.arrayBuffer();

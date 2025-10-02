@@ -258,7 +258,21 @@ serve(async (req) => {
             conversation = newConversation;
           }
 
-          console.log('📎 Sending media via URL to Evolution API...');
+          // Download image from Supabase Storage and convert to base64
+          console.log('📥 Downloading image from Supabase Storage:', mediaUrl);
+          const imageResponse = await fetch(mediaUrl);
+          
+          if (!imageResponse.ok) {
+            throw new Error(`Failed to download image from storage: ${imageResponse.status}`);
+          }
+
+          const imageBuffer = await imageResponse.arrayBuffer();
+          const base64Image = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
+          
+          console.log(`✅ Image downloaded and converted to base64 (${imageBuffer.byteLength} bytes)`);
+
+          // Send to Evolution API with base64 image
+          console.log('📎 Sending media with base64 to Evolution API...');
           const response = await fetch(`${currentApiUrl}/message/sendMedia/${mediaUrlInstanceName}`, {
             method: 'POST',
             headers: {
@@ -268,21 +282,22 @@ serve(async (req) => {
             body: JSON.stringify({
               number: mediaUrlNumber.replace(/\D/g, ''),
               mediaMessage: {
-                mediaUrl: mediaUrl,
+                mediaType: mediaUrlType,
                 fileName: mediaUrlFileName,
-                caption: mediaUrlCaption
+                caption: mediaUrlCaption,
+                media: base64Image  // Send base64, not URL
               }
             })
           });
 
           const result = await response.json();
-          console.log('📎 Evolution API media URL send result:', result);
+          console.log('📎 Evolution API media send result:', result);
 
           if (!response.ok) {
             throw new Error(`Failed to send media: ${result.error?.message || result.message || 'Unknown error'}`);
           }
 
-          // Save message record to database
+          // Save message record to database with Storage URL (not WhatsApp URL)
           const { error: saveError } = await supabase
             .from('whatsapp_messages')
             .insert({
@@ -291,7 +306,7 @@ serve(async (req) => {
               message_type: mediaUrlType,
               is_from_lead: false,
               status: 'sent',
-              media_url: mediaUrl,
+              media_url: mediaUrl,  // Keep original Storage URL
               media_type: mediaUrlType,
               attachment_name: mediaUrlFileName,
               message_id: result.key?.id,
@@ -300,12 +315,14 @@ serve(async (req) => {
 
           if (saveError) {
             console.error('❌ Error saving media message to database:', saveError);
+          } else {
+            console.log('✅ Message saved to database with Storage URL');
           }
 
           return new Response(
             JSON.stringify({ 
               success: true, 
-              message: 'Media URL sent successfully',
+              message: 'Media sent successfully',
               messageId: result.key?.id,
               conversationId: conversation.id
             }),

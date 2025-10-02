@@ -409,23 +409,37 @@ export default function UnifiedAtendimento() {
     }
     try {
       setIsUploadingImage(true);
+      toast.info('Enviando imagem...');
+      
       const fileName = `${Date.now()}_${file.name}`;
-      const path = `uploads/${fileName}`;
+      const path = `${currentWorkspace?.id}/images/${fileName}`;
+      
+      // Upload to correct bucket: whatsapp-media
       const {
         data: up,
         error: upErr
-      } = await supabase.storage.from('whatsapp-images').upload(path, file, {
-        contentType: file.type
+      } = await supabase.storage.from('whatsapp-media').upload(path, file, {
+        contentType: file.type,
+        cacheControl: '3600'
       });
-      if (upErr) throw upErr;
+      
+      if (upErr) {
+        console.error('Upload error:', upErr);
+        throw new Error(`Erro ao fazer upload da imagem: ${upErr.message}`);
+      }
+      
       const {
         data: pub
-      } = supabase.storage.from('whatsapp-images').getPublicUrl(up.path);
+      } = supabase.storage.from('whatsapp-media').getPublicUrl(up.path);
+      
       const phoneToSend = ensureCountryCode55(selectedConv.phone_number || '');
-      // Evolution API config (optional)
+      
+      // Evolution API config
       const cfgRaw = currentWorkspace?.id ? localStorage.getItem(`evolution_config_${currentWorkspace.id}`) : null;
       const cfg = cfgRaw ? JSON.parse(cfgRaw) : null;
-      await supabase.functions.invoke('whatsapp-evolution', {
+      
+      // Send image via Evolution API
+      const { data: sendResult, error: sendError } = await supabase.functions.invoke('whatsapp-evolution', {
         body: {
           action: 'send_image',
           instanceName: selectedInstanceName,
@@ -434,9 +448,19 @@ export default function UnifiedAtendimento() {
           caption: message?.trim() || undefined,
           workspaceId: currentWorkspace?.id,
           apiKey: cfg?.global_api_key,
-          apiUrl: cfg?.apiUrl
+          apiUrl: cfg?.api_url
         }
       });
+      
+      if (sendError) {
+        console.error('Send error:', sendError);
+        throw new Error(`Erro ao enviar imagem: ${sendError.message}`);
+      }
+      
+      if (!sendResult || sendResult.error) {
+        throw new Error(sendResult?.error || 'Falha ao enviar imagem');
+      }
+      
       setMessage('');
       queryClient.invalidateQueries({
         queryKey: ['whatsapp-messages', selectedConv.id]
@@ -447,6 +471,7 @@ export default function UnifiedAtendimento() {
       setTimeout(scrollToBottom, 200);
       toast.success('Imagem enviada com sucesso!');
     } catch (e: any) {
+      console.error('Image send error:', e);
       toast.error(e?.message || 'Falha ao enviar imagem');
     } finally {
       setIsUploadingImage(false);

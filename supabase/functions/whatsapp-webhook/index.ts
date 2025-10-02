@@ -514,18 +514,6 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
         }
       }
 
-      // Verificar se a mensagem já existe (evitar duplicatas)
-      const { data: existingMessage } = await supabase
-        .from('whatsapp_messages')
-        .select('id')
-        .eq('message_id', messageId)
-        .maybeSingle();
-
-      if (existingMessage) {
-        console.log('Message already exists, skipping:', messageId);
-        continue;
-      }
-
       // Salvar mensagem no banco com campos de descriptografia para áudio
       const messageData: any = {
         conversation_id: conversation.id,

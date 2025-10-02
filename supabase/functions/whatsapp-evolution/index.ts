@@ -220,7 +220,16 @@ serve(async (req) => {
           
           console.log(`✅ Image downloaded and converted to base64 (${imageBuffer.byteLength} bytes)`);
 
-          // Send to Evolution API with base64 image
+          // Map mediaType to correct mimetype
+          const mimetypeMap: Record<string, string> = {
+            'image': 'image/jpeg',
+            'video': 'video/mp4',
+            'audio': 'audio/mpeg',
+            'document': 'application/pdf'
+          };
+          const mimetype = mimetypeMap[mediaUrlType] || 'application/octet-stream';
+          
+          // Send to Evolution API with base64 image - flat structure as per official docs
           console.log('📎 Sending media with base64 to Evolution API...');
           const response = await fetch(`${currentApiUrl}/message/sendMedia/${mediaUrlInstanceName}`, {
             method: 'POST',
@@ -230,12 +239,11 @@ serve(async (req) => {
             },
             body: JSON.stringify({
               number: mediaUrlNumber.replace(/\D/g, ''),
-              mediaMessage: {
-                mediaType: mediaUrlType,
-                fileName: mediaUrlFileName,
-                caption: mediaUrlCaption,
-                media: base64Image  // Send base64, not URL
-              }
+              mediatype: mediaUrlType,  // lowercase as per Evolution API
+              mimetype: mimetype,       // required field
+              media: base64Image,       // base64 at root level
+              fileName: mediaUrlFileName,
+              caption: mediaUrlCaption
             })
           });
 

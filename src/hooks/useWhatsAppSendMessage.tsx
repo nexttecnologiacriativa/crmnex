@@ -58,7 +58,7 @@ export function useWhatsAppSendMessage() {
       } else if (params.mediaId && params.mediaType && params.permanentUrl) {
         // Send media message using permanent URL
         console.log('📎 Sending media message:', params.mediaType, params.permanentUrl);
-        const { error } = await supabase.functions.invoke('whatsapp-evolution', {
+        const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
           body: {
             action: 'sendMediaUrl',
             instanceName: activeInstance.instance_name,
@@ -74,6 +74,7 @@ export function useWhatsAppSendMessage() {
         });
         
         if (error) throw error;
+        if (data?.error) throw new Error(data.error);
       } else {
         throw new Error('Parâmetros inválidos para envio de mensagem');
       }

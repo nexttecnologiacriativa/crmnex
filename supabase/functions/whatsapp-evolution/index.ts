@@ -951,11 +951,12 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
     }
 
     // Download image and convert to base64 for Evolution API
+    console.log('🔄 [SENDIMAGE] Starting image processing for Evolution API');
     let permanentImageUrl = imageUrl;
     let base64Image = '';
     
     try {
-      console.log('📥 Downloading image from URL:', imageUrl);
+      console.log('📥 [SENDIMAGE] Downloading image from URL:', imageUrl);
       
       const imageResponse = await fetch(imageUrl);
       if (!imageResponse.ok) {
@@ -965,11 +966,12 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
       const imageBuffer = await imageResponse.arrayBuffer();
       
       // Convert to base64 for Evolution API
+      console.log('🔄 [SENDIMAGE] Converting image to base64...');
       const base64 = btoa(
         new Uint8Array(imageBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
       );
       base64Image = `data:image/jpeg;base64,${base64}`;
-      console.log('✅ Image converted to base64, size:', base64.length);
+      console.log('✅ [SENDIMAGE] Image converted to base64, size:', base64.length);
       
       // Also save to Supabase Storage for permanent URL
       const timestamp = Date.now();
@@ -999,7 +1001,8 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
     }
 
     // Send media using official Evolution API format with base64
-    console.log('📤 Sending image to Evolution API...');
+    console.log('📤 [SENDIMAGE] Sending image to Evolution API with base64 content...');
+    console.log('🔍 [SENDIMAGE] Payload structure: mediatype (lowercase), base64 content');
     const response = await fetch(`${apiUrl}/message/sendMedia/${instanceName}`, {
       method: 'POST',
       headers: {

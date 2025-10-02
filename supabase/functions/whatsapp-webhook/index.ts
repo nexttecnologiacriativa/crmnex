@@ -154,10 +154,20 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
         messageType
       });
 
-      // 🔥 FASE 1: Filtrar status - processar apenas mensagens recebidas
-      if (!['RECEIVED', 'PENDING'].includes(messageStatus) && !fromMe) {
-        console.log(`⏭️ Skipping message with status: ${messageStatus}`);
+      // 🔥 FASE 1: Processar mídia no primeiro evento, filtrar apenas texto por status
+      const hasMedia = messageContent?.imageMessage || 
+                       messageContent?.audioMessage || 
+                       messageContent?.videoMessage;
+      
+      // Se não tem mídia, filtrar por status (apenas mensagens de texto)
+      if (!hasMedia && !['RECEIVED', 'PENDING'].includes(messageStatus) && !fromMe) {
+        console.log(`⏭️ Skipping text message with status: ${messageStatus}`);
         continue;
+      }
+      
+      // Log indicando processamento de mídia
+      if (hasMedia) {
+        console.log(`📸 Processing media message with status: ${messageStatus}`);
       }
 
       console.log('Message details:', {

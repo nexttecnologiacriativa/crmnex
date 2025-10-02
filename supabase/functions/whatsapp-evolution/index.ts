@@ -952,18 +952,21 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
 
     // Use URL directly - Evolution API will download from Supabase Storage
     console.log('📤 [SENDIMAGE] Sending image to Evolution API using URL:', imageUrl);
-    console.log('🔍 [SENDIMAGE] Using optimized payload with URL parameter');
+    console.log('🔍 [SENDIMAGE] Using self-hosted Evolution API format with instanceName endpoint');
     
-    const response = await fetch(`${apiUrl}/message/sendMedia/${normalizedPhone}`, {
+    const response = await fetch(`${apiUrl}/message/sendMedia/${instanceName}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': apiKey,
       },
       body: JSON.stringify({
-        fileName: "image.jpg",
-        url: imageUrl,
-        caption: caption || ''
+        number: normalizedPhone,
+        mediaMessage: {
+          mediaUrl: imageUrl,
+          fileName: "image.jpg",
+          caption: caption || ''
+        }
       }),
     });
 

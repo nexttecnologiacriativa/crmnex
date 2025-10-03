@@ -92,9 +92,11 @@ export function ChatBox({ conversation, workspaceId, className }: ChatBoxProps) 
     }
   }, [messages]);
 
-  // Real-time subscription para novas mensagens
+  // Real-time subscription para novas mensagens - OPTIMIZED
   useEffect(() => {
     if (!conversation.id) return;
+
+    console.log('🔌 Setting up realtime subscription for conversation:', conversation.id);
 
     const channel = supabase
       .channel(`messages-${conversation.id}`)
@@ -111,17 +113,35 @@ export function ChatBox({ conversation, workspaceId, className }: ChatBoxProps) 
           console.log('📨 Message details:', {
             messageType: payload.new?.message_type,
             messageText: payload.new?.message_text,
-            isFromLead: payload.new?.is_from_lead
+            isFromLead: payload.new?.is_from_lead,
+            messageId: payload.new?.message_id
           });
-          refetch(); // Refetch messages when a new one is inserted
+          
+          // Adicionar nova mensagem diretamente ao cache em vez de refetch completo
+          queryClient.setQueryData(
+            ['whatsapp-messages', conversation.id],
+            (oldData: WhatsAppMessage[] = []) => {
+              // Verificar se a mensagem já existe no cache (evitar duplicação)
+              const messageExists = oldData.some(msg => msg.id === payload.new.id);
+              if (messageExists) {
+                console.log('⏭️ Message already in cache, skipping:', payload.new.id);
+                return oldData;
+              }
+              console.log('➕ Adding new message to cache:', payload.new.id);
+              return [...oldData, payload.new as WhatsAppMessage];
+            }
+          );
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Subscription status:', status);
+      });
 
     return () => {
+      console.log('🔌 Cleaning up subscription for conversation:', conversation.id);
       supabase.removeChannel(channel);
     };
-  }, [conversation.id, refetch]);
+  }, [conversation.id, queryClient]);
 
   // Marcar conversa como lida quando aberta
   useEffect(() => {

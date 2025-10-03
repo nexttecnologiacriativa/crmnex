@@ -83,8 +83,8 @@ export function useWhatsAppSendMessage() {
       return { success: true };
     },
     onSuccess: () => {
-      // Invalidate queries to refresh messages and conversations
-      queryClient.invalidateQueries({ queryKey: ['whatsapp-messages'] });
+      // A subscription em tempo real no ChatBox já cuida do refetch das mensagens
+      // Apenas invalidar conversações para atualizar a lista/contadores
       queryClient.invalidateQueries({ queryKey: ['whatsapp-conversations'] });
       toast.success('Mensagem enviada com sucesso!');
     },

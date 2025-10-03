@@ -30,7 +30,7 @@ export default function AIInsightsCard() {
   const { currentWorkspace } = useWorkspace();
   const queryClient = useQueryClient();
 
-  // Check if OpenAI API key is configured
+  // Get workspace settings for selected pipelines info
   const { data: workspaceSettings } = useQuery({
     queryKey: ['workspace-settings', currentWorkspace?.id],
     queryFn: async () => {
@@ -38,7 +38,7 @@ export default function AIInsightsCard() {
       
       const { data, error } = await supabase
         .from('workspace_settings')
-        .select('openai_api_key, ai_insights_pipeline_ids')
+        .select('ai_insights_pipeline_ids')
         .eq('workspace_id', currentWorkspace.id)
         .maybeSingle();
       
@@ -52,7 +52,6 @@ export default function AIInsightsCard() {
     enabled: !!currentWorkspace?.id,
   });
 
-  const hasApiKey = Boolean(workspaceSettings?.openai_api_key && workspaceSettings.openai_api_key.trim() !== '');
   const selectedPipelinesCount = workspaceSettings?.ai_insights_pipeline_ids?.length || 0;
 
   const { data: insights, refetch, isLoading, error } = useQuery<AIInsights>({
@@ -72,7 +71,7 @@ export default function AIInsightsCard() {
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes in React Query
     gcTime: 10 * 60 * 1000, // Keep in garbage collection for 10 minutes
     refetchOnWindowFocus: false,
-    enabled: Boolean(currentWorkspace?.id && hasApiKey),
+    enabled: Boolean(currentWorkspace?.id),
   });
 
   const handleRefresh = async () => {
@@ -168,43 +167,6 @@ export default function AIInsightsCard() {
 
     return { blocks };
   };
-
-  // Show insights card for all users when API key is configured
-  // Show setup message for non-configured workspaces
-  if (!hasApiKey) {
-    return (
-      <Card className="border-0 shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Brain className="h-5 w-5 text-blue-600" />
-            Insights de IA
-            <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600">
-              Não Configurado
-            </Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="text-center py-8">
-            <Brain className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Insights de IA não configurados
-            </h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Para usar os insights de IA, é necessário configurar uma chave da API OpenAI. 
-              Entre em contato com um administrador para configurar.
-            </p>
-            <Button
-              variant="outline"
-              onClick={() => window.location.href = '/settings?tab=ai'}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0 hover:from-blue-700 hover:to-purple-700"
-            >
-              Ver Configurações de IA
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   if (error) {
     return (

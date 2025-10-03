@@ -1,15 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import { useWorkspaceSettings, useUpdateWorkspaceSettings } from '@/hooks/useWorkspaceSettings';
 import { usePipelines } from '@/hooks/usePipeline';
 import { useWorkspace } from '@/hooks/useWorkspace';
-import { Eye, EyeOff, Brain, Sparkles, Filter, TestTube, AlertTriangle } from 'lucide-react';
+import { Brain, Sparkles, Filter, CheckCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
 interface AISettingsProps {
   currentUserRole?: string;
@@ -20,17 +19,11 @@ export default function AISettings({ currentUserRole }: AISettingsProps) {
   const { data: settings } = useWorkspaceSettings();
   const { mutate: updateSettings, isPending } = useUpdateWorkspaceSettings();
   const { data: pipelines } = usePipelines(currentWorkspace?.id);
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [apiKey, setApiKey] = useState('');
   const [selectedPipelines, setSelectedPipelines] = useState<string[]>([]);
-  const [isTesting, setIsTesting] = useState(false);
-
-  const isDisabled = currentUserRole !== 'admin' && currentUserRole !== 'manager';
 
   // Update local state when settings change
   useEffect(() => {
     if (settings) {
-      setApiKey(settings.openai_api_key || '');
       setSelectedPipelines(settings.ai_insights_pipeline_ids || []);
     }
   }, [settings]);
@@ -44,134 +37,32 @@ export default function AISettings({ currentUserRole }: AISettingsProps) {
   };
 
   const handleSave = () => {
-    if (!apiKey.trim()) {
-      toast({
-        title: "Erro",
-        description: "Por favor, insira uma API key válida",
-        variant: "destructive",
-      });
-      return;
-    }
-
     updateSettings({
-      openai_api_key: apiKey.trim(),
       ai_insights_pipeline_ids: selectedPipelines.length > 0 ? selectedPipelines : null
     });
-  };
-
-  const handleClear = () => {
-    setApiKey('');
-    setSelectedPipelines([]);
-    updateSettings({
-      openai_api_key: null,
-      ai_insights_pipeline_ids: null
-    });
-  };
-
-  const handleTestConnection = async () => {
-    if (!apiKey.trim()) {
-      toast({
-        title: "Erro",
-        description: "Por favor, salve a API key primeiro",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsTesting(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('test-openai');
-      
-      if (error) {
-        console.error('Test function error:', error);
-        toast({
-          title: "Erro no Teste",
-          description: `Falha ao testar conexão: ${error.message}`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (data.success) {
-        toast({
-          title: "Teste Bem-sucedido!",
-          description: "Conexão com OpenAI funcionando corretamente",
-        });
-      } else {
-        toast({
-          title: "Erro na Conexão",
-          description: data.error || "Erro desconhecido ao conectar com OpenAI",
-          variant: "destructive",
-        });
-      }
-    } catch (err) {
-      console.error('Test connection error:', err);
-      toast({
-        title: "Erro no Teste",
-        description: "Falha ao executar teste de conexão",
-        variant: "destructive",
-      });
-    } finally {
-      setIsTesting(false);
-    }
   };
 
   return (
     <div className="space-y-6">
       <Card className="border-0 shadow-lg">
         <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Brain className="h-5 w-5 text-blue-600" />
-            Configurações de IA
-          </CardTitle>
-          <p className="text-sm text-gray-600 mt-2">
-            Configure a integração com OpenAI para receber insights inteligentes sobre seus dados do CRM.
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Brain className="h-5 w-5 text-blue-600" />
+                Configurações de IA
+                <Badge variant="outline" className="text-xs bg-green-100 text-green-700">
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  Ativa
+                </Badge>
+              </CardTitle>
+              <p className="text-sm text-gray-600 mt-2">
+                A IA está ativa e pronta para gerar insights. Selecione os pipelines que deseja incluir na análise.
+              </p>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-6 space-y-6">
-          {/* OpenAI API Key */}
-          <div className="space-y-3">
-            <Label htmlFor="openai-api-key" className="text-sm font-medium">
-              OpenAI API Key
-            </Label>
-            <div className="relative">
-              <Input
-                id="openai-api-key"
-                type={showApiKey ? 'text' : 'password'}
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="sk-..."
-                className="pr-10"
-                disabled={isDisabled}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                onClick={() => setShowApiKey(!showApiKey)}
-                disabled={isDisabled}
-              >
-                {showApiKey ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-            <p className="text-xs text-gray-500">
-              Sua API key será criptografada e armazenada com segurança. 
-              Você pode obter uma em{' '}
-              <a 
-                href="https://platform.openai.com/api-keys" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
-              >
-                platform.openai.com/api-keys
-              </a>
-            </p>
-          </div>
 
           {/* Pipeline Selection */}
           {pipelines && pipelines.length > 0 && (
@@ -195,7 +86,6 @@ export default function AISettings({ currentUserRole }: AISettingsProps) {
                       onCheckedChange={(checked) => 
                         handlePipelineToggle(pipeline.id, checked as boolean)
                       }
-                      disabled={isDisabled}
                     />
                     <Label 
                       htmlFor={`pipeline-${pipeline.id}`}
@@ -221,58 +111,15 @@ export default function AISettings({ currentUserRole }: AISettingsProps) {
           )}
 
           {/* Actions */}
-          {!isDisabled && (
-            <div className="flex gap-3 pt-4">
-              <Button
-                onClick={handleSave}
-                disabled={isPending || !apiKey.trim()}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-              >
-                {isPending ? 'Salvando...' : 'Salvar Configurações'}
-              </Button>
-              {settings?.openai_api_key && (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={handleTestConnection}
-                    disabled={isTesting || isPending}
-                    className="border-green-500 text-green-600 hover:bg-green-50"
-                  >
-                    <TestTube className="h-4 w-4 mr-2" />
-                    {isTesting ? 'Testando...' : 'Testar Conexão'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleClear}
-                    disabled={isPending}
-                  >
-                    Remover API Key
-                  </Button>
-                </>
-              )}
-            </div>
-          )}
-
-          {isDisabled && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                <div>
-                  <h4 className="font-medium text-amber-800 mb-1">
-                    Permissão Necessária
-                  </h4>
-                  <p className="text-sm text-amber-700 mb-2">
-                    Apenas administradores e gerentes podem configurar as integrações de IA. 
-                    Entre em contato com um administrador para solicitar a configuração da OpenAI API.
-                  </p>
-                  <p className="text-xs text-amber-600">
-                    Seu perfil atual: <strong>{currentUserRole}</strong> • 
-                    Perfis com acesso: <strong>admin</strong>, <strong>manager</strong>
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+          <div className="flex gap-3 pt-4">
+            <Button
+              onClick={handleSave}
+              disabled={isPending}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            >
+              {isPending ? 'Salvando...' : 'Salvar Pipelines'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -291,7 +138,7 @@ export default function AISettings({ currentUserRole }: AISettingsProps) {
               <div>
                 <p className="font-medium text-sm">Insights Automáticos do Dashboard</p>
                 <p className="text-xs text-gray-600">
-                  Análise inteligente dos seus dados de leads, tarefas e conversões dos últimos 30 dias dos pipelines selecionados
+                  Análise inteligente dos seus dados de leads e conversões dos últimos 30 dias dos pipelines selecionados
                 </p>
               </div>
             </li>

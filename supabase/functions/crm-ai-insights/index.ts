@@ -106,38 +106,29 @@ serve(async (req) => {
 
     console.log('No valid cache found or force refresh requested, generating new insights');
 
-    // Get workspace settings to get OpenAI API key and selected pipelines
+    // Get OpenAI API key from Supabase secrets (global configuration)
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    
+    if (!openaiApiKey) {
+      console.error('OPENAI_API_KEY not found in Supabase secrets');
+      return new Response(JSON.stringify({
+        error: 'OpenAI API key not configured',
+        message: 'A API key da OpenAI não está configurada. Entre em contato com o administrador do sistema.'
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Get workspace settings to get selected pipelines
     const { data: settings } = await supabaseClient
       .from('workspace_settings')
-      .select('openai_api_key, ai_insights_pipeline_ids')
+      .select('ai_insights_pipeline_ids')
       .eq('workspace_id', workspaceId)
       .single();
 
-    if (!settings?.openai_api_key) {
-      console.error('OpenAI API key not found in workspace settings');
-      return new Response(JSON.stringify({
-        error: 'OpenAI API key not configured',
-        message: 'Configure sua API key da OpenAI nas configurações para receber insights de IA.'
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Validate API key format
-    if (!settings.openai_api_key.startsWith('sk-')) {
-      console.error('Invalid OpenAI API key format');
-      return new Response(JSON.stringify({
-        error: 'Invalid OpenAI API key format',
-        message: 'A API key da OpenAI deve começar com "sk-". Verifique se a chave foi configurada corretamente.'
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    console.log('OpenAI API key found, length:', settings.openai_api_key.length);
-    console.log('Selected pipelines:', settings.ai_insights_pipeline_ids);
+    console.log('OpenAI API key found in Supabase secrets');
+    console.log('Selected pipelines:', settings?.ai_insights_pipeline_ids);
 
     // Calculate date range - focus on last 30 days for insights
     const endDate = new Date();
@@ -181,7 +172,7 @@ serve(async (req) => {
           .order('position');
 
         // Apply pipeline filter if specific pipelines are selected
-        if (settings.ai_insights_pipeline_ids && settings.ai_insights_pipeline_ids.length > 0) {
+        if (settings?.ai_insights_pipeline_ids && settings.ai_insights_pipeline_ids.length > 0) {
           pipelineQuery = pipelineQuery.in('pipelines.id', settings.ai_insights_pipeline_ids);
         }
 
@@ -313,7 +304,7 @@ Analise os dados do CRM dos ${contextData.period} (${contextData.dateRange}) e f
 - Total de leads: ${metrics.leads.current}
 - Período anterior (30 dias): ${metrics.leads.previous}
 - Crescimento: ${metrics.leads.growth}%
-- Pipelines analisados: ${settings.ai_insights_pipeline_ids && settings.ai_insights_pipeline_ids.length > 0 ? `${settings.ai_insights_pipeline_ids.length} selecionados` : 'Todos os pipelines'}
+- Pipelines analisados: ${settings?.ai_insights_pipeline_ids && settings.ai_insights_pipeline_ids.length > 0 ? `${settings.ai_insights_pipeline_ids.length} selecionados` : 'Todos os pipelines'}
 
 **CONVERSÃO:**
 - Oportunidades com valor: ${metrics.conversion.totalOpportunities}
@@ -342,7 +333,7 @@ ${Object.entries(metrics.stageDistribution).map(([stage, count]) => `- ${stage}:
 Forneça análise focada nos últimos 30 dias com comparação ao período anterior e oportunidades de melhoria.
 `;
 
-    console.log('Calling OpenAI API with key ending in...', settings.openai_api_key.slice(-10));
+    console.log('Calling OpenAI API...');
 
     let openaiResponse;
     let openaiData;
@@ -352,7 +343,7 @@ Forneça análise focada nos últimos 30 dias com comparação ao período anter
       openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${settings.openai_api_key}`,
+          'Authorization': `Bearer ${openaiApiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({

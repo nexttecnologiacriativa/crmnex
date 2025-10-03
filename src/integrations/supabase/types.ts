@@ -2612,7 +2612,6 @@ export type Database = {
           default_pipeline_id: string | null
           id: string
           n8n_webhook_url: string | null
-          openai_api_key: string | null
           updated_at: string
           workspace_id: string
         }
@@ -2622,7 +2621,6 @@ export type Database = {
           default_pipeline_id?: string | null
           id?: string
           n8n_webhook_url?: string | null
-          openai_api_key?: string | null
           updated_at?: string
           workspace_id: string
         }
@@ -2632,7 +2630,6 @@ export type Database = {
           default_pipeline_id?: string | null
           id?: string
           n8n_webhook_url?: string | null
-          openai_api_key?: string | null
           updated_at?: string
           workspace_id?: string
         }

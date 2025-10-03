@@ -8,7 +8,6 @@ export interface WorkspaceSettings {
   workspace_id: string;
   default_pipeline_id: string | null;
   n8n_webhook_url: string | null;
-  openai_api_key: string | null;
   ai_insights_pipeline_ids: string[] | null;
   created_at: string;
   updated_at: string;

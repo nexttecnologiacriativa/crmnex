@@ -136,7 +136,7 @@ const LandingPage = () => {
                 ✨ SaaS & CRM Moderno
               </Badge>
               
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white mb-8 leading-tight">
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-8 leading-tight">
                 NexCRM – O CRM que{" "}
                 <span className="text-[#003366] dark:text-[#A4D65E]">
                   transforma bagunça em vendas

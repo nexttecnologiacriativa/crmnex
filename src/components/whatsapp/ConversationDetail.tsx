@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Trash2, ArrowLeft, UserPlus } from 'lucide-react';
+import { Trash2, ArrowLeft, UserPlus, ExternalLink } from 'lucide-react';
 import { useDeleteWhatsAppMessage } from '@/hooks/useWhatsAppOfficial';
 import { useWhatsAppMessages } from '@/hooks/useWhatsApp';
 import { MessageInput } from './MessageInput';
@@ -16,6 +16,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useLeads } from '@/hooks/useLeads';
 import { phonesMatch } from '@/lib/phone';
+import { useNavigate } from 'react-router-dom';
 
 interface Message {
   id: string;
@@ -42,6 +43,7 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
   const { data: messages = [], isLoading } = useWhatsAppMessages(conversationId);
   const { data: leads = [] } = useLeads();
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
+  const navigate = useNavigate();
 
   // Get conversation details for phone number
   const { data: conversation } = useQuery({
@@ -233,7 +235,17 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
           <h2 className="font-semibold">{conversation?.contact_name || 'Conversa'}</h2>
         </div>
         
-        {!leadForConversation && conversation && (
+        {leadForConversation ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700"
+            onClick={() => navigate(`/leads/${leadForConversation.id}`)}
+          >
+            <ExternalLink className="h-4 w-4" />
+            Ver Lead
+          </Button>
+        ) : conversation && (
           <Button
             variant="outline"
             size="sm"

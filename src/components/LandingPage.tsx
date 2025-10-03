@@ -2,6 +2,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Check, Kanban, BarChart3, Webhook, Users, Smartphone, Menu, X, Star, TrendingUp, Zap, Target } from "lucide-react";
 import { useState } from "react";
+import avatar1 from "@/assets/avatar-1.jpg";
+import avatar2 from "@/assets/avatar-2.jpg";
+import avatar3 from "@/assets/avatar-3.jpg";
+import avatar4 from "@/assets/avatar-4.jpg";
+import heroWoman from "@/assets/hero-woman.jpg";
 const LandingPage = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const handleLoginClick = () => {
@@ -124,9 +129,14 @@ const LandingPage = () => {
               {/* Social Proof */}
               <div className="flex items-center gap-3 justify-center lg:justify-start">
                 <div className="flex -space-x-3">
-                  {[1, 2, 3, 4].map(i => <div key={i} className="w-10 h-10 rounded-full bg-gradient-to-br from-[#003366] to-[#A4D65E] border-2 border-white dark:border-slate-950 flex items-center justify-center text-white font-bold text-sm">
-                      {String.fromCharCode(64 + i)}
-                    </div>)}
+                  {[avatar1, avatar2, avatar3, avatar4].map((avatar, i) => (
+                    <img 
+                      key={i} 
+                      src={avatar} 
+                      alt={`Cliente satisfeito ${i + 1}`}
+                      className="w-10 h-10 rounded-full border-2 border-white dark:border-slate-950 object-cover"
+                    />
+                  ))}
                 </div>
                 <div className="flex items-center gap-1">
                   {[1, 2, 3, 4, 5].map(i => <Star key={i} className="w-5 h-5 fill-[#A4D65E] text-[#A4D65E]" />)}
@@ -141,19 +151,13 @@ const LandingPage = () => {
                 {/* Blur Effect Background */}
                 <div className="absolute inset-0 bg-gradient-to-br from-[#003366]/10 via-[#A4D65E]/10 to-[#E3F2FD]/20 blur-3xl rounded-3xl"></div>
                 
-                {/* Mockup Area */}
-                <div className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-8 border border-gray-100 dark:border-slate-800">
-                  <div className="aspect-[4/3] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-900 rounded-2xl flex items-center justify-center">
-                    <div className="text-center space-y-6">
-                      <div className="w-24 h-24 bg-[#003366] rounded-2xl mx-auto flex items-center justify-center">
-                        <Kanban className="w-12 h-12 text-[#A4D65E]" />
-                      </div>
-                      <div className="space-y-2">
-                        <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-48 mx-auto"></div>
-                        <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-32 mx-auto"></div>
-                      </div>
-                    </div>
-                  </div>
+                {/* Hero Image */}
+                <div className="relative rounded-3xl shadow-2xl overflow-hidden border border-gray-100 dark:border-slate-800">
+                  <img 
+                    src={heroWoman} 
+                    alt="Mulher feliz usando NexCRM" 
+                    className="w-full h-full object-cover aspect-[4/3]"
+                  />
                 </div>
               </div>
             </div>

@@ -3,8 +3,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Loader2, Sparkles, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 interface WorkspaceOnboardingProps {
   open: boolean;
@@ -19,6 +20,7 @@ export default function WorkspaceOnboarding({
 }: WorkspaceOnboardingProps) {
   const [workspaceName, setWorkspaceName] = useState('');
   const { toast } = useToast();
+  const { signOut } = useAuth();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,6 +89,17 @@ export default function WorkspaceOnboarding({
             ) : (
               'Criar Workspace'
             )}
+          </Button>
+
+          <Button 
+            type="button"
+            variant="outline"
+            className="w-full" 
+            onClick={() => signOut()}
+            disabled={isCreating}
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Fazer Logout
           </Button>
         </form>
       </DialogContent>

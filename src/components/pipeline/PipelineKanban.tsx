@@ -93,24 +93,7 @@ export default function PipelineKanban({
     queryFn: async () => {
       if (!selectedPipelineId || !workspace?.id) return [];
       
-      // Buscar os IDs dos leads que estão neste pipeline através da tabela de relações
-      const { data: relations, error: relationsError } = await supabase
-        .from('lead_pipeline_relations')
-        .select('lead_id, stage_id')
-        .eq('pipeline_id', selectedPipelineId);
-
-      if (relationsError) {
-        console.error("Erro ao buscar relações de leads:", relationsError);
-        toast.error("Erro ao buscar leads do pipeline.");
-        return [];
-      }
-
-      if (!relations || relations.length === 0) return [];
-
-      const leadIds = relations.map(r => r.lead_id);
-      const stageMap = new Map(relations.map(r => [r.lead_id, r.stage_id]));
-
-      // Buscar os leads completos
+      // Buscar leads com JOIN direto na tabela de relações
       const { data, error } = await supabase
         .from('leads')
         .select(`
@@ -122,10 +105,14 @@ export default function PipelineKanban({
           pipeline_stages (
             name,
             color
+          ),
+          lead_pipeline_relations!inner (
+            stage_id,
+            pipeline_id
           )
         `)
         .eq('workspace_id', workspace.id)
-        .in('id', leadIds)
+        .eq('lead_pipeline_relations.pipeline_id', selectedPipelineId)
         .order('updated_at', { ascending: false });
 
       if (error) {
@@ -134,10 +121,10 @@ export default function PipelineKanban({
         return [];
       }
       
-      // Atualizar o stage_id de cada lead com o da relação específica deste pipeline
+      // Usar o stage_id da relação específica deste pipeline
       return (data || []).map(lead => ({
         ...lead,
-        stage_id: stageMap.get(lead.id) || lead.stage_id
+        stage_id: lead.lead_pipeline_relations?.[0]?.stage_id || lead.stage_id
       }));
     },
     enabled: !!selectedPipelineId && !!workspace?.id

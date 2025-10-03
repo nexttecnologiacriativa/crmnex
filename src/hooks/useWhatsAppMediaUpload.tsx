@@ -22,40 +22,59 @@ export function useWhatsAppMediaUpload() {
     mutationFn: async ({ file, mediaType }: MediaUploadParams): Promise<MediaUploadResponse> => {
       console.log('📎 Starting media upload:', { fileName: file.name, mediaType });
 
-      // Get session for authentication
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('No authentication token available');
+      // Get workspace ID
+      const { data: workspaceMember } = await supabase
+        .from('workspace_members')
+        .select('workspace_id')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      if (!workspaceMember) {
+        throw new Error('No workspace found');
       }
 
-      // Create FormData for file upload
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('mediaType', mediaType);
+      // Convert file to base64
+      const fileToBase64 = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = error => reject(error);
+        });
+      };
+
+      console.log('📤 Converting file to base64...');
+      const fileData = await fileToBase64(file);
 
       console.log('📤 Uploading to WhatsApp Media API...');
 
-      // Upload to our edge function
-      const response = await fetch(
-        'https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/whatsapp-media-upload',
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-          body: formData,
+      // Upload to our edge function with base64
+      const { data: result, error } = await supabase.functions.invoke('whatsapp-media-upload', {
+        body: {
+          fileData,
+          mimeType: file.type,
+          filename: file.name,
+          workspaceId: workspaceMember.workspace_id
         }
-      );
+      });
 
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        console.error('❌ Media upload failed:', result);
-        throw new Error(result.error || 'Failed to upload media');
+      if (error || !result?.success) {
+        console.error('❌ Media upload failed:', error || result);
+        throw new Error(error?.message || result?.error || 'Failed to upload media');
       }
 
       console.log('✅ Media uploaded successfully:', result);
-      return result;
+      
+      // Return in expected format
+      return {
+        success: true,
+        mediaId: result.path.split('/').pop() || '',
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        mediaType,
+        permanentUrl: result.publicUrl
+      };
     },
     onSuccess: (data) => {
       toast.success(`${data.mediaType === 'image' ? 'Imagem' : 'Arquivo'} carregado com sucesso!`);

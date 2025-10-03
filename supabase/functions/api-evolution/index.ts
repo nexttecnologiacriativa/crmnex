@@ -69,13 +69,53 @@ serve(async (req) => {
     const messageType = messageData.messageType;
     const timestamp = messageData.messageTimestamp || Date.now();
 
-    // Extract text content from different message types
+    // Extract text content and media info from different message types
     let text = '';
+    let mediaUrl = null;
+    let mediaType = null;
+    let caption = null;
+    
     if (messageData.message) {
+      // Text messages
       if (messageData.message.conversation) {
         text = messageData.message.conversation;
       } else if (messageData.message.extendedTextMessage?.text) {
         text = messageData.message.extendedTextMessage.text;
+      }
+      
+      // Image messages
+      else if (messageData.message.imageMessage) {
+        const imgMsg = messageData.message.imageMessage;
+        mediaUrl = imgMsg.url || imgMsg.fileUrl;
+        mediaType = 'image';
+        caption = imgMsg.caption || '';
+        text = caption || 'Imagem';
+      }
+      
+      // Audio messages
+      else if (messageData.message.audioMessage) {
+        const audMsg = messageData.message.audioMessage;
+        mediaUrl = audMsg.url || audMsg.fileUrl;
+        mediaType = 'audio';
+        text = 'Áudio';
+      }
+      
+      // Video messages
+      else if (messageData.message.videoMessage) {
+        const vidMsg = messageData.message.videoMessage;
+        mediaUrl = vidMsg.url || vidMsg.fileUrl;
+        mediaType = 'video';
+        caption = vidMsg.caption || '';
+        text = caption || 'Vídeo';
+      }
+      
+      // Document messages
+      else if (messageData.message.documentMessage) {
+        const docMsg = messageData.message.documentMessage;
+        mediaUrl = docMsg.url || docMsg.fileUrl;
+        mediaType = 'document';
+        caption = docMsg.caption || docMsg.fileName || '';
+        text = caption || 'Documento';
       }
     }
 
@@ -116,6 +156,53 @@ serve(async (req) => {
       );
     }
 
+    // Download and store media if present
+    let permanentMediaUrl = mediaUrl;
+    
+    if (mediaUrl && mediaType) {
+      try {
+        console.log('📥 Downloading media from Evolution API:', mediaUrl);
+        
+        // Download media from Evolution API
+        const mediaResponse = await fetch(mediaUrl);
+        if (mediaResponse.ok) {
+          const mediaBuffer = await mediaResponse.arrayBuffer();
+          const base64Media = btoa(String.fromCharCode(...new Uint8Array(mediaBuffer)));
+          
+          // Determine mimeType from mediaType
+          let mimeType = 'application/octet-stream';
+          if (mediaType === 'image') mimeType = 'image/jpeg';
+          else if (mediaType === 'audio') mimeType = 'audio/mpeg';
+          else if (mediaType === 'video') mimeType = 'video/mp4';
+          else if (mediaType === 'document') mimeType = 'application/pdf';
+          
+          // Upload to Supabase Storage via edge function
+          const uploadResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-media-upload`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseKey}`
+            },
+            body: JSON.stringify({
+              fileData: `data:${mimeType};base64,${base64Media}`,
+              mimeType,
+              filename: `${Date.now()}_${messageData.key?.id || 'media'}.${mediaType === 'image' ? 'jpg' : mediaType === 'audio' ? 'mp3' : 'mp4'}`,
+              workspaceId: 'default' // Will be extracted from instance later
+            })
+          });
+          
+          if (uploadResponse.ok) {
+            const uploadResult = await uploadResponse.json();
+            permanentMediaUrl = uploadResult.publicUrl;
+            console.log('✅ Media stored permanently:', permanentMediaUrl);
+          }
+        }
+      } catch (mediaError) {
+        console.error('❌ Failed to download/store media:', mediaError);
+        // Continue with original URL
+      }
+    }
+
     // Save message to Supabase
     const { data: savedMessage, error: saveError } = await supabase
       .from('whatsapp_webhook_messages')
@@ -123,11 +210,13 @@ serve(async (req) => {
         thread_id: threadId,
         from_me: fromMe,
         push_name: pushName,
-        message_type: messageType,
+        message_type: mediaType || messageType,
         text: text,
         timestamp: typeof timestamp === 'number' ? timestamp : parseInt(timestamp),
         custom_fields: customFields,
-        raw: messageData
+        raw: messageData,
+        media_url: permanentMediaUrl,
+        media_type: mediaType
       })
       .select()
       .single();

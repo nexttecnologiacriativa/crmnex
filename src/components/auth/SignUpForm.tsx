@@ -37,6 +37,9 @@ export default function SignUpForm({ onToggleMode }: SignUpFormProps) {
   
   const { register, handleSubmit, formState: { errors }, reset } = useForm<SignUpForm>({
     resolver: zodResolver(signUpSchema),
+    defaultValues: {
+      email: 'demo@next.tec.br',
+    },
   });
 
   const onSubmit = async (data: SignUpForm) => {

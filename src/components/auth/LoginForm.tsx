@@ -29,6 +29,9 @@ export default function LoginForm({ onToggleMode }: LoginFormProps) {
   
   const { register, handleSubmit, formState: { errors }, watch } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: 'demo@next.tec.br',
+    },
   });
 
   const email = watch('email');

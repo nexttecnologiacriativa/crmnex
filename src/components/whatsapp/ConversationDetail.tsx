@@ -66,6 +66,17 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
     ? leads.find(lead => lead.phone && phonesMatch(lead.phone, conversation.phone_number))
     : null;
 
+  console.log('🔍 ConversationDetail - Lead check:', {
+    hasConversation: !!conversation,
+    phoneNumber: conversation?.phone_number,
+    totalLeads: leads.length,
+    leadForConversation: leadForConversation ? {
+      id: leadForConversation.id,
+      name: leadForConversation.name,
+      phone: leadForConversation.phone
+    } : null
+  });
+
   // Auto scroll to bottom when new messages arrive
   useEffect(() => {
     if (scrollAreaRef.current) {

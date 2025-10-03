@@ -2697,6 +2697,10 @@ export type Database = {
         Args: { p_role?: string; p_user_email: string; p_workspace_id: string }
         Returns: Json
       }
+      create_workspace_for_user: {
+        Args: { p_user_id: string; p_workspace_name: string }
+        Returns: string
+      }
       debug_auth_context: {
         Args: Record<PropertyKey, never>
         Returns: Json

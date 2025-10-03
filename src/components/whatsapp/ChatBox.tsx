@@ -92,11 +92,9 @@ export function ChatBox({ conversation, workspaceId, className }: ChatBoxProps) 
     }
   }, [messages]);
 
-  // Real-time subscription para novas mensagens - OPTIMIZED
+  // Real-time subscription para novas mensagens
   useEffect(() => {
     if (!conversation.id) return;
-
-    console.log('🔌 Setting up realtime subscription for conversation:', conversation.id);
 
     const channel = supabase
       .channel(`messages-${conversation.id}`)
@@ -109,36 +107,27 @@ export function ChatBox({ conversation, workspaceId, className }: ChatBoxProps) 
           filter: `conversation_id=eq.${conversation.id}`
         },
         (payload) => {
-          console.log('📨 New message received via realtime:', payload);
-          console.log('📨 Message details:', {
-            messageType: payload.new?.message_type,
-            messageText: payload.new?.message_text,
-            isFromLead: payload.new?.is_from_lead,
-            messageId: payload.new?.message_id
-          });
+          console.log('📨 Realtime message:', payload.new?.message_id);
           
-          // Adicionar nova mensagem diretamente ao cache em vez de refetch completo
+          // Adicionar mensagem ao cache verificando duplicata por message_id
           queryClient.setQueryData(
             ['whatsapp-messages', conversation.id],
             (oldData: WhatsAppMessage[] = []) => {
-              // Verificar se a mensagem já existe no cache (evitar duplicação)
-              const messageExists = oldData.some(msg => msg.id === payload.new.id);
-              if (messageExists) {
-                console.log('⏭️ Message already in cache, skipping:', payload.new.id);
+              const isDuplicate = oldData.some(
+                msg => msg.id === payload.new.id || msg.message_id === payload.new.message_id
+              );
+              if (isDuplicate) {
+                console.log('⏭️ Duplicata detectada:', payload.new.message_id);
                 return oldData;
               }
-              console.log('➕ Adding new message to cache:', payload.new.id);
               return [...oldData, payload.new as WhatsAppMessage];
             }
           );
         }
       )
-      .subscribe((status) => {
-        console.log('📡 Subscription status:', status);
-      });
+      .subscribe();
 
     return () => {
-      console.log('🔌 Cleaning up subscription for conversation:', conversation.id);
       supabase.removeChannel(channel);
     };
   }, [conversation.id, queryClient]);

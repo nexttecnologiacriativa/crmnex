@@ -146,28 +146,7 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
       const messageId = message.key?.id;
       const messageStatus = message.status;
 
-      console.log('📨 Webhook received:', { 
-        messageId, 
-        status: messageStatus,
-        fromMe,
-        phoneNumber,
-        messageType
-      });
-
-      console.log('Message details:', {
-        messageType,
-        fromMe,
-        phoneNumber,
-        remoteJid,
-        pushName,
-        messageId,
-        hasMessageContent: !!messageContent,
-        messageContentType: typeof messageContent
-      });
-
-      console.log('Processing message - fromMe:', fromMe);
-
-      // ⚠️ CRITICAL: Verificar duplicata PRIMEIRO, ANTES de processar qualquer coisa
+      // ⚠️ CRITICAL: Verificar duplicata IMEDIATAMENTE
       const { data: existingMessage } = await supabase
         .from('whatsapp_messages')
         .select('id')
@@ -175,12 +154,19 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
         .maybeSingle();
 
       if (existingMessage) {
-        console.log('🔄 DUPLICATA DETECTADA - Message already exists:', messageId);
-        console.log('✅ Pulando processamento para evitar duplicação');
+        console.log('🔄 DUPLICATA - Pulando:', messageId);
         continue;
       }
 
-      // Buscar instância pelo nome no banco primeiro para ter workspace_id
+      console.log('📨 Processing new message:', { 
+        messageId, 
+        status: messageStatus,
+        fromMe,
+        phoneNumber,
+        messageType
+      });
+
+      // Buscar instância
       const { data: instance, error: instanceError } = await supabase
         .from('whatsapp_instances')
         .select('*')
@@ -252,7 +238,7 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
             console.log('✅ Processing image from base64...');
             imageData = Uint8Array.from(atob(mediaBase64), c => c.charCodeAt(0));
           } 
-          // 🔥 FASE 2: Se não tiver base64 e URL for .enc, usar API Evolution
+          // 🔥 FASE 2: Se não tiver base64 e URL for .enc, usar Evolution API
           else if (isEncryptedUrl) {
             console.log('🔐 Encrypted URL detected - downloading via Evolution API...');
             const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
@@ -262,7 +248,8 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
               throw new Error('Evolution API credentials not configured');
             }
             
-            const downloadUrl = `${evolutionApiUrl}/message/downloadMedia/${instance.instance_name}`;
+            // Endpoint correto: /chat/fetchMedia/{instance}
+            const downloadUrl = `${evolutionApiUrl}/chat/fetchMedia/${instance.instance_name}`;
             console.log('📥 Downloading from Evolution:', downloadUrl);
             
             const response = await fetch(downloadUrl, {
@@ -272,10 +259,12 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
-                key: {
-                  id: messageId,
-                  remoteJid: phoneNumber,
-                  fromMe: false
+                message: {
+                  key: {
+                    id: messageId,
+                    remoteJid: `${phoneNumber}@s.whatsapp.net`,
+                    fromMe: fromMe
+                  }
                 }
               })
             });
@@ -286,8 +275,15 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
               throw new Error(`Evolution API error: ${response.status} - ${errorText}`);
             }
             
-            imageData = await response.arrayBuffer();
-            console.log('✅ Downloaded via Evolution API:', imageData.byteLength, 'bytes');
+            const result = await response.json();
+            console.log('✅ Evolution API response:', { hasBase64: !!result.base64, size: result.base64?.length });
+            
+            if (result.base64) {
+              imageData = Uint8Array.from(atob(result.base64), c => c.charCodeAt(0));
+              console.log('✅ Downloaded via Evolution API:', imageData.byteLength, 'bytes');
+            } else {
+              throw new Error('No base64 data in Evolution API response');
+            }
           }
           // Se não for .enc, tentar download direto
           else if (mediaUrl) {

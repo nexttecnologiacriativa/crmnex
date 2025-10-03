@@ -154,22 +154,6 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
         messageType
       });
 
-      // 🔥 FASE 1: Processar mídia no primeiro evento, filtrar apenas texto por status
-      const hasMedia = messageContent?.imageMessage || 
-                       messageContent?.audioMessage || 
-                       messageContent?.videoMessage;
-      
-      // Se não tem mídia, filtrar por status (apenas mensagens de texto)
-      if (!hasMedia && !['RECEIVED', 'PENDING'].includes(messageStatus) && !fromMe) {
-        console.log(`⏭️ Skipping text message with status: ${messageStatus}`);
-        continue;
-      }
-      
-      // Log indicando processamento de mídia
-      if (hasMedia) {
-        console.log(`📸 Processing media message with status: ${messageStatus}`);
-      }
-
       console.log('Message details:', {
         messageType,
         fromMe,
@@ -182,6 +166,19 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
       });
 
       console.log('Processing message - fromMe:', fromMe);
+
+      // ⚠️ CRITICAL: Verificar duplicata PRIMEIRO, ANTES de processar qualquer coisa
+      const { data: existingMessage } = await supabase
+        .from('whatsapp_messages')
+        .select('id')
+        .eq('message_id', messageId)
+        .maybeSingle();
+
+      if (existingMessage) {
+        console.log('🔄 DUPLICATA DETECTADA - Message already exists:', messageId);
+        console.log('✅ Pulando processamento para evitar duplicação');
+        continue;
+      }
 
       // Buscar instância pelo nome no banco primeiro para ter workspace_id
       const { data: instance, error: instanceError } = await supabase
@@ -201,19 +198,6 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
       }
 
       console.log('Found instance:', instance);
-
-      // ⚠️ CRITICAL: Verificar duplicata ANTES de processar mídia
-      const { data: existingMessage } = await supabase
-        .from('whatsapp_messages')
-        .select('id')
-        .eq('message_id', messageId)
-        .maybeSingle();
-
-      if (existingMessage) {
-        console.log('🔄 DUPLICATA DETECTADA - Message already exists:', messageId);
-        console.log('✅ Pulando processamento para evitar duplicação');
-        continue;
-      }
 
       // Verificar se a mensagem tem conteúdo válido
       if (!messageContent) {

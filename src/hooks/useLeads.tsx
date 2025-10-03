@@ -127,7 +127,8 @@ export function useLeads() {
           )
         `)
         .eq('workspace_id', currentWorkspace.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(10000);
       
       if (workspaceError) {
         throw workspaceError;

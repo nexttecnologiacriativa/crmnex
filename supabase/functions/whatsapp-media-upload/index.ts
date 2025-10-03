@@ -34,14 +34,12 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Determine folder based on mimeType
-    let folder = 'documents';
-    if (mimeType.startsWith('image/')) {
-      folder = 'images';
-    } else if (mimeType.startsWith('audio/')) {
+    // Determine folder based on mimeType - APENAS audio/ e images/
+    let folder = 'images'; // default
+    if (mimeType.startsWith('audio/')) {
       folder = 'audio';
-    } else if (mimeType.startsWith('video/')) {
-      folder = 'videos';
+    } else if (mimeType.startsWith('image/')) {
+      folder = 'images';
     }
 
     // Convert base64 to buffer
@@ -54,14 +52,14 @@ serve(async (req) => {
     const extension = filename.split('.').pop() || 'bin';
     const uniqueFilename = `${timestamp}_${randomId}.${extension}`;
     
-    // Upload path: whatsapp-media/<workspaceId>/<folder>/<filename>
-    const path = `${workspaceId}/${folder}/${uniqueFilename}`;
+    // Upload path: <folder>/<filename> dentro do bucket e15cbf15-2758-4af5-a1af-8fd3a641b778
+    const path = `${folder}/${uniqueFilename}`;
 
     console.log('💾 Uploading to Supabase Storage:', { path, size: buffer.length });
 
-    // Upload to Supabase Storage
+    // Upload to Supabase Storage - BUCKET ÚNICO: e15cbf15-2758-4af5-a1af-8fd3a641b778
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('whatsapp-media')
+      .from('e15cbf15-2758-4af5-a1af-8fd3a641b778')
       .upload(path, buffer, {
         contentType: mimeType,
         cacheControl: '31536000', // 1 year cache
@@ -81,7 +79,7 @@ serve(async (req) => {
 
     // Get public URL
     const { data: publicUrlData } = supabase.storage
-      .from('whatsapp-media')
+      .from('e15cbf15-2758-4af5-a1af-8fd3a641b778')
       .getPublicUrl(uploadData.path);
 
     const publicUrl = publicUrlData.publicUrl;

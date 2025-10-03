@@ -158,6 +158,7 @@ serve(async (req) => {
 
     // Download and store media if present
     let permanentMediaUrl = mediaUrl;
+    let attachmentName = null;
     
     if (mediaUrl && mediaType) {
       try {
@@ -169,12 +170,26 @@ serve(async (req) => {
           const mediaBuffer = await mediaResponse.arrayBuffer();
           const base64Media = btoa(String.fromCharCode(...new Uint8Array(mediaBuffer)));
           
-          // Determine mimeType from mediaType
+          // Determine mimeType and filename from mediaType
           let mimeType = 'application/octet-stream';
-          if (mediaType === 'image') mimeType = 'image/jpeg';
-          else if (mediaType === 'audio') mimeType = 'audio/mpeg';
-          else if (mediaType === 'video') mimeType = 'video/mp4';
-          else if (mediaType === 'document') mimeType = 'application/pdf';
+          let extension = 'bin';
+          
+          if (mediaType === 'image') {
+            mimeType = 'image/jpeg';
+            extension = 'jpg';
+          } else if (mediaType === 'audio') {
+            mimeType = 'audio/ogg';
+            extension = 'ogg';
+          } else if (mediaType === 'video') {
+            mimeType = 'video/mp4';
+            extension = 'mp4';
+          } else if (mediaType === 'document') {
+            mimeType = 'application/pdf';
+            extension = 'pdf';
+          }
+          
+          const filename = `${mediaType}_${Date.now()}.${extension}`;
+          attachmentName = filename;
           
           // Upload to Supabase Storage via edge function
           const uploadResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-media-upload`, {
@@ -186,8 +201,8 @@ serve(async (req) => {
             body: JSON.stringify({
               fileData: `data:${mimeType};base64,${base64Media}`,
               mimeType,
-              filename: `${Date.now()}_${messageData.key?.id || 'media'}.${mediaType === 'image' ? 'jpg' : mediaType === 'audio' ? 'mp3' : 'mp4'}`,
-              workspaceId: 'default' // Will be extracted from instance later
+              filename,
+              workspaceId: 'default'
             })
           });
           
@@ -195,7 +210,11 @@ serve(async (req) => {
             const uploadResult = await uploadResponse.json();
             permanentMediaUrl = uploadResult.publicUrl;
             console.log('✅ Media stored permanently:', permanentMediaUrl);
+          } else {
+            console.error('❌ Upload failed:', await uploadResponse.text());
           }
+        } else {
+          console.error('❌ Failed to download media:', mediaResponse.status);
         }
       } catch (mediaError) {
         console.error('❌ Failed to download/store media:', mediaError);
@@ -203,7 +222,7 @@ serve(async (req) => {
       }
     }
 
-    // Save message to Supabase
+    // Save message to Supabase com attachment_name
     const { data: savedMessage, error: saveError } = await supabase
       .from('whatsapp_webhook_messages')
       .insert({

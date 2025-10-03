@@ -179,6 +179,18 @@ export function useCreateLead() {
       
       if (error) throw error;
       
+      // Criar relação de pipeline (backup/fallback caso o trigger falhe)
+      try {
+        await supabase.from('lead_pipeline_relations').insert({
+          lead_id: result.id,
+          pipeline_id: data.pipeline_id,
+          stage_id: data.stage_id,
+          is_primary: true
+        });
+      } catch (relationError) {
+        console.log('Relação de pipeline já existe ou foi criada pelo trigger');
+      }
+      
       // Não disparar automação se skip_automation for true
       if (!skip_automation) {
         // Disparar automação apenas se não foi explicitamente desabilitada

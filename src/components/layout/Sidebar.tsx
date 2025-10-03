@@ -21,18 +21,13 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Leads', href: '/leads', icon: Users },
   { name: 'Pipeline', href: '/pipeline', icon: Workflow },
+  { name: 'Atendimento', href: '/atendimento', icon: Headphones },
   { name: 'Tarefas', href: '/tasks', icon: CheckSquare },
   { name: 'Jobs', href: '/jobs', icon: Kanban },
-  { name: 'Atendimento', href: '/atendimento', icon: Headphones },
-  
-//  { name: 'WhatsApp', href: '/whatsapp', icon: MessageCircle }, // Movido para Atendimento
-//  { name: 'WhatsApp WEB', href: '/whatsapp-web', icon: Globe }, // Movido para Atendimento
   { name: 'Automação', href: '/automation', icon: Bot },
-  // { name: 'Debriefing', href: '/debriefing', icon: FileText }, // Removido temporariamente
   { name: 'Marketing', href: '/marketing', icon: Megaphone },
   { name: 'Outbound', href: '/outbound', icon: Search },
   { name: 'Relatórios', href: '/reports', icon: BarChart3 },
-  { name: 'Webhooks', href: '/webhooks', icon: Webhook },
   { name: 'Configurações', href: '/settings', icon: Settings },
 ];
 
@@ -77,7 +72,7 @@ export default function AppSidebar() {
       collapsible="icon"
     >
         <SidebarHeader className="border-b border-gray-200 bg-gray-50 transition-all duration-300">
-          <div className="flex h-12 items-center justify-center px-4">
+          <div className="flex h-10 items-center justify-center px-4">
             <img 
               src="/nexcrm-logo.png" 
               alt="NexCRM Logo" 
@@ -86,8 +81,8 @@ export default function AppSidebar() {
           </div>
         </SidebarHeader>
 
-        <SidebarContent className="px-2 py-3">
-          <SidebarMenu className="space-y-1">
+        <SidebarContent className="px-2 py-2 sidebar-scroll flex-1 overflow-y-auto">
+          <SidebarMenu className="space-y-0.5">
             {navigation.map((item) => {
               const isActive = location.pathname === item.href;
               return (
@@ -96,7 +91,7 @@ export default function AppSidebar() {
                     onClick={() => handleNavigation(item.href)}
                     isActive={isActive}
                     className={cn(
-                      'group relative h-9 px-3 text-sidebar-foreground/70 hover:text-sidebar-foreground',
+                      'group relative h-8 px-3 text-sidebar-foreground/70 hover:text-sidebar-foreground',
                       'transition-all duration-200 ease-out rounded-lg',
                       'hover:bg-sidebar-accent/40',
                       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
@@ -130,12 +125,12 @@ export default function AppSidebar() {
           </SidebarMenu>
         </SidebarContent>
 
-        <SidebarFooter className="px-2 pb-3">
-          <SidebarSeparator className="bg-sidebar-border mb-3 opacity-50" />
+        <SidebarFooter className="px-2 pb-2">
+          <SidebarSeparator className="bg-sidebar-border mb-2 opacity-50" />
           <SidebarMenuButton
             onClick={handleSignOut}
             className={cn(
-              "w-full justify-start h-9 px-3 text-sidebar-foreground/70 hover:text-sidebar-foreground",
+              "w-full justify-start h-8 px-3 text-sidebar-foreground/70 hover:text-sidebar-foreground",
               "hover:bg-destructive/10 hover:text-destructive",
               "rounded-lg",
               "transition-all duration-200 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2"

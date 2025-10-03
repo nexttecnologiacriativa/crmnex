@@ -2734,6 +2734,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      sync_workspace_lead_relations: {
+        Args: { p_workspace_id: string }
+        Returns: undefined
+      }
       user_has_workspace_access: {
         Args: { workspace_uuid: string }
         Returns: boolean

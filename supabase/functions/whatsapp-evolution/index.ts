@@ -847,16 +847,40 @@ async function sendMessage(instanceName: string, phone: string, message: string,
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      const errorText = await response.text();
+      let errorData = {};
+      
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { message: errorText };
+      }
+      
       console.error(`❌ Failed to send message:`, {
         status: response.status,
         statusText: response.statusText,
         phone: normalizedPhone,
         instanceName,
         credentialsSource,
-        errorData
+        errorData,
+        errorText
       });
-      throw new Error(`Failed to send message: ${response.status} - ${JSON.stringify(errorData)}`);
+      
+      // Detectar erros específicos
+      const errorMsg = errorText.toLowerCase();
+      if (errorMsg.includes('not registered') || 
+          errorMsg.includes('not found') ||
+          errorMsg.includes('jid not found') ||
+          errorMsg.includes('número não cadastrado')) {
+        throw new Error('WhatsApp não cadastrado neste número');
+      }
+      
+      if (errorMsg.includes('invalid number') || 
+          errorMsg.includes('número inválido')) {
+        throw new Error('Número de telefone inválido');
+      }
+      
+      throw new Error(`Failed to send message: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();

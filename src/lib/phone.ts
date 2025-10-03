@@ -137,3 +137,54 @@ export function phonesMatch(a: string, b: string): boolean {
   
   return false;
 }
+
+/**
+ * Validates Brazilian phone number format
+ * Returns object with isValid flag and error message if invalid
+ */
+export function validateBrazilianPhone(phone: string): { 
+  isValid: boolean; 
+  error?: string 
+} {
+  if (!phone) {
+    return { 
+      isValid: false, 
+      error: 'Número de telefone é obrigatório' 
+    };
+  }
+
+  // Remove formatação e sufixos
+  let digitsOnly = phone.replace(/\D/g, '');
+  
+  // Remove DDI 55 se presente
+  if (digitsOnly.startsWith('55')) {
+    digitsOnly = digitsOnly.substring(2);
+  }
+  
+  // Valida tamanho (11 dígitos: 2 DDD + 9 número)
+  if (digitsOnly.length !== 11) {
+    return { 
+      isValid: false, 
+      error: 'Número inválido. Formato esperado: (XX) 9XXXX-XXXX com 11 dígitos' 
+    };
+  }
+  
+  // Valida DDD (11-99)
+  const ddd = parseInt(digitsOnly.substring(0, 2));
+  if (ddd < 11 || ddd > 99) {
+    return { 
+      isValid: false, 
+      error: 'DDD inválido. Use um DDD válido entre 11 e 99' 
+    };
+  }
+  
+  // Valida se é celular (começa com 9)
+  if (digitsOnly[2] !== '9') {
+    return { 
+      isValid: false, 
+      error: 'Número deve ser celular (começar com 9 após o DDD)' 
+    };
+  }
+  
+  return { isValid: true };
+}

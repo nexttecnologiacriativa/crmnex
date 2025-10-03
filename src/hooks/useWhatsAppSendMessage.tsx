@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useWorkspace } from './useWorkspace';
 import { useWhatsAppInstances } from './useWhatsAppInstance';
+import { validateBrazilianPhone } from '@/lib/phone';
 
 interface SendMessageParams {
   conversationId: string;
@@ -23,6 +24,12 @@ export function useWhatsAppSendMessage() {
   return useMutation({
     mutationFn: async (params: SendMessageParams) => {
       console.log('📨 Sending WhatsApp message:', params);
+
+      // Validar número de telefone ANTES de enviar
+      const validation = validateBrazilianPhone(params.phoneNumber);
+      if (!validation.isValid) {
+        throw new Error(`❌ ${validation.error}`);
+      }
 
       // Get active instance
       const activeInstance = instances.find(instance => instance.status === 'open') || instances[0];
@@ -91,22 +98,35 @@ export function useWhatsAppSendMessage() {
     onError: (error: any) => {
       console.error('❌ Send message error:', error);
       
-      // Extract detailed error information
       let errorMessage = 'Erro desconhecido';
+      let errorTitle = 'Erro ao enviar mensagem';
       
       if (error?.message) {
-        errorMessage = error.message;
+        // Detectar tipos específicos de erro
+        const msg = error.message;
+        
+        if (msg.includes('❌')) {
+          // Erro de validação de número
+          errorTitle = '📱 Número de telefone incorreto';
+          errorMessage = msg.replace('❌ ', '');
+        } else if (msg.includes('not registered') || 
+                   msg.includes('número não cadastrado') ||
+                   msg.includes('WhatsApp não cadastrado')) {
+          errorTitle = '📱 WhatsApp não cadastrado';
+          errorMessage = 'Este número não possui WhatsApp ativo. Verifique o número do lead.';
+        } else if (msg.includes('Nenhuma instância')) {
+          errorTitle = '⚠️ Instância não conectada';
+          errorMessage = msg;
+        } else {
+          errorMessage = msg;
+        }
       }
       
-      // If there's additional context in the error object
-      if (error?.context) {
-        errorMessage += `\n\nDetalhes: ${JSON.stringify(error.context, null, 2)}`;
-      }
-      
-      // Show full error details
+      // Log completo para debugging
       console.error('📋 Full error details:', JSON.stringify(error, null, 2));
       
-      toast.error(`Erro ao enviar mensagem:\n${errorMessage}`, {
+      toast.error(errorMessage, {
+        description: errorTitle,
         duration: 8000,
       });
     },

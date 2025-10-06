@@ -29,9 +29,21 @@ export function useAutomationProcessor() {
   };
 
   useEffect(() => {
-    // Desabilitado - agora usa cron jobs no banco de dados
-    // Para evitar conflitos com os schedulers automáticos
-    console.log('🔄 Automation processor hook desabilitado - usando cron jobs');
+    if (!currentWorkspace?.id) return;
+
+    // Processar imediatamente ao montar
+    processAutomationQueue();
+
+    // Processar a cada 30 segundos
+    intervalRef.current = setInterval(() => {
+      processAutomationQueue();
+    }, 30000);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
   }, [currentWorkspace?.id]);
 
   return {

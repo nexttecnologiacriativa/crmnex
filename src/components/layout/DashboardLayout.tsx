@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { useNavigate } from 'react-router-dom';
 import AppSidebar from '@/components/layout/Sidebar';
+import { useAutomationProcessor } from '@/hooks/useAutomationProcessor';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -10,8 +11,8 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
 
-  // Os schedulers agora rodam automaticamente via cron jobs no banco
-  // Não é mais necessário executar no frontend
+  // Processar automações periodicamente no frontend
+  useAutomationProcessor();
 
   return (
     <SidebarProvider>

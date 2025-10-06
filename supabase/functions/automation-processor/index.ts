@@ -63,7 +63,7 @@ serve(async (req) => {
               workspace_id: item.workspace_id
             }
           });
-        } else if (item.trigger_type === 'tag_applied') {
+        } else if (item.trigger_type === 'tag_applied' || item.trigger_type === 'tag_added') {
           const tagId = item.trigger_data?.tag_id;
           if (tagId) {
             result = await supabase.functions.invoke('automation-engine', {

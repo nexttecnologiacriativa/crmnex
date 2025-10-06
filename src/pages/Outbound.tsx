@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Search, MapPin, Building, Phone, MessageCircle, UserPlus, ExternalLink, Settings, CheckCircle2 } from 'lucide-react';
+import { Search, MapPin, Building, Phone, MessageCircle, UserPlus, ExternalLink, Settings, CheckCircle2, Mail } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { usePipelines } from '@/hooks/usePipeline';
 import { useCreateLead } from '@/hooks/useLeads';
@@ -91,22 +91,9 @@ export default function Outbound() {
           reviews: place.reviews
         }));
         
-        // Filtrar apenas celulares brasileiros
-        companies = companies.filter(company => 
-          company.phone && isBrazilianMobile(company.phone)
-        );
-
-        if (companies.length === 0) {
-          setResults([]);
-          toast.info('Nenhum celular válido encontrado nos resultados');
-          return;
-        }
-
-        toast.info(`Validando ${companies.length} números no WhatsApp...`);
-
-        // Validar WhatsApp em lote
+        // Validar WhatsApp apenas em celulares brasileiros
         const phonesToValidate = companies
-          .filter(c => c.phone)
+          .filter(c => c.phone && isBrazilianMobile(c.phone))
           .map(c => c.phone!);
 
         const validationResults = await validateWhatsAppBatch(phonesToValidate);
@@ -117,16 +104,12 @@ export default function Outbound() {
           hasWhatsApp: validationResults.find(r => r.phone === company.phone)?.hasWhatsApp || false
         }));
 
-        // Filtrar apenas com WhatsApp
-        const whatsAppCompanies = companiesWithWhatsApp.filter(c => c.hasWhatsApp);
-
-        setResults(whatsAppCompanies);
+        setResults(companiesWithWhatsApp);
         
-        if (whatsAppCompanies.length > 0) {
-          toast.success(`${whatsAppCompanies.length} empresas com WhatsApp encontradas!`);
-        } else {
-          toast.info('Nenhuma empresa com WhatsApp ativo encontrada');
-        }
+        const withWhatsApp = companiesWithWhatsApp.filter(c => c.hasWhatsApp).length;
+        const total = companiesWithWhatsApp.length;
+        
+        toast.success(`${total} empresas encontradas (${withWhatsApp} com WhatsApp ativo)`);
       } else {
         setResults([]);
         toast.info('Nenhuma empresa encontrada para esta busca');
@@ -284,9 +267,19 @@ export default function Outbound() {
         {/* Results */}
         {results.length > 0 && (
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold">
-              {results.length} empresas encontradas
-            </h2>
+            <div className="flex items-center gap-4">
+              <h2 className="text-xl font-semibold">
+                {results.length} empresas encontradas
+              </h2>
+              <div className="flex gap-2">
+                <Badge variant="default" className="bg-green-600">
+                  {results.filter(r => r.hasWhatsApp).length} com WhatsApp
+                </Badge>
+                <Badge variant="outline">
+                  {results.filter(r => !r.hasWhatsApp && r.phone).length} outros contatos
+                </Badge>
+              </div>
+            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {results.map((company) => (
@@ -296,10 +289,25 @@ export default function Outbound() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
                           <CardTitle className="text-lg">{company.name}</CardTitle>
-                          {company.hasWhatsApp && (
+                          {company.hasWhatsApp ? (
                             <Badge variant="default" className="bg-green-600">
                               <CheckCircle2 className="h-3 w-3 mr-1" />
                               WhatsApp
+                            </Badge>
+                          ) : company.phone && isBrazilianMobile(company.phone) ? (
+                            <Badge variant="outline" className="border-orange-500 text-orange-700">
+                              <Phone className="h-3 w-3 mr-1" />
+                              Celular s/ WhatsApp
+                            </Badge>
+                          ) : company.phone ? (
+                            <Badge variant="outline" className="border-blue-500 text-blue-700">
+                              <Phone className="h-3 w-3 mr-1" />
+                              Telefone Fixo
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">
+                              <Mail className="h-3 w-3 mr-1" />
+                              Email disponível
                             </Badge>
                           )}
                         </div>
@@ -347,6 +355,17 @@ export default function Outbound() {
                       )}
                     </div>
 
+                    {!company.hasWhatsApp && company.phone && (
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+                        <p className="text-xs text-amber-800 font-medium">
+                          ⚠️ Cliente sem WhatsApp ativo
+                        </p>
+                        <p className="text-xs text-amber-700 mt-1">
+                          Faça a prospecção por telefone ou e-mail
+                        </p>
+                      </div>
+                    )}
+
                     <div className="flex flex-wrap gap-2 pt-2">
                       <Button
                         size="sm"
@@ -361,7 +380,13 @@ export default function Outbound() {
                         size="sm"
                         variant="outline"
                         onClick={() => handleStartConversation(company)}
-                        className="text-green-600 border-green-600 hover:bg-green-50"
+                        disabled={!company.hasWhatsApp}
+                        className={
+                          company.hasWhatsApp 
+                            ? "text-green-600 border-green-600 hover:bg-green-50"
+                            : "opacity-50 cursor-not-allowed"
+                        }
+                        title={!company.hasWhatsApp ? "WhatsApp não disponível" : ""}
                       >
                         <MessageCircle className="h-4 w-4 mr-1" />
                         Fale

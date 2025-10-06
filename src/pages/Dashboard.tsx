@@ -1,16 +1,11 @@
-
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import DashboardOverview from '@/components/dashboard/DashboardOverview';
 import { useN8nScheduler } from '@/hooks/useN8nScheduler';
-import { useAutomationProcessor } from '@/hooks/useAutomationProcessor';
 import { useEffect } from 'react';
 
 export default function Dashboard() {
   // Iniciar o scheduler automático do N8N
   useN8nScheduler();
-  
-  // Inicializar processador de automação
-  useAutomationProcessor();
 
   // SEO
   useEffect(() => {

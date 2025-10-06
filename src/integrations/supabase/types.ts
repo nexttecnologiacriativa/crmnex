@@ -2702,6 +2702,20 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      get_pending_automation_items: {
+        Args: { item_limit?: number }
+        Returns: {
+          created_at: string | null
+          error_message: string | null
+          id: string
+          lead_id: string | null
+          processed_at: string | null
+          status: string | null
+          trigger_data: Json | null
+          trigger_type: string
+          workspace_id: string
+        }[]
+      }
       get_scheduler_stats: {
         Args: Record<PropertyKey, never>
         Returns: Json

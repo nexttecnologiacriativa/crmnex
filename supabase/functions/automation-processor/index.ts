@@ -18,13 +18,9 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Buscar itens pendentes na fila de automação
+    // Buscar itens pendentes na fila com lock para evitar processamento simultâneo
     const { data: queueItems, error: queueError } = await supabase
-      .from('automation_queue')
-      .select('*')
-      .eq('status', 'pending')
-      .order('created_at', { ascending: true })
-      .limit(10);
+      .rpc('get_pending_automation_items', { item_limit: 10 });
 
     if (queueError) {
       console.error('❌ Error fetching queue items:', queueError);

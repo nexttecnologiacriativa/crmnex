@@ -8,11 +8,13 @@ import CreatePipelineStageDialog from './CreatePipelineStageDialog';
 import EditPipelineStageDialog from './EditPipelineStageDialog';
 import CreateLeadDialog from '../leads/CreateLeadDialog';
 import BulkActionsPanel from './BulkActionsPanel';
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useEnsureDefaultWorkspace } from '@/hooks/useWorkspace';
 import { useDeletePipelineStage, useReorderPipelineStages } from '@/hooks/usePipeline';
 import { useStagePagination } from '@/hooks/useStagePagination';
+import { useWhatsAppValidation } from '@/hooks/useWhatsAppValidation';
+import { isBrazilianMobile } from '@/lib/phone';
 
 interface PipelineKanbanProps {
   selectedPipelineId: string | null;
@@ -60,10 +62,12 @@ export default function PipelineKanban({
   const [editingStage, setEditingStage] = useState<any>(null);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
+  const [leadsWhatsAppStatus, setLeadsWhatsAppStatus] = useState<Record<string, boolean>>({});
   
   const { workspace } = useEnsureDefaultWorkspace();
   const deleteStage = useDeletePipelineStage();
   const reorderStages = useReorderPipelineStages();
+  const { validateWhatsAppBatch, isValidating } = useWhatsAppValidation();
   
   const {
     data: stages,
@@ -140,6 +144,45 @@ export default function PipelineKanban({
     leads: leads || [],
     leadsPerPage: 20 
   });
+
+  // Validar WhatsApp para todos os leads com celular
+  useEffect(() => {
+    const validateLeadsWhatsApp = async () => {
+      if (!leads || leads.length === 0) return;
+      
+      // Filtrar apenas celulares válidos e remover apenas caracteres não numéricos
+      const phonesToValidate = leads
+        .filter(lead => lead.phone && isBrazilianMobile(lead.phone))
+        .map(lead => lead.phone!.replace(/\D/g, '')); // Apenas dígitos
+      
+      if (phonesToValidate.length === 0) return;
+      
+      console.log('📱 Validando WhatsApp para leads do pipeline:', phonesToValidate.length);
+      
+      const validationResults = await validateWhatsAppBatch(phonesToValidate);
+      
+      // Criar mapa leadId -> hasWhatsApp
+      const statusMap: Record<string, boolean> = {};
+      leads.forEach(lead => {
+        if (!lead.phone) {
+          statusMap[lead.id] = false;
+          return;
+        }
+        
+        const leadDigits = lead.phone.replace(/\D/g, '');
+        const result = validationResults.find(
+          r => r.phone.replace(/\D/g, '') === leadDigits
+        );
+        
+        statusMap[lead.id] = result?.hasWhatsApp || false;
+      });
+
+      setLeadsWhatsAppStatus(statusMap);
+      console.log('✅ Validação concluída:', Object.keys(statusMap).length, 'leads');
+    };
+    
+    validateLeadsWhatsApp();
+  }, [leads]);
 
   const handleDragEnd = async (result: any) => {
     const {
@@ -326,6 +369,14 @@ export default function PipelineKanban({
   }
 
   return <div className="flex flex-col h-full">
+      {/* Indicador de validação */}
+      {isValidating && (
+        <div className="fixed top-4 right-4 bg-white shadow-lg rounded-lg p-3 flex items-center gap-2 z-50">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+          <span className="text-sm text-gray-600">Validando WhatsApp...</span>
+        </div>
+      )}
+
       {/* Barra de controles */}
       <div className="flex justify-between items-center mb-4 flex-shrink-0">
         <div className="flex items-center gap-2">
@@ -418,9 +469,10 @@ export default function PipelineKanban({
                           <Droppable droppableId={stage.id}>
                             {(provided, snapshot) => <div ref={provided.innerRef} {...provided.droppableProps} className={`p-4 space-y-3 flex-1 overflow-y-auto ${snapshot.isDraggingOver ? 'bg-blue-50' : ''}`}>
                                 {visibleLeads.map((lead, index) => <Draggable key={lead.id} draggableId={lead.id} index={index}>
-                                    {provided => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
+                                     {provided => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
                                         <LeadKanbanCard 
-                                          lead={lead} 
+                                          lead={lead}
+                                          hasWhatsApp={leadsWhatsAppStatus[lead.id] || false}
                                           selectionMode={selectionMode}
                                           isSelected={selectedLeads.includes(lead.id)}
                                           onSelect={handleLeadSelect}

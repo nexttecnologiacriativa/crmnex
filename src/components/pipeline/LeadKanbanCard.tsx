@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Mail, Phone, Building, DollarSign, Calendar, Edit, Plus, Globe, Tag, Check, Clock, MessageCircle } from 'lucide-react';
+import { Mail, Phone, Building, DollarSign, Calendar, Edit, Plus, Globe, Tag, Check, Clock, MessageCircle, CheckCircle2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,14 +13,18 @@ import LeadAssigneeSelector from '../leads/LeadAssigneeSelector';
 import PipelineTagSelector from './PipelineTagSelector';
 import { useLeadTagRelations } from '@/hooks/useLeadTags';
 import { getLeadDisplayName } from '@/lib/leadUtils';
+import { isBrazilianMobile } from '@/lib/phone';
+
 interface LeadKanbanCardProps {
   lead: any;
+  hasWhatsApp?: boolean;
   isSelected?: boolean;
   onSelect?: (leadId: string, selected: boolean) => void;
   selectionMode?: boolean;
 }
 export default function LeadKanbanCard({
   lead,
+  hasWhatsApp = false,
   isSelected = false,
   onSelect,
   selectionMode = false
@@ -90,20 +94,47 @@ export default function LeadKanbanCard({
                   <Globe className="h-3 w-3 inline mr-1" />
                   {lead.utm_source}
                 </div>}
+
+              {/* Badge de status WhatsApp */}
+              {lead.phone && (
+                <div className="flex items-center gap-1 mt-1">
+                  {isBrazilianMobile(lead.phone) ? (
+                    hasWhatsApp ? (
+                      <Badge variant="default" className="bg-green-600 text-white text-[10px] px-1.5 py-0.5 h-4">
+                        <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
+                        WhatsApp
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="border-orange-500 text-orange-700 text-[10px] px-1.5 py-0.5 h-4">
+                        <Phone className="h-2.5 w-2.5 mr-0.5" />
+                        Sem WhatsApp
+                      </Badge>
+                    )
+                  ) : (
+                    <Badge variant="outline" className="border-blue-500 text-blue-700 text-[10px] px-1.5 py-0.5 h-4">
+                      <Phone className="h-2.5 w-2.5 mr-0.5" />
+                      Fixo
+                    </Badge>
+                  )}
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-1">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={e => handleButtonClick(e, () => {
-                  navigate('/atendimento', { state: { leadId: lead.id, phone: lead.phone } });
-                })} 
-                className="h-6 px-2 bg-green-100 hover:bg-green-200 text-green-700"
-                title="Falar com o lead"
-              >
-                <MessageCircle className="h-3 w-3 mr-1" />
-                <span className="text-xs">Falar</span>
-              </Button>
+              {/* Botão Falar - Condicional baseado em WhatsApp */}
+              {lead.phone && isBrazilianMobile(lead.phone) && hasWhatsApp && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={e => handleButtonClick(e, () => {
+                    navigate('/atendimento', { state: { leadId: lead.id, phone: lead.phone } });
+                  })} 
+                  className="h-6 px-2 bg-green-100 hover:bg-green-200 text-green-700"
+                  title="Falar com o lead no WhatsApp"
+                >
+                  <MessageCircle className="h-3 w-3 mr-1" />
+                  <span className="text-xs">Falar</span>
+                </Button>
+              )}
             </div>
           </div>
           

@@ -5,13 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Search, MapPin, Building, Phone, MessageCircle, UserPlus, ExternalLink, Settings } from 'lucide-react';
+import { Search, MapPin, Building, Phone, MessageCircle, UserPlus, ExternalLink, Settings, CheckCircle2 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { usePipelines } from '@/hooks/usePipeline';
 import { useCreateLead } from '@/hooks/useLeads';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { isBrazilianMobile } from '@/lib/phone';
+import { useWhatsAppValidation } from '@/hooks/useWhatsAppValidation';
 
 interface CompanyResult {
   id: string;
@@ -22,6 +24,7 @@ interface CompanyResult {
   category: string;
   rating?: number;
   reviews?: number;
+  hasWhatsApp?: boolean;
 }
 
 export default function Outbound() {
@@ -38,6 +41,7 @@ export default function Outbound() {
   const { data: pipelines } = usePipelines(currentWorkspace?.id);
   const createLead = useCreateLead();
   const navigate = useNavigate();
+  const { validateWhatsAppBatch, isValidating } = useWhatsAppValidation();
 
   // Serper API search function
   const searchCompanies = async () => {
@@ -76,7 +80,7 @@ export default function Outbound() {
       const data = await response.json();
       
       if (data.places && data.places.length > 0) {
-        const companies: CompanyResult[] = data.places.map((place: any, index: number) => ({
+        let companies: CompanyResult[] = data.places.map((place: any, index: number) => ({
           id: place.placeId || `${place.title}-${index}`,
           name: place.title,
           address: place.address || 'Localização não informada',
@@ -87,8 +91,42 @@ export default function Outbound() {
           reviews: place.reviews
         }));
         
-        setResults(companies);
-        toast.success(`${companies.length} empresas encontradas!`);
+        // Filtrar apenas celulares brasileiros
+        companies = companies.filter(company => 
+          company.phone && isBrazilianMobile(company.phone)
+        );
+
+        if (companies.length === 0) {
+          setResults([]);
+          toast.info('Nenhum celular válido encontrado nos resultados');
+          return;
+        }
+
+        toast.info(`Validando ${companies.length} números no WhatsApp...`);
+
+        // Validar WhatsApp em lote
+        const phonesToValidate = companies
+          .filter(c => c.phone)
+          .map(c => c.phone!);
+
+        const validationResults = await validateWhatsAppBatch(phonesToValidate);
+
+        // Marcar empresas com WhatsApp
+        const companiesWithWhatsApp = companies.map(company => ({
+          ...company,
+          hasWhatsApp: validationResults.find(r => r.phone === company.phone)?.hasWhatsApp || false
+        }));
+
+        // Filtrar apenas com WhatsApp
+        const whatsAppCompanies = companiesWithWhatsApp.filter(c => c.hasWhatsApp);
+
+        setResults(whatsAppCompanies);
+        
+        if (whatsAppCompanies.length > 0) {
+          toast.success(`${whatsAppCompanies.length} empresas com WhatsApp encontradas!`);
+        } else {
+          toast.info('Nenhuma empresa com WhatsApp ativo encontrada');
+        }
       } else {
         setResults([]);
         toast.info('Nenhuma empresa encontrada para esta busca');
@@ -226,11 +264,11 @@ export default function Outbound() {
               <div className="md:col-span-1">
                 <Button 
                   onClick={searchCompanies}
-                  disabled={isSearching}
+                  disabled={isSearching || isValidating}
                   className="w-full gradient-premium text-white"
                 >
-                  {isSearching ? (
-                    <>Buscando...</>
+                  {isSearching || isValidating ? (
+                    <>{isValidating ? 'Validando WhatsApp...' : 'Buscando...'}</>
                   ) : (
                     <>
                       <Search className="h-4 w-4 mr-2" />
@@ -256,7 +294,15 @@ export default function Outbound() {
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <CardTitle className="text-lg mb-2">{company.name}</CardTitle>
+                        <div className="flex items-center gap-2 mb-2">
+                          <CardTitle className="text-lg">{company.name}</CardTitle>
+                          {company.hasWhatsApp && (
+                            <Badge variant="default" className="bg-green-600">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              WhatsApp
+                            </Badge>
+                          )}
+                        </div>
                         <Badge variant="secondary" className="mb-2">
                           {company.category}
                         </Badge>

@@ -142,6 +142,10 @@ export function phonesMatch(a: string, b: string): boolean {
  * Validates Brazilian phone number format
  * Returns object with isValid flag and error message if invalid
  */
+/**
+ * Validates Brazilian phone number format
+ * Returns object with isValid flag and error message if invalid
+ */
 export function validateBrazilianPhone(phone: string): { 
   isValid: boolean; 
   error?: string 
@@ -187,4 +191,23 @@ export function validateBrazilianPhone(phone: string): {
   }
   
   return { isValid: true };
+}
+
+/**
+ * Checks if a phone number is a Brazilian mobile number
+ * Returns true if it's a valid Brazilian mobile (11 digits with 9 prefix)
+ */
+export function isBrazilianMobile(phone: string): boolean {
+  if (!phone) return false;
+  
+  // Remove formatação
+  let digitsOnly = phone.replace(/\D/g, '');
+  
+  // Remove DDI 55 se presente
+  if (digitsOnly.startsWith('55')) {
+    digitsOnly = digitsOnly.substring(2);
+  }
+  
+  // Verifica se tem 11 dígitos e começa com 9
+  return digitsOnly.length === 11 && digitsOnly[2] === '9';
 }

@@ -75,6 +75,8 @@ serve(async (req) => {
         return await sendMessage(instanceName, phone, message, supabase, currentApiUrl, currentApiKey, workspaceId);
       case 'send_image':
         return await sendImage(instanceName, phone, bodyData?.imageUrl, bodyData?.caption || '', supabase, currentApiUrl, currentApiKey, workspaceId);
+      case 'checkWhatsApp':
+        return await checkWhatsApp(phone, workspaceId, supabase, currentApiUrl, currentApiKey);
       case 'sendMedia': {
         const mediaInstanceName = bodyData.instanceName || instanceName;
         const mediaNumber = bodyData.number || phone;
@@ -821,6 +823,86 @@ async function getInstanceStatus(instanceName: string, supabase: any, apiUrl: st
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+  }
+}
+
+async function checkWhatsApp(phone: string, workspaceId: string, supabase: any, apiUrl: string, apiKey: string) {
+  try {
+    // Normalizar telefone para garantir DDI 55 para números brasileiros
+    const normalizedPhone = ensureCountryCode55(phone);
+    
+    console.log(`🔍 Checking WhatsApp for ${normalizedPhone}`);
+
+    // Buscar uma instância aberta do workspace
+    const { data: instanceData, error: instanceError } = await supabase
+      .from('whatsapp_instances')
+      .select('instance_name')
+      .eq('workspace_id', workspaceId)
+      .eq('status', 'open')
+      .limit(1)
+      .single();
+
+    if (instanceError || !instanceData) {
+      console.log('⚠️ No open instance found for workspace');
+      return new Response(
+        JSON.stringify({ 
+          hasWhatsApp: false,
+          error: 'Nenhuma instância conectada encontrada'
+        }), 
+        { 
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    const instanceName = instanceData.instance_name;
+    console.log(`📱 Using instance ${instanceName} to check WhatsApp`);
+
+    // Chamar Evolution API para verificar se o número tem WhatsApp
+    const response = await fetch(`${apiUrl}/chat/whatsappNumbers/${instanceName}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': apiKey,
+      },
+      body: JSON.stringify({
+        numbers: [normalizedPhone]
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(`❌ Failed to check WhatsApp: ${response.status}`);
+      return new Response(
+        JSON.stringify({ hasWhatsApp: false }), 
+        { 
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    const data = await response.json();
+    console.log('✅ WhatsApp check result:', data);
+
+    // Evolution API retorna um array com os números que têm WhatsApp
+    const hasWhatsApp = data && Array.isArray(data) && data.length > 0;
+
+    return new Response(
+      JSON.stringify({ hasWhatsApp }), 
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+  } catch (error) {
+    console.error('❌ Error checking WhatsApp:', error);
+    return new Response(
+      JSON.stringify({ hasWhatsApp: false }), 
+      { 
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
   }
 }
 

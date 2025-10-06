@@ -42,12 +42,6 @@ serve(async (req) => {
       try {
         console.log(`🔄 Processing automation item: ${item.id} (${item.trigger_type})`);
 
-        // Marcar como processando
-        await supabase
-          .from('automation_queue')
-          .update({ status: 'processing', processed_at: new Date().toISOString() })
-          .eq('id', item.id);
-
         let result = null;
 
         // Processar diferentes tipos de triggers

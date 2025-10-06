@@ -361,17 +361,35 @@ async function executeFlow(supabase: any, { lead_id, flow_id, workspace_id }: an
 async function executeFlowForLead(supabase: any, flow: any, lead_id: string, workspace_id: string) {
   console.log(`🚀 Executing flow: ${flow.name} for lead: ${lead_id}`);
 
-  // Verificar se já foi executado para este lead (se send_once_per_lead estiver ativo)
+  // 🛡️ CAMADA 1: Verificar idempotência - não executar se já foi executado recentemente (últimos 60 segundos)
+  const sixtySecondsAgo = new Date(Date.now() - 60 * 1000).toISOString();
+  const { data: recentLog } = await supabase
+    .from('automation_logs')
+    .select('id, created_at')
+    .eq('flow_id', flow.id)
+    .eq('lead_id', lead_id)
+    .eq('status', 'success')
+    .gte('created_at', sixtySecondsAgo)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (recentLog) {
+    console.log(`⏭️ Skipping flow ${flow.name} - already executed recently (${recentLog.created_at})`);
+    return;
+  }
+
+  // 🛡️ CAMADA 2: Verificar se já foi executado para este lead (se send_once_per_lead estiver ativo)
   if (flow.send_once_per_lead) {
     const { data: existingExecution } = await supabase
       .from('automation_executions')
       .select('id')
       .eq('flow_id', flow.id)
       .eq('lead_id', lead_id)
-      .single();
+      .maybeSingle();
 
     if (existingExecution) {
-      console.log(`⏭️ Skipping flow ${flow.name} - already executed for this lead`);
+      console.log(`⏭️ Skipping flow ${flow.name} - already executed for this lead (send_once_per_lead)`);
       return;
     }
   }

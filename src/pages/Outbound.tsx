@@ -92,17 +92,26 @@ export default function Outbound() {
         }));
         
         // Validar WhatsApp apenas em celulares brasileiros
+        // Enviar apenas os dígitos, sem adicionar DDI (a edge function fará isso)
         const phonesToValidate = companies
           .filter(c => c.phone && isBrazilianMobile(c.phone))
-          .map(c => c.phone!);
+          .map(c => c.phone!.replace(/\D/g, '')); // Apenas remover caracteres não numéricos
+
+        console.log('📱 Números para validação WhatsApp (apenas dígitos):', phonesToValidate);
 
         const validationResults = await validateWhatsAppBatch(phonesToValidate);
 
-        // Marcar empresas com WhatsApp
-        const companiesWithWhatsApp = companies.map(company => ({
-          ...company,
-          hasWhatsApp: validationResults.find(r => r.phone === company.phone)?.hasWhatsApp || false
-        }));
+        // Marcar empresas com WhatsApp (comparar apenas os dígitos)
+        const companiesWithWhatsApp = companies.map(company => {
+          const companyDigits = company.phone?.replace(/\D/g, '') || '';
+          const result = validationResults.find(
+            r => r.phone.replace(/\D/g, '') === companyDigits
+          );
+          return {
+            ...company,
+            hasWhatsApp: result?.hasWhatsApp || false
+          };
+        });
 
         setResults(companiesWithWhatsApp);
         

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useWorkspace } from './useWorkspace';
 
 interface WhatsAppValidationResult {
   phone: string;
@@ -9,6 +10,7 @@ interface WhatsAppValidationResult {
 
 export function useWhatsAppValidation() {
   const [isValidating, setIsValidating] = useState(false);
+  const { currentWorkspace } = useWorkspace();
 
   /**
    * Valida se um número tem WhatsApp via Evolution API
@@ -18,7 +20,8 @@ export function useWhatsAppValidation() {
       const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
         body: {
           action: 'checkWhatsApp',
-          phone: phone
+          phone: phone,
+          workspaceId: currentWorkspace?.id
         }
       });
 

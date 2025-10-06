@@ -57,6 +57,8 @@ export default function UnifiedAtendimento() {
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [search, setSearch] = useState('');
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [lastSentAt, setLastSentAt] = useState<number>(0);
 
   // Controlled initialization - runs only once
   const hasInitialized = useRef(false);
@@ -373,11 +375,21 @@ export default function UnifiedAtendimento() {
   // }, [currentWorkspace?.id, queryClient]);
 
   const handleSend = async () => {
-    if (!message.trim() || !selectedConv || !selectedInstanceName) {
+    if (!message.trim() || !selectedConv || !selectedInstanceName || isSendingMessage) {
       if (!selectedInstanceName) toast.error('Selecione uma instância Evolution');
       return;
     }
+
+    // Prevenir cliques rápidos (cooldown de 1s)
+    const now = Date.now();
+    if (now - lastSentAt < 1000) {
+      toast.error('Aguarde um momento antes de enviar outra mensagem');
+      return;
+    }
+
+    setIsSendingMessage(true); // Trava imediata
     const phoneToSend = ensureCountryCode55(selectedConv.phone_number || '');
+    
     try {
       await sendEvolution.mutateAsync({
         instanceName: selectedInstanceName,
@@ -386,6 +398,7 @@ export default function UnifiedAtendimento() {
         workspaceId: currentWorkspace?.id
       });
       setMessage('');
+      setLastSentAt(Date.now()); // Registrar timestamp
       queryClient.invalidateQueries({
         queryKey: ['whatsapp-messages', selectedConv.id]
       });
@@ -396,6 +409,8 @@ export default function UnifiedAtendimento() {
       setTimeout(scrollToBottom, 200);
     } catch (e) {
       // feedback nos hooks
+    } finally {
+      setIsSendingMessage(false); // Libera após conclusão
     }
   };
   const handleImageSelect = async (file: File) => {
@@ -840,9 +855,9 @@ export default function UnifiedAtendimento() {
                        <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={!selectedInstanceName}>
                          <ImageIcon className="h-4 w-4" />
                        </Button>
-                       <Button onClick={handleSend} size="sm" disabled={!message.trim() || !selectedInstanceName}>
-                         <Send className="h-4 w-4" />
-                       </Button>
+                       <Button onClick={handleSend} size="sm" disabled={!message.trim() || !selectedInstanceName || isSendingMessage}>
+                          <Send className="h-4 w-4" />
+                        </Button>
                      </div>
                    </div>
 

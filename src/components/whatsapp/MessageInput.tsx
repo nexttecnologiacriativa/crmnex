@@ -32,6 +32,8 @@ export function MessageInput({ conversationId, phoneNumber, disabled, instanceNa
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastSentAt, setLastSentAt] = useState<number>(0);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -42,7 +44,20 @@ export function MessageInput({ conversationId, phoneNumber, disabled, instanceNa
   const isSending = mediaUpload.isPending || sendMessage.isPending;
 
   const handleSendText = async () => {
-    if (!message.trim() || isSending) return;
+    if (!message.trim() || isSending || isSubmitting) return;
+
+    // Prevenir cliques rápidos (cooldown de 1s)
+    const now = Date.now();
+    if (now - lastSentAt < 1000) {
+      toast({
+        title: "Aguarde",
+        description: "Aguarde um momento antes de enviar outra mensagem",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting(true); // Trava imediata
 
     try {
       await sendMessage.mutateAsync({
@@ -51,13 +66,29 @@ export function MessageInput({ conversationId, phoneNumber, disabled, instanceNa
         message: message.trim()
       });
       setMessage('');
+      setLastSentAt(Date.now()); // Registrar timestamp
     } catch (error) {
       // Error handling is done in the mutation
+    } finally {
+      setIsSubmitting(false); // Libera após conclusão
     }
   };
 
   const handleSendImage = async () => {
-    if (!selectedImage || isSending) return;
+    if (!selectedImage || isSending || isSubmitting) return;
+
+    // Prevenir cliques rápidos (cooldown de 1s)
+    const now = Date.now();
+    if (now - lastSentAt < 1000) {
+      toast({
+        title: "Aguarde",
+        description: "Aguarde um momento antes de enviar outra imagem",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting(true); // Trava imediata
 
     try {
       // First upload the image to get mediaId
@@ -81,8 +112,11 @@ export function MessageInput({ conversationId, phoneNumber, disabled, instanceNa
       setSelectedImage(null);
       setImagePreview(null);
       setCaption('');
+      setLastSentAt(Date.now()); // Registrar timestamp
     } catch (error) {
       // Error handling is done in the mutations
+    } finally {
+      setIsSubmitting(false); // Libera após conclusão
     }
   };
 
@@ -199,7 +233,7 @@ export function MessageInput({ conversationId, phoneNumber, disabled, instanceNa
     console.log('Audio recording triggered:', audioData);
   };
 
-  const isDisabled = disabled || isSending;
+  const isDisabled = disabled || isSending || isSubmitting;
 
   return (
     <Card className="border-t rounded-none">

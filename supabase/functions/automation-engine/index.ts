@@ -633,8 +633,6 @@ async function executeEvolutionMessageStep(supabase: any, step: any, lead: any, 
       
       console.log(`✅ Message sent successfully via fallback instance: ${fallbackInstance.instance_name}`);
       
-      // Após enviar a mensagem com sucesso, mover automaticamente para a próxima etapa
-      await moveLeadToNextStage(supabase, lead);
       return fallbackData;
     }
     
@@ -649,9 +647,6 @@ async function executeEvolutionMessageStep(supabase: any, step: any, lead: any, 
     messageLength: messageText.length,
     success: !!data
   });
-
-  // Após enviar a mensagem com sucesso, mover automaticamente para a próxima etapa
-  await moveLeadToNextStage(supabase, lead);
 }
 
 function replaceMessageVariables(message: string, lead: any): string {

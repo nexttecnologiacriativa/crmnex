@@ -263,19 +263,20 @@ async function processTagApplied(supabase: any, { lead_id, tag_id, workspace_id 
   console.log('🏷️ Processing tag applied:', { lead_id, tag_id });
 
   // 1. Buscar fluxos ativos que são disparados por essa tag
+  // Incluindo tanto "tag_applied" quanto "lead_created_with_tag" para cobrir ambos os casos
   const { data: flows, error: flowsError } = await supabase
     .from('automation_flows')
     .select('*')
     .eq('workspace_id', workspace_id)
     .eq('is_active', true)
-    .eq('trigger_type', 'tag_applied');
+    .in('trigger_type', ['tag_applied', 'tag_added', 'lead_created_with_tag']);
 
   if (flowsError) {
     console.error('❌ Error fetching flows:', flowsError);
     throw flowsError;
   }
 
-  console.log(`📋 Found ${flows?.length || 0} active tag-triggered flows`);
+  console.log(`📋 Found ${flows?.length || 0} active tag-triggered flows (including lead_created_with_tag)`);
 
   if (!flows || flows.length === 0) {
     return new Response(

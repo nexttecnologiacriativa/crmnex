@@ -131,27 +131,33 @@ export default function FlowBuilder({ flow, onClose }: FlowBuilderProps) {
           if (step.config.send_type === 'evolution') {
             if (!step.config.evolution_instance) {
               toast.error('Selecione uma instância Evolution para todas as mensagens via Evolution API');
+              setLoading(false);
               return;
             }
             if (!step.config.message || step.config.message.trim() === '') {
               toast.error('Digite uma mensagem personalizada para envio via Evolution API');
+              setLoading(false);
               return;
             }
           } else if (!step.config.template) {
             toast.error('Selecione um template para todas as mensagens via WhatsApp Oficial');
+            setLoading(false);
             return;
           }
         }
         if (step.type === 'apply_tag' && !step.config.tag_id) {
           toast.error('Selecione uma tag para todos os passos de aplicação');
+          setLoading(false);
           return;
         }
         if (step.type === 'wait' && (!step.config.minutes || step.config.minutes <= 0)) {
           toast.error('Configure um tempo válido para todos os passos de espera');
+          setLoading(false);
           return;
         }
         if (step.type === 'move_to_stage' && (!step.config.pipeline_id || !step.config.stage_id)) {
           toast.error('Selecione pipeline e etapa para todos os passos de movimentação');
+          setLoading(false);
           return;
         }
       }
@@ -163,7 +169,9 @@ export default function FlowBuilder({ flow, onClose }: FlowBuilderProps) {
         return;
       }
 
-      // Atualizar o fluxo usando o método updateFlow
+      console.log('💾 Salvando fluxo e aguardando sincronização...');
+
+      // Atualizar o fluxo e aguardar sincronização completa
       await updateFlow(flow.id, {
         name: flowName,
         description: flowDescription,
@@ -174,6 +182,10 @@ export default function FlowBuilder({ flow, onClose }: FlowBuilderProps) {
           : undefined
       });
 
+      // Aguardar um momento para garantir que os dados foram recarregados
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      console.log('✅ Fluxo salvo e sincronizado com sucesso');
       onClose();
       
     } catch (error) {
@@ -701,21 +713,33 @@ Vamos entrar em contato em breve!"
                           <SelectValue placeholder="Selecione uma etapa" />
                         </SelectTrigger>
                         <SelectContent>
-                          {availableStages.map((stage) => (
-                            <SelectItem key={stage.id} value={stage.id}>
-                              <div className="flex items-center gap-2">
-                                <div 
-                                  className="w-3 h-3 rounded-full" 
-                                  style={{ backgroundColor: stage.color }}
-                                />
-                                {stage.name}
-                              </div>
-                            </SelectItem>
-                          ))}
+                          {availableStages.length === 0 && selectedStep.config.pipeline_id ? (
+                            <div className="px-2 py-3 text-sm text-gray-500 text-center">
+                              Carregando etapas...
+                            </div>
+                          ) : availableStages.length === 0 ? (
+                            <div className="px-2 py-3 text-sm text-gray-500 text-center">
+                              Selecione um pipeline primeiro
+                            </div>
+                          ) : (
+                            availableStages.map((stage) => (
+                              <SelectItem key={stage.id} value={stage.id}>
+                                <div className="flex items-center gap-2">
+                                  <div 
+                                    className="w-3 h-3 rounded-full" 
+                                    style={{ backgroundColor: stage.color }}
+                                  />
+                                  {stage.name}
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-gray-600">
-                        Etapa para onde o lead será movido
+                        {!selectedStep.config.pipeline_id 
+                          ? 'Selecione um pipeline para ver as etapas disponíveis'
+                          : 'Etapa para onde o lead será movido'}
                       </p>
                     </div>
                   </div>

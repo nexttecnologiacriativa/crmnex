@@ -126,7 +126,8 @@ export function useAutomationFlows() {
       }
 
       if (data) {
-        await fetchFlows(); // Recarregar fluxos
+        // Recarregar fluxos e aguardar completar
+        await fetchFlows();
         toast.success('Fluxo atualizado com sucesso!');
         return data;
       }

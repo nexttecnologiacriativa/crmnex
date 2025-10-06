@@ -365,17 +365,17 @@ async function executeFlowForLead(supabase: any, flow: any, lead_id: string, wor
   const sixtySecondsAgo = new Date(Date.now() - 60 * 1000).toISOString();
   const { data: recentLog } = await supabase
     .from('automation_logs')
-    .select('id, created_at')
+    .select('id, executed_at')
     .eq('flow_id', flow.id)
     .eq('lead_id', lead_id)
     .eq('status', 'success')
-    .gte('created_at', sixtySecondsAgo)
-    .order('created_at', { ascending: false })
+    .gte('executed_at', sixtySecondsAgo)
+    .order('executed_at', { ascending: false })
     .limit(1)
     .maybeSingle();
 
   if (recentLog) {
-    console.log(`⏭️ Skipping flow ${flow.name} - already executed recently (${recentLog.created_at})`);
+    console.log(`⏭️ Skipping flow ${flow.name} - already executed recently (${recentLog.executed_at})`);
     return;
   }
 

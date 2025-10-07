@@ -266,16 +266,6 @@ export function useCreateMarketingCampaign() {
 
         // Dispara o processor imediatamente
         await supabase.functions.invoke('automation-processor', { body: {} });
-
-        // Fallback: invocar diretamente o engine caso a fila não seja processada
-        await supabase.functions.invoke('automation-engine', {
-          body: {
-            action: 'process_marketing_campaign',
-            campaign_id: campaign.id,
-            api_type: data.api_type,
-            workspace_id: workspaceId,
-          }
-        });
       }
 
       return campaign;
@@ -336,16 +326,6 @@ export function useStartCampaign() {
 
       // Dispara o processor imediatamente
       await supabase.functions.invoke('automation-processor', { body: {} });
-
-      // Fallback: invocar diretamente o engine caso a fila não seja processada
-      await supabase.functions.invoke('automation-engine', {
-        body: {
-          action: 'process_marketing_campaign',
-          campaign_id: campaignId,
-          api_type: campaign.api_type,
-          workspace_id: campaign.workspace_id,
-        }
-      });
       
       return { success: true, message: 'Campaign queued for processing' };
     },

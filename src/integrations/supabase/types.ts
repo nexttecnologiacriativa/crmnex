@@ -1203,6 +1203,79 @@ export type Database = {
           },
         ]
       }
+      lead_appointments: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          lead_id: string
+          notes: string | null
+          reminder_sent: boolean
+          reminder_sent_at: string | null
+          scheduled_date: string
+          scheduled_time: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          title: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          lead_id: string
+          notes?: string | null
+          reminder_sent?: boolean
+          reminder_sent_at?: string | null
+          scheduled_date: string
+          scheduled_time: string
+          status?: Database["public"]["Enums"]["appointment_status"]
+          title: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          lead_id?: string
+          notes?: string | null
+          reminder_sent?: boolean
+          reminder_sent_at?: string | null
+          scheduled_date?: string
+          scheduled_time?: string
+          status?: Database["public"]["Enums"]["appointment_status"]
+          title?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_appointments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_appointments_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_appointments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_pipeline_relations: {
         Row: {
           created_at: string | null
@@ -2743,6 +2816,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      get_appointment_stats: {
+        Args: {
+          p_end_date?: string
+          p_start_date?: string
+          p_workspace_id: string
+        }
+        Returns: Json
+      }
       get_pending_automation_items: {
         Args: { item_limit?: number }
         Returns: {
@@ -2799,6 +2880,12 @@ export type Database = {
       }
     }
     Enums: {
+      appointment_status:
+        | "aguardando"
+        | "compareceu"
+        | "nao_qualificado"
+        | "reagendado"
+        | "falhou"
       lead_status:
         | "new"
         | "contacted"
@@ -2938,6 +3025,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      appointment_status: [
+        "aguardando",
+        "compareceu",
+        "nao_qualificado",
+        "reagendado",
+        "falhou",
+      ],
       lead_status: [
         "new",
         "contacted",

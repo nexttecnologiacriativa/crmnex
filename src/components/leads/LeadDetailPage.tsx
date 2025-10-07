@@ -17,6 +17,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import LeadTasks from './LeadTasks';
 import LeadMultiplePipelinesManager from './LeadMultiplePipelinesManager';
 import LeadTimeline from './LeadTimeline';
+import { LeadAppointments } from './LeadAppointments';
 import { useDeleteLead } from '@/hooks/useLeads';
 import { getLeadDisplayName } from '@/lib/leadUtils';
 
@@ -196,9 +197,10 @@ export default function LeadDetailPage() {
               <Card className="border-0 shadow-lg">
                 <CardContent className="p-6">
                   <Tabs defaultValue="info" className="w-full">
-                    <TabsList className="grid w-full grid-cols-5">
+                    <TabsList className="grid w-full grid-cols-6">
                       <TabsTrigger value="info">Informações</TabsTrigger>
                       <TabsTrigger value="pipelines">Pipelines</TabsTrigger>
+                      <TabsTrigger value="appointments">Agendamentos</TabsTrigger>
                       <TabsTrigger value="tasks">Tarefas</TabsTrigger>
                       <TabsTrigger value="activities">Atividades</TabsTrigger>
                       <TabsTrigger value="timeline">Histórico</TabsTrigger>
@@ -329,6 +331,18 @@ export default function LeadDetailPage() {
                       {currentWorkspace && (
                         <LeadMultiplePipelinesManager 
                           leadId={lead.id}
+                          workspaceId={currentWorkspace.id}
+                        />
+                      )}
+                    </TabsContent>
+
+                    {/* Tab: Agendamentos */}
+                    <TabsContent value="appointments" className="mt-4">
+                      {currentWorkspace && (
+                        <LeadAppointments 
+                          leadId={lead.id}
+                          leadName={getLeadDisplayName(lead)}
+                          leadPhone={lead.phone}
                           workspaceId={currentWorkspace.id}
                         />
                       )}

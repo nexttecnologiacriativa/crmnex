@@ -182,17 +182,17 @@ export default function TVDashboard() {
 
         {/* Main Dashboard Grid - Otimizado para uma tela */}
         <div className="flex-1 grid grid-cols-12 gap-3 min-h-0">
-          {/* Left Column - Funnel & Performance */}
+          {/* Left Column - Appointments & Funnel */}
           <div className="col-span-7 flex flex-col gap-3 min-h-0">
-            <div className="flex-1 min-h-0">
-              <TVFunnelChart isDarkMode={isDarkMode} />
+            <div className="flex-[0.8] min-h-0">
+              <TVAppointmentsCard isDarkMode={isDarkMode} />
             </div>
-            <div className="flex-1 min-h-0">
-              <TVPerformanceChart isDarkMode={isDarkMode} />
+            <div className="flex-[1.2] min-h-0">
+              <TVFunnelChart isDarkMode={isDarkMode} />
             </div>
           </div>
 
-          {/* Right Column - Leaderboard, Activities, Appointments & Tags */}
+          {/* Right Column - Leaderboard, Activities, Performance & Tags */}
           <div className="col-span-5 flex flex-col gap-3 min-h-0">
             <div className="flex-[1.2] min-h-0">
               <TVLeaderboard isDarkMode={isDarkMode} />
@@ -201,7 +201,7 @@ export default function TVDashboard() {
               <TVActivityFeed isDarkMode={isDarkMode} />
             </div>
             <div className="flex-[0.9] min-h-0">
-              <TVAppointmentsCard isDarkMode={isDarkMode} />
+              <TVPerformanceChart isDarkMode={isDarkMode} />
             </div>
             <div className="flex-[0.7] min-h-0">
               <TVTopTags isDarkMode={isDarkMode} />

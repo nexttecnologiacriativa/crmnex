@@ -24,118 +24,160 @@ export default function TVAppointmentsCard({ isDarkMode }: TVAppointmentsCardPro
       "h-full border-0 shadow-xl overflow-hidden",
       isDarkMode ? "bg-white/10 backdrop-blur-md" : "bg-white"
     )}>
-      <CardContent className="p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Calendar className={cn(
-            "h-5 w-5",
-            isDarkMode ? "text-white" : "text-nexcrm-blue"
-          )} />
-          <h3 className={cn(
-            "text-lg font-bold",
-            isDarkMode ? "text-white" : "text-nexcrm-blue"
-          )}>
-            Agendamentos Hoje
-          </h3>
-        </div>
-
-        <div className="space-y-4">
-          {/* Total e Taxa */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className={cn(
-                "text-xs mb-1",
-                isDarkMode ? "text-white/70" : "text-muted-foreground"
-              )}>
-                Total
-              </p>
-              <motion.p
-                key={metrics.total}
-                initial={{ scale: 1.2, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className={cn(
-                  "text-3xl font-bold",
-                  isDarkMode ? "text-white" : "text-nexcrm-blue"
-                )}
-              >
-                {metrics.total}
-              </motion.p>
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              "w-12 h-12 rounded-xl flex items-center justify-center",
+              isDarkMode ? "bg-white/10" : "bg-nexcrm-blue/10"
+            )}>
+              <Calendar className={cn(
+                "h-6 w-6",
+                isDarkMode ? "text-white" : "text-nexcrm-blue"
+              )} />
             </div>
             <div>
-              <p className={cn(
-                "text-xs mb-1",
-                isDarkMode ? "text-white/70" : "text-muted-foreground"
+              <h3 className={cn(
+                "text-xl font-bold",
+                isDarkMode ? "text-white" : "text-nexcrm-blue"
               )}>
-                Taxa
+                Agendamentos Hoje
+              </h3>
+              <p className={cn(
+                "text-sm",
+                isDarkMode ? "text-white/60" : "text-gray-500"
+              )}>
+                Acompanhamento em tempo real
               </p>
-              <motion.p
-                key={metrics.taxa_comparecimento}
-                initial={{ scale: 1.2, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="text-3xl font-bold text-green-500"
-              >
-                {metrics.taxa_comparecimento}%
-              </motion.p>
             </div>
           </div>
+        </div>
 
-          {/* Status compacto */}
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            {Object.entries(metrics.byStatus).map(([status, count]) => {
-              const config = statusConfig[status as keyof typeof statusConfig];
-              return (
+        <div className="grid grid-cols-5 gap-4 mb-5">
+          {/* Total */}
+          <div className={cn(
+            "p-4 rounded-lg",
+            isDarkMode ? "bg-white/5" : "bg-nexcrm-blue/5"
+          )}>
+            <p className={cn(
+              "text-xs font-medium mb-1",
+              isDarkMode ? "text-white/70" : "text-gray-600"
+            )}>
+              Total
+            </p>
+            <motion.p
+              key={metrics.total}
+              initial={{ scale: 1.2, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className={cn(
+                "text-3xl font-bold",
+                isDarkMode ? "text-white" : "text-nexcrm-blue"
+              )}
+            >
+              {metrics.total}
+            </motion.p>
+          </div>
+
+          {/* Taxa de Comparecimento */}
+          <div className={cn(
+            "p-4 rounded-lg",
+            isDarkMode ? "bg-green-500/10" : "bg-green-50"
+          )}>
+            <p className={cn(
+              "text-xs font-medium mb-1",
+              isDarkMode ? "text-green-300" : "text-green-700"
+            )}>
+              Taxa
+            </p>
+            <motion.p
+              key={metrics.taxa_comparecimento}
+              initial={{ scale: 1.2, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className={cn(
+                "text-3xl font-bold",
+                isDarkMode ? "text-green-400" : "text-green-600"
+              )}
+            >
+              {metrics.taxa_comparecimento}%
+            </motion.p>
+          </div>
+
+          {/* Status individuais */}
+          {[
+            { key: 'aguardando', label: 'Aguardando', color: isDarkMode ? 'text-gray-300' : 'text-gray-600' },
+            { key: 'compareceu', label: 'Compareceu', color: isDarkMode ? 'text-green-400' : 'text-green-600' },
+            { key: 'falhou', label: 'Faltaram', color: isDarkMode ? 'text-red-400' : 'text-red-600' },
+          ].map(({ key, label, color }) => (
+            <div
+              key={key}
+              className={cn(
+                "p-4 rounded-lg",
+                isDarkMode ? "bg-white/5" : "bg-gray-50"
+              )}
+            >
+              <p className={cn(
+                "text-xs font-medium mb-1",
+                isDarkMode ? "text-white/70" : "text-gray-600"
+              )}>
+                {label}
+              </p>
+              <motion.p
+                key={metrics.byStatus[key as keyof typeof metrics.byStatus]}
+                initial={{ scale: 1.2, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className={cn("text-3xl font-bold", color)}
+              >
+                {metrics.byStatus[key as keyof typeof metrics.byStatus]}
+              </motion.p>
+            </div>
+          ))}
+        </div>
+
+        {/* Próximos agendamentos */}
+        {metrics.upcomingToday.length > 0 && (
+          <div className={cn(
+            "p-4 rounded-lg",
+            isDarkMode ? "bg-white/5" : "bg-gray-50"
+          )}>
+            <p className={cn(
+              "text-sm font-bold mb-3 flex items-center gap-2",
+              isDarkMode ? "text-white/90" : "text-gray-900"
+            )}>
+              <Clock className="h-4 w-4" />
+              Próximos Agendamentos
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {metrics.upcomingToday.slice(0, 3).map((apt) => (
                 <div
-                  key={status}
+                  key={apt.id}
                   className={cn(
-                    "flex items-center gap-1 px-2 py-1 rounded",
-                    isDarkMode ? "bg-white/5" : "bg-gray-50"
+                    "p-3 rounded-lg",
+                    isDarkMode ? "bg-white/5" : "bg-white"
                   )}
                 >
-                  <span>{config.icon}</span>
-                  <span className={isDarkMode ? "text-white/80" : "text-gray-700"}>
-                    {count}
-                  </span>
+                  <p className={cn(
+                    "font-semibold text-sm mb-1 truncate",
+                    isDarkMode ? "text-white" : "text-gray-900"
+                  )}>
+                    {apt.title}
+                  </p>
+                  <p className={cn(
+                    "text-xs mb-1",
+                    isDarkMode ? "text-white/60" : "text-gray-500"
+                  )}>
+                    {apt.scheduled_time}
+                  </p>
+                  <p className={cn(
+                    "text-xs truncate",
+                    isDarkMode ? "text-white/50" : "text-gray-400"
+                  )}>
+                    {apt.lead_name}
+                  </p>
                 </div>
-              );
-            })}
-          </div>
-
-          {/* Próximos agendamentos */}
-          {metrics.upcomingToday.length > 0 && (
-            <div className="space-y-2">
-              <p className={cn(
-                "text-xs font-semibold flex items-center gap-1",
-                isDarkMode ? "text-white/90" : "text-gray-700"
-              )}>
-                <Clock className="h-3 w-3" />
-                Próximos
-              </p>
-              <div className="space-y-1 max-h-32 overflow-y-auto">
-                {metrics.upcomingToday.slice(0, 3).map((apt) => (
-                  <div
-                    key={apt.id}
-                    className={cn(
-                      "text-xs p-2 rounded",
-                      isDarkMode ? "bg-white/5" : "bg-gray-50"
-                    )}
-                  >
-                    <p className={cn(
-                      "font-medium truncate",
-                      isDarkMode ? "text-white" : "text-gray-900"
-                    )}>
-                      {apt.title}
-                    </p>
-                    <p className={cn(
-                      "truncate",
-                      isDarkMode ? "text-white/60" : "text-gray-500"
-                    )}>
-                      {apt.scheduled_time} - {apt.lead_name}
-                    </p>
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

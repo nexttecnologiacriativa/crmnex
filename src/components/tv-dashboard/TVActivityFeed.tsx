@@ -5,9 +5,12 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
 
 export default function TVActivityFeed() {
+  const [visibleCount, setVisibleCount] = useState(0);
+
   const { data: activities = [] } = useQuery({
     queryKey: ['tv-activities'],
     queryFn: async () => {
@@ -25,6 +28,25 @@ export default function TVActivityFeed() {
     },
     refetchInterval: 10000,
   });
+
+  // Animação contínua: mostra cards um por um em loop
+  useEffect(() => {
+    if (activities.length === 0) return;
+
+    setVisibleCount(0);
+    
+    const interval = setInterval(() => {
+      setVisibleCount((prev) => {
+        // Quando chegar ao final, reinicia
+        if (prev >= activities.length) {
+          return 1;
+        }
+        return prev + 1;
+      });
+    }, 500); // Cada card aparece a cada 500ms
+
+    return () => clearInterval(interval);
+  }, [activities.length]);
 
   const getActivityIcon = (type: string) => {
     const icons: Record<string, string> = {
@@ -85,15 +107,14 @@ export default function TVActivityFeed() {
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[400px] sm:h-[500px] lg:h-[600px] pr-4">
-          <AnimatePresence>
-            {activities.map((activity, index) => (
+          <div className="space-y-4">
+            {activities.slice(0, visibleCount).map((activity, index) => (
               <motion.div
-                key={activity.id}
+                key={`${activity.id}-${index}`}
                 initial={{ opacity: 0, x: -30, scale: 0.9 }}
                 animate={{ opacity: 1, x: 0, scale: 1 }}
-                exit={{ opacity: 0, x: 20, scale: 0.9 }}
                 transition={{ 
-                  delay: index * 0.05,
+                  duration: 0.5,
                   type: "spring",
                   stiffness: 200,
                   damping: 20
@@ -149,7 +170,7 @@ export default function TVActivityFeed() {
                 </div>
               </motion.div>
             ))}
-          </AnimatePresence>
+          </div>
         </ScrollArea>
       </CardContent>
     </Card>

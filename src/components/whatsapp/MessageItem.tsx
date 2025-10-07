@@ -85,6 +85,7 @@ export function MessageItem({ message, isFromCurrentUser }: MessageItemProps) {
                   alt="Imagem compartilhada"
                   className="w-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                   onClick={() => window.open(message.media_url!, '_blank')}
+                  crossOrigin="anonymous"
                   onError={(e) => {
                     console.error('Erro ao carregar imagem:', message.media_url);
                     e.currentTarget.style.display = 'none';

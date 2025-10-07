@@ -188,10 +188,11 @@ export default function AudioPlayer({
       <audio
         ref={audioRef}
         src={finalUrl}
-        preload="metadata"
+        preload="auto"
         crossOrigin="anonymous"
       >
         <source src={finalUrl} type={getAudioFormat(finalUrl)} />
+        <source src={finalUrl} type="audio/ogg; codecs=opus" />
         <source src={finalUrl} type="audio/ogg" />
         <source src={finalUrl} type="audio/mpeg" />
         <source src={finalUrl} type="audio/wav" />

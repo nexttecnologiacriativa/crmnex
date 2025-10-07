@@ -6,8 +6,11 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-export default function TVFunnelChart() {
-  const isDarkMode = true; // Você pode passar isso como prop
+interface TVFunnelChartProps {
+  isDarkMode?: boolean;
+}
+
+export default function TVFunnelChart({ isDarkMode = true }: TVFunnelChartProps) {
   const { currentWorkspace } = useWorkspace();
 
   const { data: leads = [] } = useQuery({

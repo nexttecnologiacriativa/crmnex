@@ -184,23 +184,23 @@ export default function TVDashboard() {
           {/* Left Column - Funnel & Performance */}
           <div className="col-span-7 flex flex-col gap-3 min-h-0">
             <div className="flex-1 min-h-0">
-              <TVFunnelChart />
+              <TVFunnelChart isDarkMode={isDarkMode} />
             </div>
             <div className="flex-1 min-h-0">
-              <TVPerformanceChart />
+              <TVPerformanceChart isDarkMode={isDarkMode} />
             </div>
           </div>
 
           {/* Right Column - Leaderboard, Activities & Tags */}
           <div className="col-span-5 flex flex-col gap-3 min-h-0">
             <div className="flex-[1.2] min-h-0">
-              <TVLeaderboard />
+              <TVLeaderboard isDarkMode={isDarkMode} />
             </div>
             <div className="flex-1 min-h-0">
-              <TVActivityFeed />
+              <TVActivityFeed isDarkMode={isDarkMode} />
             </div>
             <div className="flex-[0.8] min-h-0">
-              <TVTopTags />
+              <TVTopTags isDarkMode={isDarkMode} />
             </div>
           </div>
         </div>

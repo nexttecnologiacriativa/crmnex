@@ -9,8 +9,11 @@ import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
-export default function TVActivityFeed() {
-  const isDarkMode = true; // Você pode passar isso como prop
+interface TVActivityFeedProps {
+  isDarkMode?: boolean;
+}
+
+export default function TVActivityFeed({ isDarkMode = true }: TVActivityFeedProps) {
   const [visibleCount, setVisibleCount] = useState(0);
 
   const { data: activities = [] } = useQuery({

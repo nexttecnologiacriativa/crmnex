@@ -8,7 +8,11 @@ import { Trophy, Medal, Award } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-export default function TVLeaderboard() {
+interface TVLeaderboardProps {
+  isDarkMode?: boolean;
+}
+
+export default function TVLeaderboard({ isDarkMode = true }: TVLeaderboardProps) {
   const { currentWorkspace } = useWorkspace();
 
   const { data: leads = [] } = useQuery({
@@ -76,8 +80,6 @@ export default function TVLeaderboard() {
       .toUpperCase()
       .slice(0, 2);
   };
-
-  const isDarkMode = true; // Você pode passar isso como prop
 
   return (
     <Card className={cn(

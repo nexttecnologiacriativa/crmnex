@@ -8,8 +8,11 @@ import { motion } from 'framer-motion';
 import { Hash } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export default function TVTopTags() {
-  const isDarkMode = true; // Você pode passar isso como prop
+interface TVTopTagsProps {
+  isDarkMode?: boolean;
+}
+
+export default function TVTopTags({ isDarkMode = true }: TVTopTagsProps) {
   const { currentWorkspace } = useWorkspace();
 
   const { data: tagRelations = [] } = useQuery({

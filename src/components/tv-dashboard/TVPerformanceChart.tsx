@@ -7,8 +7,11 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-export default function TVPerformanceChart() {
-  const isDarkMode = true; // Você pode passar isso como prop
+interface TVPerformanceChartProps {
+  isDarkMode?: boolean;
+}
+
+export default function TVPerformanceChart({ isDarkMode = true }: TVPerformanceChartProps) {
   const { currentWorkspace } = useWorkspace();
 
   const { data: leads = [] } = useQuery({

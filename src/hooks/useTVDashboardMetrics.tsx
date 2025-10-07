@@ -23,23 +23,6 @@ export function useTVDashboardMetrics() {
     refetchInterval: 30000,
   });
 
-  const { data: conversations = [], isLoading: conversationsLoading } = useQuery({
-    queryKey: ['tv-dashboard-conversations', currentWorkspace?.id],
-    queryFn: async () => {
-      if (!currentWorkspace?.id) return [];
-      const { data, error } = await supabase
-        .from('whatsapp_conversations')
-        .select('*')
-        .eq('workspace_id', currentWorkspace.id)
-        .eq('is_read', false);
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!currentWorkspace?.id,
-    refetchInterval: 10000,
-  });
-
   const metrics = useMemo(() => {
     const today = startOfDay(new Date());
     const yesterday = startOfDay(subDays(new Date(), 1));
@@ -67,7 +50,7 @@ export function useTVDashboardMetrics() {
     
     const conversionChange = 0;
 
-    const activeConversations = conversations.length;
+    const totalLeads = leads.length;
 
     const pipelineValue = leads
       .filter(l => l.status !== 'closed_won' && l.status !== 'closed_lost')
@@ -80,13 +63,13 @@ export function useTVDashboardMetrics() {
       revenueGoal,
       conversionRate,
       conversionChange,
-      activeConversations,
+      totalLeads,
       pipelineValue,
     };
-  }, [leads, conversations]);
+  }, [leads]);
 
   return {
     metrics,
-    isLoading: leadsLoading || conversationsLoading,
+    isLoading: leadsLoading,
   };
 }

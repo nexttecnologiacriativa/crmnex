@@ -52,23 +52,23 @@
   }
 
   .dark {
-    --background: 209 100% 15%;
-    --foreground: 0 0% 100%;
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
 
-    --card: 209 100% 18%;
-    --card-foreground: 0 0% 100%;
+    --card: 220 15% 8%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 209 100% 18%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 220 15% 8%;
+    --popover-foreground: 210 40% 98%;
 
     --primary: 87 57% 51%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 209 50% 25%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 217.2 32.6% 12%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 209 50% 25%;
-    --muted-foreground: 0 0% 70%;
+    --muted: 217.2 32.6% 12%;
+    --muted-foreground: 215 20.2% 65.1%;
 
     --accent: 87 57% 51%;
     --accent-foreground: 0 0% 100%;
@@ -76,17 +76,17 @@
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 209 50% 25%;
-    --input: 209 50% 25%;
+    --border: 217.2 32.6% 12%;
+    --input: 217.2 32.6% 12%;
     --ring: 87 57% 51%;
 
-    --sidebar-background: 209 100% 15%;
+    --sidebar-background: 220 20% 6%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 87 57% 51%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 209 50% 25%;
+    --sidebar-accent: 217.2 32.6% 12%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 209 50% 25%;
+    --sidebar-border: 217.2 32.6% 12%;
     --sidebar-ring: 87 57% 51%;
 
     --nexcrm-blue: 209 100% 22%;

@@ -129,9 +129,9 @@ export default function TVDashboard() {
           suffix="%"
         />
         <TVMetricCard
-          title="WhatsApp Ativo"
-          value={metrics.activeConversations}
-          icon="💬"
+          title="Total Leads"
+          value={metrics.totalLeads}
+          icon="👥"
           variant="warning"
         />
         <TVMetricCard

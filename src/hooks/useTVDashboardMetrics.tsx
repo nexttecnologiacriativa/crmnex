@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from './useWorkspace';
 import { useMemo } from 'react';
-import { startOfDay, startOfMonth, subDays } from 'date-fns';
+import { startOfDay, startOfMonth, subDays, endOfDay } from 'date-fns';
 import { useTVDashboardSettings } from './useTVDashboardSettings';
 
 export function useTVDashboardMetrics() {
@@ -25,10 +25,28 @@ export function useTVDashboardMetrics() {
     refetchInterval: 30000,
   });
 
+  const { data: appointments = [] } = useQuery({
+    queryKey: ['tv-dashboard-appointments', currentWorkspace?.id],
+    queryFn: async () => {
+      if (!currentWorkspace?.id) return [];
+      const { data, error } = await supabase
+        .from('lead_appointments')
+        .select('*')
+        .eq('workspace_id', currentWorkspace.id);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!currentWorkspace?.id,
+    refetchInterval: 30000,
+  });
+
   const metrics = useMemo(() => {
-    const today = startOfDay(new Date());
-    const yesterday = startOfDay(subDays(new Date(), 1));
-    const thisMonth = startOfMonth(new Date());
+    const now = new Date();
+    const today = startOfDay(now);
+    const todayEnd = endOfDay(now);
+    const yesterday = startOfDay(subDays(now, 1));
+    const thisMonth = startOfMonth(now);
 
     const leadsToday = leads.filter(l => new Date(l.created_at) >= today).length;
     const leadsYesterday = leads.filter(
@@ -58,6 +76,21 @@ export function useTVDashboardMetrics() {
       .filter(l => l.status !== 'closed_won' && l.status !== 'closed_lost')
       .reduce((sum, l) => sum + Number(l.value || 0), 0);
 
+    // Métricas de agendamentos do dia
+    const todayAppointments = appointments.filter(apt => {
+      const aptDate = new Date(apt.scheduled_date);
+      return aptDate >= today && aptDate <= todayEnd;
+    });
+
+    const appointmentsToday = todayAppointments.length;
+    const appointmentsCompareceu = todayAppointments.filter(a => a.status === 'compareceu').length;
+    const appointmentsFinalizados = todayAppointments.filter(a => 
+      a.status === 'compareceu' || a.status === 'nao_qualificado' || a.status === 'falhou'
+    ).length;
+    const appointmentsTaxaComparecimento = appointmentsFinalizados > 0
+      ? Math.round((appointmentsCompareceu / appointmentsFinalizados) * 100)
+      : 0;
+
     return {
       leadsToday,
       leadsChange,
@@ -67,8 +100,10 @@ export function useTVDashboardMetrics() {
       conversionChange,
       totalLeads,
       pipelineValue,
+      appointmentsToday,
+      appointmentsTaxaComparecimento,
     };
-  }, [leads, settings]);
+  }, [leads, appointments, settings]);
 
   return {
     metrics,

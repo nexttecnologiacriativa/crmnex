@@ -8,6 +8,7 @@ import TVLeaderboard from '@/components/tv-dashboard/TVLeaderboard';
 import TVPerformanceChart from '@/components/tv-dashboard/TVPerformanceChart';
 import TVTopTags from '@/components/tv-dashboard/TVTopTags';
 import TVSettings from '@/components/tv-dashboard/TVSettings';
+import TVAppointmentsCard from '@/components/tv-dashboard/TVAppointmentsCard';
 import { useTVDashboardMetrics } from '@/hooks/useTVDashboardMetrics';
 import { useTVDashboardRealtime } from '@/hooks/useTVDashboardRealtime';
 import { cn } from '@/lib/utils';
@@ -191,7 +192,7 @@ export default function TVDashboard() {
             </div>
           </div>
 
-          {/* Right Column - Leaderboard, Activities & Tags */}
+          {/* Right Column - Leaderboard, Activities, Appointments & Tags */}
           <div className="col-span-5 flex flex-col gap-3 min-h-0">
             <div className="flex-[1.2] min-h-0">
               <TVLeaderboard isDarkMode={isDarkMode} />
@@ -199,7 +200,10 @@ export default function TVDashboard() {
             <div className="flex-1 min-h-0">
               <TVActivityFeed isDarkMode={isDarkMode} />
             </div>
-            <div className="flex-[0.8] min-h-0">
+            <div className="flex-[0.9] min-h-0">
+              <TVAppointmentsCard isDarkMode={isDarkMode} />
+            </div>
+            <div className="flex-[0.7] min-h-0">
               <TVTopTags isDarkMode={isDarkMode} />
             </div>
           </div>

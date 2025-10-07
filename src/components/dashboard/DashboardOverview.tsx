@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { getLeadDisplayName } from '../../lib/leadUtils';
 import LeadsFunnelChart from './LeadsFunnelChart';
 import AIInsightsCard from './AIInsightsCard';
+import AppointmentsCard from './AppointmentsCard';
 
 export default function DashboardOverview() {
   const { currentWorkspace } = useWorkspace();
@@ -137,6 +138,11 @@ export default function DashboardOverview() {
       {/* Leads Funnel Chart */}
       <div className="mb-6 md:mb-8">
         <LeadsFunnelChart />
+      </div>
+
+      {/* Appointments Card */}
+      <div className="mb-6 md:mb-8">
+        <AppointmentsCard />
       </div>
 
       {/* Recent Content */}

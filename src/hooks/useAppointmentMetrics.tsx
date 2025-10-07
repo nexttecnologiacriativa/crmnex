@@ -23,6 +23,7 @@ export interface AppointmentMetrics {
     falhou: number;
   };
   taxa_comparecimento: number;
+  taxa_falhas: number;
   change: number;
   upcomingToday: Array<{
     id: string;
@@ -140,10 +141,30 @@ export function useAppointmentMetrics(period: PeriodFilter = 'day') {
       falhou: currentPeriodAppointments.filter(a => a.status === 'falhou').length,
     };
 
-    // Calcular taxa de comparecimento
-    const finalizados = byStatus.compareceu + byStatus.nao_qualificado + byStatus.falhou;
-    const taxa_comparecimento = finalizados > 0 
-      ? Math.round((byStatus.compareceu / finalizados) * 100)
+    // Agendamentos finalizados hoje (status atualizado hoje)
+    const finalizedToday = appointments.filter(apt => {
+      const updatedDate = new Date(apt.updated_at);
+      const isFinalized = ['compareceu', 'falhou', 'nao_qualificado'].includes(apt.status);
+      return updatedDate >= todayStart && updatedDate <= todayEnd && isFinalized;
+    });
+
+    const finalizedTodayByStatus = {
+      compareceu: finalizedToday.filter(a => a.status === 'compareceu').length,
+      falhou: finalizedToday.filter(a => a.status === 'falhou').length,
+      nao_qualificado: finalizedToday.filter(a => a.status === 'nao_qualificado').length,
+    };
+
+    const totalFinalizadosHoje = finalizedTodayByStatus.compareceu + 
+                                  finalizedTodayByStatus.falhou + 
+                                  finalizedTodayByStatus.nao_qualificado;
+
+    // Calcular taxa de comparecimento e falhas baseado em finalizados hoje
+    const taxa_comparecimento = totalFinalizadosHoje > 0 
+      ? Math.round((finalizedTodayByStatus.compareceu / totalFinalizadosHoje) * 100)
+      : 0;
+
+    const taxa_falhas = totalFinalizadosHoje > 0 
+      ? Math.round((finalizedTodayByStatus.falhou / totalFinalizadosHoje) * 100)
       : 0;
 
     // Calcular mudança vs período anterior
@@ -193,6 +214,7 @@ export function useAppointmentMetrics(period: PeriodFilter = 'day') {
       byStatus,
       createdTodayByStatus,
       taxa_comparecimento,
+      taxa_falhas,
       change,
       upcomingToday,
     };

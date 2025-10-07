@@ -53,7 +53,7 @@ export default function TVAppointmentsCard({ isDarkMode }: TVAppointmentsCardPro
           </div>
         </div>
 
-        <div className="grid grid-cols-6 gap-4 mb-5">
+        <div className="grid grid-cols-7 gap-4 mb-5">
           {/* Criados Hoje */}
           <div className={cn(
             "p-4 rounded-lg",
@@ -163,7 +163,7 @@ export default function TVAppointmentsCard({ isDarkMode }: TVAppointmentsCardPro
               "text-xs font-medium mb-1",
               isDarkMode ? "text-green-300" : "text-green-700"
             )}>
-              Taxa
+              Comparecimento Hoje
             </p>
             <motion.p
               key={metrics.taxa_comparecimento}
@@ -176,9 +176,43 @@ export default function TVAppointmentsCard({ isDarkMode }: TVAppointmentsCardPro
             >
               {metrics.taxa_comparecimento}%
             </motion.p>
+            <p className={cn(
+              "text-[10px] mt-1",
+              isDarkMode ? "text-green-300/70" : "text-green-600/70"
+            )}>
+              (Finalizados Hoje)
+            </p>
           </div>
 
-          {/* Aguardando */}
+          {/* Taxa de Falhas */}
+          <div className={cn(
+            "p-4 rounded-lg",
+            isDarkMode ? "bg-red-500/10" : "bg-red-50"
+          )}>
+            <p className={cn(
+              "text-xs font-medium mb-1",
+              isDarkMode ? "text-red-300" : "text-red-700"
+            )}>
+              Faltas Hoje
+            </p>
+            <motion.p
+              key={metrics.taxa_falhas}
+              initial={{ scale: 1.2, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className={cn(
+                "text-3xl font-bold",
+                isDarkMode ? "text-red-400" : "text-red-600"
+              )}
+            >
+              {metrics.taxa_falhas}%
+            </motion.p>
+            <p className={cn(
+              "text-[10px] mt-1",
+              isDarkMode ? "text-red-300/70" : "text-red-600/70"
+            )}>
+              (Finalizados Hoje)
+            </p>
+          </div>
           <div
             className={cn(
               "p-4 rounded-lg",

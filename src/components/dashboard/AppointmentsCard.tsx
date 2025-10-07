@@ -42,7 +42,7 @@ export default function AppointmentsCard() {
           </div>
         ) : (
           <div className="space-y-8">
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
           {/* Criados Hoje */}
           <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
             <p className="text-sm font-semibold text-muted-foreground mb-2">Criados Hoje</p>
@@ -73,12 +73,17 @@ export default function AppointmentsCard() {
 
           {/* Taxa de Comparecimento */}
           <div className="p-4 rounded-lg bg-green-50 border border-green-100">
-            <p className="text-sm font-semibold text-green-800 mb-2">Taxa de Comparecimento</p>
+            <p className="text-sm font-semibold text-green-800 mb-2">Comparecimento Hoje</p>
             <p className="text-3xl font-bold text-green-600">{metrics.taxa_comparecimento}%</p>
-            <p className="text-xs text-green-700 mt-1 font-medium">Agendados para o Período</p>
+            <p className="text-xs text-green-700 mt-1 font-medium">(Finalizados Hoje)</p>
           </div>
 
-          {/* Aguardando */}
+          {/* Taxa de Falhas */}
+          <div className="p-4 rounded-lg bg-red-50 border border-red-100">
+            <p className="text-sm font-semibold text-red-800 mb-2">Faltas Hoje</p>
+            <p className="text-3xl font-bold text-red-600">{metrics.taxa_falhas}%</p>
+            <p className="text-xs text-red-700 mt-1 font-medium">(Finalizados Hoje)</p>
+          </div>
           <div className="p-4 rounded-lg bg-gray-50 border border-gray-100">
             <p className="text-sm font-semibold text-muted-foreground mb-2">Aguardando</p>
             <p className="text-3xl font-bold text-gray-600">{metrics.byStatus.aguardando}</p>

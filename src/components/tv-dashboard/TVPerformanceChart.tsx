@@ -5,8 +5,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 export default function TVPerformanceChart() {
+  const isDarkMode = true; // Você pode passar isso como prop
   const { currentWorkspace } = useWorkspace();
 
   const { data: leads = [] } = useQuery({
@@ -53,9 +55,17 @@ export default function TVPerformanceChart() {
   const maxCount = Math.max(...utmData.map(d => d.count), 1);
 
   return (
-    <Card className="h-full glass-morphism border-2 border-white/20 overflow-hidden bg-gradient-to-br from-[hsl(209,100%,22%)]/80 to-[hsl(209,80%,15%)]/80">
+    <Card className={cn(
+      "h-full glass-morphism border-2 border-white/20 overflow-hidden",
+      isDarkMode 
+        ? "bg-gradient-to-br from-[hsl(209,100%,22%)]/80 to-[hsl(209,80%,15%)]/80"
+        : "bg-white/90 backdrop-blur-sm"
+    )}>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-white">
+        <CardTitle className={cn(
+          "flex items-center gap-2",
+          isDarkMode ? "text-white" : "text-[hsl(209,100%,22%)]"
+        )}>
           📊 Performance por Origem (UTM)
           <motion.span
             className="inline-block w-2 h-2 bg-[hsl(87,57%,51%)] rounded-full"
@@ -99,7 +109,10 @@ export default function TVPerformanceChart() {
                         delay: index * 0.2
                       }}
                     />
-                    <span className="font-semibold text-base text-white">{item.source}</span>
+                    <span className={cn(
+                      "font-semibold text-base",
+                      isDarkMode ? "text-white" : "text-[hsl(209,100%,22%)]"
+                    )}>{item.source}</span>
                   </div>
                   <div className="flex items-center gap-4 text-sm">
                     <motion.div 
@@ -109,14 +122,26 @@ export default function TVPerformanceChart() {
                       animate={{ scale: 1 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <div className="text-xl font-bold text-[hsl(87,57%,51%)]">{item.count}</div>
-                      <div className="text-xs text-white/60">Leads</div>
+                      <div className={cn(
+                        "text-xl font-bold",
+                        isDarkMode ? "text-[hsl(87,57%,51%)]" : "text-[hsl(87,57%,40%)]"
+                      )}>{item.count}</div>
+                      <div className={cn(
+                        "text-xs",
+                        isDarkMode ? "text-white/60" : "text-[hsl(209,100%,22%)]/60"
+                      )}>Leads</div>
                     </motion.div>
                     <div className="text-center">
-                      <div className="text-base font-semibold text-[hsl(87,57%,51%)]">
+                      <div className={cn(
+                        "text-base font-semibold",
+                        isDarkMode ? "text-[hsl(87,57%,51%)]" : "text-[hsl(87,57%,40%)]"
+                      )}>
                         {conversionRate.toFixed(1)}%
                       </div>
-                      <div className="text-xs text-white/60">Conv.</div>
+                      <div className={cn(
+                        "text-xs",
+                        isDarkMode ? "text-white/60" : "text-[hsl(209,100%,22%)]/60"
+                      )}>Conv.</div>
                     </div>
                     <motion.div 
                       className="text-center"
@@ -125,10 +150,16 @@ export default function TVPerformanceChart() {
                       animate={{ scale: 1 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <div className="text-base font-bold text-white">
+                      <div className={cn(
+                        "text-base font-bold",
+                        isDarkMode ? "text-white" : "text-[hsl(209,100%,22%)]"
+                      )}>
                         R$ {item.value.toLocaleString('pt-BR')}
                       </div>
-                      <div className="text-xs text-white/60">Valor</div>
+                      <div className={cn(
+                        "text-xs",
+                        isDarkMode ? "text-white/60" : "text-[hsl(209,100%,22%)]/60"
+                      )}>Valor</div>
                     </motion.div>
                   </div>
                 </div>

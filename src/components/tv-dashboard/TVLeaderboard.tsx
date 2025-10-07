@@ -6,6 +6,7 @@ import { useWorkspace } from '@/hooks/useWorkspace';
 import { useMemo } from 'react';
 import { Trophy, Medal, Award } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 export default function TVLeaderboard() {
   const { currentWorkspace } = useWorkspace();
@@ -76,10 +77,20 @@ export default function TVLeaderboard() {
       .slice(0, 2);
   };
 
+  const isDarkMode = true; // Você pode passar isso como prop
+
   return (
-    <Card className="h-full glass-morphism border-2 border-white/20 overflow-hidden bg-gradient-to-br from-[hsl(209,100%,22%)]/80 to-[hsl(209,80%,15%)]/80">
+    <Card className={cn(
+      "h-full glass-morphism border-2 border-white/20 overflow-hidden",
+      isDarkMode 
+        ? "bg-gradient-to-br from-[hsl(209,100%,22%)]/80 to-[hsl(209,80%,15%)]/80"
+        : "bg-white/90 backdrop-blur-sm"
+    )}>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-white">
+        <CardTitle className={cn(
+          "flex items-center gap-2",
+          isDarkMode ? "text-white" : "text-[hsl(209,100%,22%)]"
+        )}>
           🏆 Top 5 Vendedores do Mês
           <motion.span
             className="inline-block w-2 h-2 bg-yellow-500 rounded-full"
@@ -132,9 +143,15 @@ export default function TVLeaderboard() {
               </Avatar>
 
               <div className="flex-1 min-w-0">
-                <p className="font-semibold truncate text-white">{user.name}</p>
+                <p className={cn(
+                  "font-semibold truncate",
+                  isDarkMode ? "text-white" : "text-[hsl(209,100%,22%)]"
+                )}>{user.name}</p>
                 <motion.p 
-                  className="text-sm text-white/70"
+                  className={cn(
+                    "text-sm",
+                    isDarkMode ? "text-white/70" : "text-[hsl(209,100%,22%)]/70"
+                  )}
                   key={`deals-${user.closedDeals}-${user.totalLeads}`}
                   initial={{ opacity: 0.5 }}
                   animate={{ opacity: 1 }}
@@ -146,7 +163,10 @@ export default function TVLeaderboard() {
 
               <div className="text-right">
                 <motion.p 
-                  className="text-xl font-bold text-white drop-shadow-lg"
+                  className={cn(
+                    "text-xl font-bold drop-shadow-lg",
+                    isDarkMode ? "text-white" : "text-[hsl(209,100%,22%)]"
+                  )}
                   key={`value-${user.totalValue}`}
                   initial={{ scale: 1.2 }}
                   animate={{ scale: 1 }}
@@ -154,7 +174,10 @@ export default function TVLeaderboard() {
                 >
                   R$ {user.totalValue.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
                 </motion.p>
-                <p className="text-xs text-white/60">
+                <p className={cn(
+                  "text-xs",
+                  isDarkMode ? "text-white/60" : "text-[hsl(209,100%,22%)]/60"
+                )}>
                   {user.closedDeals > 0 ? `R$ ${(user.totalValue / user.closedDeals).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} / venda` : 'Sem vendas'}
                 </p>
               </div>

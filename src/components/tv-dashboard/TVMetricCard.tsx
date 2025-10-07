@@ -119,15 +119,11 @@ export default function TVMetricCard({
         </div>
 
         <div className="space-y-2 relative z-10">
-          <p className={cn(
-            "text-sm font-semibold",
-            isDarkMode ? "text-white/80" : "text-[hsl(209,100%,15%)]"
-          )}>{title}</p>
+          <p className="text-sm font-semibold text-white/90">
+            {title}
+          </p>
           <motion.p 
-            className={cn(
-              "text-3xl font-bold drop-shadow-lg",
-              isDarkMode ? "text-white" : "text-[hsl(209,100%,15%)]"
-            )}
+            className="text-3xl font-bold drop-shadow-lg text-white"
             animate={{ 
               scale: isUpdating ? [1, 1.05, 1] : 1
             }}
@@ -140,15 +136,9 @@ export default function TVMetricCard({
 
         {goal && (
           <div className="space-y-1 mt-2">
-            <div className={cn(
-              "flex justify-between text-xs font-semibold",
-              isDarkMode ? "text-white/70" : "text-[hsl(209,100%,15%)]/70"
-            )}>
+            <div className="flex justify-between text-xs font-semibold text-white/80">
               <span>Meta: {prefix}{goal.toLocaleString('pt-BR')}{suffix}</span>
-              <span className={cn(
-                'font-bold px-2 rounded-full',
-                isDarkMode ? 'text-white bg-white/20' : 'text-[hsl(209,100%,15%)] bg-white/50'
-              )}>
+              <span className="font-bold px-2 rounded-full text-white bg-white/20">
                 {goalProgress?.toFixed(0)}%
               </span>
             </div>

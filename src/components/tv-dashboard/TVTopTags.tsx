@@ -6,8 +6,10 @@ import { useWorkspace } from '@/hooks/useWorkspace';
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Hash } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function TVTopTags() {
+  const isDarkMode = true; // Você pode passar isso como prop
   const { currentWorkspace } = useWorkspace();
 
   const { data: tagRelations = [] } = useQuery({
@@ -57,9 +59,17 @@ export default function TVTopTags() {
   ];
 
   return (
-    <Card className="h-full glass-morphism border-2 border-white/20 bg-gradient-to-br from-[hsl(209,100%,22%)]/80 to-[hsl(209,80%,15%)]/80">
+    <Card className={cn(
+      "h-full glass-morphism border-2 border-white/20",
+      isDarkMode 
+        ? "bg-gradient-to-br from-[hsl(209,100%,22%)]/80 to-[hsl(209,80%,15%)]/80"
+        : "bg-white/90 backdrop-blur-sm"
+    )}>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-white">
+        <CardTitle className={cn(
+          "flex items-center gap-2",
+          isDarkMode ? "text-white" : "text-[hsl(209,100%,22%)]"
+        )}>
           <Hash className="h-5 w-5" />
           Top Tags
           <motion.span
@@ -109,7 +119,10 @@ export default function TVTopTags() {
         </div>
         
         {topTags.length === 0 && (
-          <p className="text-white/60 text-center py-8">Nenhuma tag encontrada</p>
+          <p className={cn(
+            "text-center py-8",
+            isDarkMode ? "text-white/60" : "text-[hsl(209,100%,22%)]/60"
+          )}>Nenhuma tag encontrada</p>
         )}
       </CardContent>
     </Card>

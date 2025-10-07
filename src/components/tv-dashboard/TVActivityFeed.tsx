@@ -7,8 +7,10 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 
 export default function TVActivityFeed() {
+  const isDarkMode = true; // Você pode passar isso como prop
   const [visibleCount, setVisibleCount] = useState(0);
 
   const { data: activities = [] } = useQuery({
@@ -74,9 +76,17 @@ export default function TVActivityFeed() {
   };
 
   return (
-    <Card className="h-full glass-morphism border-2 border-white/20 overflow-hidden bg-gradient-to-br from-[hsl(209,100%,22%)]/80 to-[hsl(209,80%,15%)]/80">
+    <Card className={cn(
+      "h-full glass-morphism border-2 border-white/20 overflow-hidden",
+      isDarkMode 
+        ? "bg-gradient-to-br from-[hsl(209,100%,22%)]/80 to-[hsl(209,80%,15%)]/80"
+        : "bg-white/90 backdrop-blur-sm"
+    )}>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-white text-lg">
+        <CardTitle className={cn(
+          "flex items-center gap-2 text-lg",
+          isDarkMode ? "text-white" : "text-[hsl(209,100%,22%)]"
+        )}>
           <motion.span
             animate={{ 
               scale: [1, 1.2, 1],
@@ -147,14 +157,23 @@ export default function TVActivityFeed() {
                     </motion.div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm text-white">{activity.title}</p>
+                    <p className={cn(
+                      "font-semibold text-sm",
+                      isDarkMode ? "text-white" : "text-[hsl(209,100%,22%)]"
+                    )}>{activity.title}</p>
                     {activity.leads && (
-                      <p className="text-xs text-[hsl(87,57%,51%)] font-medium truncate">
+                      <p className={cn(
+                        "text-xs font-medium truncate",
+                        isDarkMode ? "text-[hsl(87,57%,51%)]" : "text-[hsl(87,57%,40%)]"
+                      )}>
                         Lead: {activity.leads.name}
                       </p>
                     )}
                     {activity.description && (
-                      <p className="text-xs text-white/70 mt-1 line-clamp-1">
+                      <p className={cn(
+                        "text-xs mt-1 line-clamp-1",
+                        isDarkMode ? "text-white/70" : "text-[hsl(209,100%,22%)]/70"
+                      )}>
                         {activity.description}
                       </p>
                     )}

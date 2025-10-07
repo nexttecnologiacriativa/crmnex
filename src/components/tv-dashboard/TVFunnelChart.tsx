@@ -4,8 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 export default function TVFunnelChart() {
+  const isDarkMode = true; // Você pode passar isso como prop
   const { currentWorkspace } = useWorkspace();
 
   const { data: leads = [] } = useQuery({
@@ -51,9 +53,17 @@ export default function TVFunnelChart() {
   const maxCount = Math.max(...stages.map(s => s.count), 1);
 
   return (
-    <Card className="h-full glass-morphism border-2 border-white/20 overflow-hidden bg-gradient-to-br from-[hsl(209,100%,22%)]/80 to-[hsl(209,80%,15%)]/80">
+    <Card className={cn(
+      "h-full glass-morphism border-2 border-white/20 overflow-hidden",
+      isDarkMode 
+        ? "bg-gradient-to-br from-[hsl(209,100%,22%)]/80 to-[hsl(209,80%,15%)]/80"
+        : "bg-white/90 backdrop-blur-sm"
+    )}>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-white">
+        <CardTitle className={cn(
+          "flex items-center gap-2",
+          isDarkMode ? "text-white" : "text-[hsl(209,100%,22%)]"
+        )}>
           Funil de Vendas - Tempo Real
           <motion.span
             className="inline-block w-2 h-2 bg-green-500 rounded-full"
@@ -84,10 +94,16 @@ export default function TVFunnelChart() {
                 transition={{ delay: index * 0.1 }}
               >
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-semibold text-white">{stage.name}</span>
+                  <span className={cn(
+                    "font-semibold",
+                    isDarkMode ? "text-white" : "text-[hsl(209,100%,22%)]"
+                  )}>{stage.name}</span>
                   <div className="flex items-center gap-3">
                     <motion.span 
-                      className="text-white/70 text-xs"
+                      className={cn(
+                        "text-xs",
+                        isDarkMode ? "text-white/70" : "text-[hsl(209,100%,22%)]/70"
+                      )}
                       key={`count-${stage.count}`}
                       initial={{ scale: 1.2 }}
                       animate={{ scale: 1 }}
@@ -96,7 +112,10 @@ export default function TVFunnelChart() {
                       {stage.count} leads
                     </motion.span>
                     <motion.span 
-                      className="font-bold text-white text-sm"
+                      className={cn(
+                        "font-bold text-sm",
+                        isDarkMode ? "text-white" : "text-[hsl(209,100%,22%)]"
+                      )}
                       key={`value-${stage.value}`}
                       initial={{ scale: 1.2 }}
                       animate={{ scale: 1 }}
@@ -105,7 +124,10 @@ export default function TVFunnelChart() {
                       R$ {stage.value.toLocaleString('pt-BR')}
                     </motion.span>
                     {index > 0 && (
-                      <span className="text-xs text-[hsl(87,57%,51%)] font-semibold">
+                      <span className={cn(
+                        "text-xs font-semibold",
+                        isDarkMode ? "text-[hsl(87,57%,51%)]" : "text-[hsl(87,57%,40%)]"
+                      )}>
                         {conversionRate.toFixed(0)}%
                       </span>
                     )}

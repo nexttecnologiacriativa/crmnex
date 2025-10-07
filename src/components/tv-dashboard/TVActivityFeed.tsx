@@ -74,9 +74,9 @@ export default function TVActivityFeed() {
   };
 
   return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <Card className="h-full glass-morphism border-white/20 overflow-hidden">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-white text-lg">
           <motion.span
             animate={{ 
               scale: [1, 1.2, 1],
@@ -106,8 +106,8 @@ export default function TVActivityFeed() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[400px] sm:h-[500px] lg:h-[600px] pr-4">
-          <div className="space-y-4">
+        <ScrollArea className="h-[calc(100%-80px)] pr-2">
+          <div className="space-y-2">
             {activities.slice(0, visibleCount).map((activity, index) => (
               <motion.div
                 key={`${activity.id}-${index}`}
@@ -123,7 +123,7 @@ export default function TVActivityFeed() {
                   scale: 1.02,
                   boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
                 }}
-                className="mb-4 p-3 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
+                className="p-3 rounded-lg bg-white/10 hover:bg-white/20 transition-all cursor-pointer border border-white/20"
               >
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0">
@@ -147,14 +147,14 @@ export default function TVActivityFeed() {
                     </motion.div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-xs sm:text-sm">{activity.title}</p>
+                    <p className="font-semibold text-sm text-white">{activity.title}</p>
                     {activity.leads && (
-                      <p className="text-xs text-muted-foreground truncate">
+                      <p className="text-xs text-cyan-300 font-medium truncate">
                         Lead: {activity.leads.name}
                       </p>
                     )}
                     {activity.description && (
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                      <p className="text-xs text-white/70 mt-1 line-clamp-1">
                         {activity.description}
                       </p>
                     )}

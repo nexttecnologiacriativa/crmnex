@@ -77,9 +77,9 @@ export default function TVLeaderboard() {
   };
 
   return (
-    <Card className="h-full">
+    <Card className="h-full glass-morphism border-white/20 overflow-hidden">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-white">
           🏆 Top 5 Vendedores do Mês
           <motion.span
             className="inline-block w-2 h-2 bg-yellow-500 rounded-full"
@@ -96,11 +96,11 @@ export default function TVLeaderboard() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className="space-y-3">
           {leaderboard.map((user, index) => (
             <motion.div
               key={user.id}
-              className="flex items-center gap-4 p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
+              className="flex items-center gap-4 p-3 rounded-lg bg-white/10 hover:bg-white/20 transition-all border border-white/20"
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ 
@@ -132,9 +132,9 @@ export default function TVLeaderboard() {
               </Avatar>
 
               <div className="flex-1 min-w-0">
-                <p className="font-semibold truncate">{user.name}</p>
+                <p className="font-semibold truncate text-white">{user.name}</p>
                 <motion.p 
-                  className="text-sm text-muted-foreground"
+                  className="text-sm text-white/70"
                   key={`deals-${user.closedDeals}-${user.totalLeads}`}
                   initial={{ opacity: 0.5 }}
                   animate={{ opacity: 1 }}
@@ -146,7 +146,7 @@ export default function TVLeaderboard() {
 
               <div className="text-right">
                 <motion.p 
-                  className="text-2xl font-bold text-primary"
+                  className="text-xl font-bold text-white drop-shadow-lg"
                   key={`value-${user.totalValue}`}
                   initial={{ scale: 1.2 }}
                   animate={{ scale: 1 }}
@@ -154,7 +154,7 @@ export default function TVLeaderboard() {
                 >
                   R$ {user.totalValue.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
                 </motion.p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-white/60">
                   {user.closedDeals > 0 ? `R$ ${(user.totalValue / user.closedDeals).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} / venda` : 'Sem vendas'}
                 </p>
               </div>

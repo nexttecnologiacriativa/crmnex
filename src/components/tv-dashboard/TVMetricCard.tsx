@@ -50,11 +50,11 @@ export default function TVMetricCard({
   }, [value]);
 
   const variantStyles = {
-    primary: 'border-primary/20 bg-primary/5',
-    success: 'border-green-500/20 bg-green-500/5',
-    warning: 'border-yellow-500/20 bg-yellow-500/5',
-    info: 'border-blue-500/20 bg-blue-500/5',
-    secondary: 'border-purple-500/20 bg-purple-500/5',
+    primary: 'gradient-purple glow-purple border-0',
+    success: 'gradient-green glow-green border-0',
+    warning: 'gradient-orange border-0',
+    info: 'gradient-blue glow-blue border-0',
+    secondary: 'gradient-pink border-0',
   };
 
   const goalProgress = goal ? (value / goal) * 100 : null;
@@ -74,9 +74,9 @@ export default function TVMetricCard({
       }}
       transition={{ duration: 0.5 }}
     >
-      <Card className={cn('p-6 transition-all hover:scale-105 relative overflow-hidden', variantStyles[variant])}>
+      <Card className={cn('p-4 transition-all hover:scale-105 relative overflow-hidden shadow-2xl', variantStyles[variant])}>
         {isUpdating && (
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-[shimmer_1s_ease-in-out]" 
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-[shimmer_1s_ease-in-out]" 
             style={{
               backgroundSize: '200% 100%',
               animation: 'shimmer 1s ease-in-out'
@@ -84,9 +84,9 @@ export default function TVMetricCard({
           />
         )}
         
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-3">
           <motion.span 
-            className="text-4xl"
+            className="text-3xl drop-shadow-lg"
             animate={{ rotate: isUpdating ? [0, 10, -10, 0] : 0 }}
             transition={{ duration: 0.5 }}
           >
@@ -94,7 +94,7 @@ export default function TVMetricCard({
           </motion.span>
           {change !== undefined && (
             <motion.div 
-              className={cn('flex items-center gap-1 text-sm font-medium', change >= 0 ? 'text-green-600' : 'text-red-600')}
+              className={cn('flex items-center gap-1 text-sm font-bold text-white bg-white/20 px-2 py-1 rounded-full', change >= 0 ? '' : '')}
               animate={{ scale: isUpdating ? [1, 1.1, 1] : 1 }}
             >
               {change >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
@@ -104,11 +104,11 @@ export default function TVMetricCard({
         </div>
 
         <div className="space-y-2 relative z-10">
-          <p className="text-sm text-muted-foreground font-medium">{title}</p>
+          <p className="text-sm text-white/80 font-semibold">{title}</p>
           <motion.p 
-            className="text-4xl font-bold"
+            className="text-3xl font-bold text-white drop-shadow-lg"
             animate={{ 
-              color: isUpdating ? ['currentColor', 'hsl(var(--primary))', 'currentColor'] : 'currentColor'
+              scale: isUpdating ? [1, 1.05, 1] : 1
             }}
             transition={{ duration: 0.5 }}
           >
@@ -118,27 +118,26 @@ export default function TVMetricCard({
           </motion.p>
 
         {goal && (
-          <div className="space-y-1">
-            <div className="flex justify-between text-xs text-muted-foreground">
+          <div className="space-y-1 mt-2">
+            <div className="flex justify-between text-xs text-white/70 font-semibold">
               <span>Meta: {prefix}{goal.toLocaleString('pt-BR')}{suffix}</span>
               <span className={cn(
-                'font-bold',
-                isAboveGoal && 'text-green-600',
-                isNearGoal && 'text-yellow-600',
-                !isAboveGoal && !isNearGoal && 'text-red-600'
+                'font-bold text-white bg-white/20 px-2 rounded-full',
               )}>
                 {goalProgress?.toFixed(0)}%
               </span>
             </div>
-            <div className="w-full bg-muted rounded-full h-2">
-              <div
+            <div className="w-full bg-white/20 rounded-full h-2">
+              <motion.div
                 className={cn(
                   'h-2 rounded-full transition-all duration-1000',
-                  isAboveGoal && 'bg-green-500',
-                  isNearGoal && 'bg-yellow-500',
-                  !isAboveGoal && !isNearGoal && 'bg-red-500'
+                  isAboveGoal && 'bg-white',
+                  isNearGoal && 'bg-yellow-300',
+                  !isAboveGoal && !isNearGoal && 'bg-white/50'
                 )}
-                style={{ width: `${Math.min(goalProgress || 0, 100)}%` }}
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(goalProgress || 0, 100)}%` }}
+                transition={{ duration: 1 }}
               />
             </div>
           </div>

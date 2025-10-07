@@ -51,9 +51,9 @@ export default function TVFunnelChart() {
   const maxCount = Math.max(...stages.map(s => s.count), 1);
 
   return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <Card className="h-full glass-morphism border-white/20 overflow-hidden">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-white">
           Funil de Vendas - Tempo Real
           <motion.span
             className="inline-block w-2 h-2 bg-green-500 rounded-full"
@@ -70,7 +70,7 @@ export default function TVFunnelChart() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className="space-y-3">
           {stages.map((stage, index) => {
             const width = (stage.count / maxCount) * 100;
             const conversionRate = index > 0 ? (stage.count / stages[0].count) * 100 : 100;
@@ -84,19 +84,19 @@ export default function TVFunnelChart() {
                 transition={{ delay: index * 0.1 }}
               >
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{stage.name}</span>
-                  <div className="flex items-center gap-4">
+                  <span className="font-semibold text-white">{stage.name}</span>
+                  <div className="flex items-center gap-3">
                     <motion.span 
-                      className="text-muted-foreground"
+                      className="text-white/70 text-xs"
                       key={`count-${stage.count}`}
-                      initial={{ scale: 1.2, color: 'hsl(var(--primary))' }}
-                      animate={{ scale: 1, color: 'hsl(var(--muted-foreground))' }}
+                      initial={{ scale: 1.2 }}
+                      animate={{ scale: 1 }}
                       transition={{ duration: 0.5 }}
                     >
                       {stage.count} leads
                     </motion.span>
                     <motion.span 
-                      className="font-bold text-primary"
+                      className="font-bold text-white text-sm"
                       key={`value-${stage.value}`}
                       initial={{ scale: 1.2 }}
                       animate={{ scale: 1 }}
@@ -105,24 +105,25 @@ export default function TVFunnelChart() {
                       R$ {stage.value.toLocaleString('pt-BR')}
                     </motion.span>
                     {index > 0 && (
-                      <span className="text-xs text-muted-foreground">
-                        {conversionRate.toFixed(0)}% conv.
+                      <span className="text-xs text-cyan-300 font-semibold">
+                        {conversionRate.toFixed(0)}%
                       </span>
                     )}
                   </div>
                 </div>
-                <div className="relative h-12 bg-muted rounded-lg overflow-hidden">
+                <div className="relative h-10 bg-white/10 rounded-lg overflow-hidden">
                   <motion.div
-                    className="absolute inset-y-0 left-0 rounded-lg flex items-center justify-center"
+                    className="absolute inset-y-0 left-0 rounded-lg flex items-center justify-center shadow-lg"
                     initial={{ width: 0 }}
                     animate={{ width: `${width}%` }}
                     transition={{ duration: 1, ease: "easeOut" }}
                     style={{
                       backgroundColor: stage.color,
+                      boxShadow: `0 0 20px ${stage.color}40`
                     }}
                   >
                     <motion.span 
-                      className="text-white font-bold text-lg px-4"
+                      className="text-white font-bold text-base px-3 drop-shadow-lg"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.5 }}

@@ -42,37 +42,41 @@ export default function AppointmentsCard() {
           </div>
         ) : (
           <div className="space-y-8">
-            {/* Métricas principais em grid responsivo */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Total de Agendamentos</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-4xl font-bold text-nexcrm-blue">{metrics.total}</p>
-                  {metrics.change !== 0 && (
-                    <div className={`flex items-center gap-1 text-sm font-semibold ${metrics.change > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {metrics.change > 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                      <span>{Math.abs(metrics.change)}%</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Taxa de Comparecimento</p>
-                <p className="text-4xl font-bold text-green-600">{metrics.taxa_comparecimento}%</p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Aguardando</p>
-                <p className="text-4xl font-bold text-gray-600">{metrics.byStatus.aguardando}</p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Compareceram</p>
-                <p className="text-4xl font-bold text-green-600">{metrics.byStatus.compareceu}</p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Faltaram</p>
-                <p className="text-4xl font-bold text-red-600">{metrics.byStatus.falhou}</p>
-              </div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {/* Criados Hoje */}
+          <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
+            <p className="text-sm text-muted-foreground mb-2">Criados Hoje</p>
+            <p className="text-3xl font-bold text-primary">{metrics.createdToday}</p>
+            <div className="flex gap-2 mt-2">
+              <span className="text-xs text-green-600">✅ {metrics.createdTodayByStatus.compareceu}</span>
+              <span className="text-xs text-red-600">❌ {metrics.createdTodayByStatus.falhou}</span>
             </div>
+          </div>
+
+          {/* Criados na Semana */}
+          <div className="p-4 rounded-lg bg-blue-50 border border-blue-100">
+            <p className="text-sm text-muted-foreground mb-2">Criados na Semana</p>
+            <p className="text-3xl font-bold text-blue-600">{metrics.createdThisWeek}</p>
+          </div>
+
+          {/* Criados no Mês */}
+          <div className="p-4 rounded-lg bg-purple-50 border border-purple-100">
+            <p className="text-sm text-muted-foreground mb-2">Criados no Mês</p>
+            <p className="text-3xl font-bold text-purple-600">{metrics.createdThisMonth}</p>
+          </div>
+
+          {/* Taxa de Comparecimento */}
+          <div className="p-4 rounded-lg bg-green-50 border border-green-100">
+            <p className="text-sm text-muted-foreground mb-2">Taxa de Comparecimento</p>
+            <p className="text-3xl font-bold text-green-600">{metrics.taxa_comparecimento}%</p>
+          </div>
+
+          {/* Aguardando */}
+          <div className="p-4 rounded-lg bg-gray-50 border border-gray-100">
+            <p className="text-sm text-muted-foreground mb-2">Aguardando</p>
+            <p className="text-3xl font-bold text-gray-600">{metrics.byStatus.aguardando}</p>
+          </div>
+        </div>
 
             {/* Status badges em linha */}
             <div className="flex flex-wrap gap-3">
@@ -97,7 +101,7 @@ export default function AppointmentsCard() {
             </div>
 
             {/* Gráfico em tela inteira */}
-            {metrics.total > 0 ? (
+            {metrics.createdToday > 0 || Object.values(metrics.byStatus).some(v => v > 0) ? (
               <div className="h-[350px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>

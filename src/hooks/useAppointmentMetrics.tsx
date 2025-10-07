@@ -7,12 +7,18 @@ import { startOfDay, endOfDay, startOfMonth, endOfMonth, startOfYear, endOfYear,
 export type PeriodFilter = 'day' | 'month' | 'year';
 
 export interface AppointmentMetrics {
-  total: number;
+  createdToday: number;
+  createdThisWeek: number;
+  createdThisMonth: number;
   byStatus: {
     aguardando: number;
     compareceu: number;
     nao_qualificado: number;
     reagendado: number;
+    falhou: number;
+  };
+  createdTodayByStatus: {
+    compareceu: number;
     falhou: number;
   };
   taxa_comparecimento: number;
@@ -55,12 +61,42 @@ export function useAppointmentMetrics(period: PeriodFilter = 'day') {
 
   const metrics = useMemo(() => {
     const now = new Date();
+
+    // Agendamentos criados hoje
+    const todayStart = startOfDay(now);
+    const todayEnd = endOfDay(now);
+    const createdToday = appointments.filter(apt => {
+      const createdDate = new Date(apt.created_at);
+      return createdDate >= todayStart && createdDate <= todayEnd;
+    });
+
+    // Agendamentos criados nesta semana
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+    
+    const createdThisWeek = appointments.filter(apt => {
+      const createdDate = new Date(apt.created_at);
+      return createdDate >= weekStart && createdDate <= weekEnd;
+    }).length;
+
+    // Agendamentos criados neste mês
+    const monthStart = startOfMonth(now);
+    const monthEnd = endOfMonth(now);
+    const createdThisMonth = appointments.filter(apt => {
+      const createdDate = new Date(apt.created_at);
+      return createdDate >= monthStart && createdDate <= monthEnd;
+    }).length;
+
+    // Definir períodos para cálculo de change
     let startDate: Date;
     let endDate: Date;
     let previousStartDate: Date;
     let previousEndDate: Date;
 
-    // Definir períodos baseado no filtro
     switch (period) {
       case 'day':
         startDate = startOfDay(now);
@@ -117,17 +153,15 @@ export function useAppointmentMetrics(period: PeriodFilter = 'day') {
       : 0;
 
     // Próximos agendamentos de hoje
-    const todayStart = startOfDay(now);
-    const todayEnd = endOfDay(now);
     const upcomingToday = appointments
       .filter(apt => {
         const aptDate = new Date(apt.scheduled_date);
         const aptTime = apt.scheduled_time ? new Date(`2000-01-01T${apt.scheduled_time}`) : new Date();
-        const now = new Date();
+        const nowTime = new Date();
         return aptDate >= todayStart && 
                aptDate <= todayEnd && 
                apt.status === 'aguardando' &&
-               aptTime >= now;
+               aptTime >= nowTime;
       })
       .slice(0, 5)
       .map(apt => ({
@@ -138,9 +172,18 @@ export function useAppointmentMetrics(period: PeriodFilter = 'day') {
         status: apt.status,
       }));
 
+    // Status dos agendamentos criados hoje
+    const createdTodayByStatus = {
+      compareceu: createdToday.filter(a => a.status === 'compareceu').length,
+      falhou: createdToday.filter(a => a.status === 'falhou').length,
+    };
+
     return {
-      total: currentTotal,
+      createdToday: createdToday.length,
+      createdThisWeek,
+      createdThisMonth,
       byStatus,
+      createdTodayByStatus,
       taxa_comparecimento,
       change,
       upcomingToday,

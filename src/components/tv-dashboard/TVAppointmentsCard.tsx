@@ -54,7 +54,7 @@ export default function TVAppointmentsCard({ isDarkMode }: TVAppointmentsCardPro
         </div>
 
         <div className="grid grid-cols-5 gap-4 mb-5">
-          {/* Total */}
+          {/* Criados Hoje */}
           <div className={cn(
             "p-4 rounded-lg",
             isDarkMode ? "bg-white/5" : "bg-nexcrm-blue/5"
@@ -63,10 +63,10 @@ export default function TVAppointmentsCard({ isDarkMode }: TVAppointmentsCardPro
               "text-xs font-medium mb-1",
               isDarkMode ? "text-white/70" : "text-gray-600"
             )}>
-              Total
+              Criados Hoje
             </p>
             <motion.p
-              key={metrics.total}
+              key={metrics.createdToday}
               initial={{ scale: 1.2, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               className={cn(
@@ -74,7 +74,59 @@ export default function TVAppointmentsCard({ isDarkMode }: TVAppointmentsCardPro
                 isDarkMode ? "text-white" : "text-nexcrm-blue"
               )}
             >
-              {metrics.total}
+              {metrics.createdToday}
+            </motion.p>
+            <div className="flex gap-2 mt-1">
+              <span className="text-xs text-green-500">✅ {metrics.createdTodayByStatus.compareceu}</span>
+              <span className="text-xs text-red-500">❌ {metrics.createdTodayByStatus.falhou}</span>
+            </div>
+          </div>
+
+          {/* Criados na Semana */}
+          <div className={cn(
+            "p-4 rounded-lg",
+            isDarkMode ? "bg-blue-500/10" : "bg-blue-50"
+          )}>
+            <p className={cn(
+              "text-xs font-medium mb-1",
+              isDarkMode ? "text-blue-300" : "text-blue-700"
+            )}>
+              Na Semana
+            </p>
+            <motion.p
+              key={metrics.createdThisWeek}
+              initial={{ scale: 1.2, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className={cn(
+                "text-3xl font-bold",
+                isDarkMode ? "text-blue-400" : "text-blue-600"
+              )}
+            >
+              {metrics.createdThisWeek}
+            </motion.p>
+          </div>
+
+          {/* Criados no Mês */}
+          <div className={cn(
+            "p-4 rounded-lg",
+            isDarkMode ? "bg-purple-500/10" : "bg-purple-50"
+          )}>
+            <p className={cn(
+              "text-xs font-medium mb-1",
+              isDarkMode ? "text-purple-300" : "text-purple-700"
+            )}>
+              No Mês
+            </p>
+            <motion.p
+              key={metrics.createdThisMonth}
+              initial={{ scale: 1.2, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className={cn(
+                "text-3xl font-bold",
+                isDarkMode ? "text-purple-400" : "text-purple-600"
+              )}
+            >
+              {metrics.createdThisMonth}
             </motion.p>
           </div>
 
@@ -102,35 +154,28 @@ export default function TVAppointmentsCard({ isDarkMode }: TVAppointmentsCardPro
             </motion.p>
           </div>
 
-          {/* Status individuais */}
-          {[
-            { key: 'aguardando', label: 'Aguardando', color: isDarkMode ? 'text-gray-300' : 'text-gray-600' },
-            { key: 'compareceu', label: 'Compareceu', color: isDarkMode ? 'text-green-400' : 'text-green-600' },
-            { key: 'falhou', label: 'Faltaram', color: isDarkMode ? 'text-red-400' : 'text-red-600' },
-          ].map(({ key, label, color }) => (
-            <div
-              key={key}
-              className={cn(
-                "p-4 rounded-lg",
-                isDarkMode ? "bg-white/5" : "bg-gray-50"
-              )}
+          {/* Aguardando */}
+          <div
+            className={cn(
+              "p-4 rounded-lg",
+              isDarkMode ? "bg-white/5" : "bg-gray-50"
+            )}
+          >
+            <p className={cn(
+              "text-xs font-medium mb-1",
+              isDarkMode ? "text-white/70" : "text-gray-600"
+            )}>
+              Aguardando
+            </p>
+            <motion.p
+              key={metrics.byStatus.aguardando}
+              initial={{ scale: 1.2, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className={cn("text-3xl font-bold", isDarkMode ? 'text-gray-300' : 'text-gray-600')}
             >
-              <p className={cn(
-                "text-xs font-medium mb-1",
-                isDarkMode ? "text-white/70" : "text-gray-600"
-              )}>
-                {label}
-              </p>
-              <motion.p
-                key={metrics.byStatus[key as keyof typeof metrics.byStatus]}
-                initial={{ scale: 1.2, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className={cn("text-3xl font-bold", color)}
-              >
-                {metrics.byStatus[key as keyof typeof metrics.byStatus]}
-              </motion.p>
-            </div>
-          ))}
+              {metrics.byStatus.aguardando}
+            </motion.p>
+          </div>
         </div>
 
         {/* Próximos agendamentos */}

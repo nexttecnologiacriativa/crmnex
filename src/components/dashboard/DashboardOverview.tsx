@@ -130,15 +130,50 @@ export default function DashboardOverview() {
         ))}
       </div>
 
-      {/* AI Insights */}
-      <div className="mb-6 md:mb-8">
+      {/* AI Insights Section */}
+      <div className="grid grid-cols-1 gap-6">
         <AIInsightsCard />
       </div>
 
       {/* Leads Funnel Chart */}
-      <div className="mb-6 md:mb-8">
-        <LeadsFunnelChart />
-      </div>
+      <LeadsFunnelChart />
+
+      {/* Performance by Origin */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Leads por Origem (UTM)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {utmData.length > 0 ? (
+            <ChartContainer config={chartConfig} className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsPieChart>
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Pie 
+                    data={utmData} 
+                    cx="50%" 
+                    cy="50%" 
+                    outerRadius="70%"
+                    fill="#8884d8" 
+                    dataKey="value"
+                    label={({ name, value }) => `${name}: ${value}`}
+                    labelLine={false}
+                  >
+                    {utmData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <ChartLegend content={<ChartLegendContent />} />
+                </RechartsPieChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          ) : (
+            <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+              Nenhum dado de UTM disponível
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Appointments Card - Full Width */}
       <AppointmentsCard />

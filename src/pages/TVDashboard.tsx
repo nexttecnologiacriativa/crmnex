@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Maximize, Minimize, Settings } from 'lucide-react';
+import { Maximize, Minimize, Settings, Moon, Sun, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TVMetricCard from '@/components/tv-dashboard/TVMetricCard';
 import TVActivityFeed from '@/components/tv-dashboard/TVActivityFeed';
@@ -13,9 +13,18 @@ import { useTVDashboardRealtime } from '@/hooks/useTVDashboardRealtime';
 export default function TVDashboard() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const { metrics, isLoading } = useTVDashboardMetrics();
   
   useTVDashboardRealtime();
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -32,6 +41,10 @@ export default function TVDashboard() {
     } else {
       document.exitFullscreen();
     }
+  };
+
+  const openCRM = () => {
+    window.open('/dashboard', '_blank');
   };
 
   if (isLoading) {
@@ -51,6 +64,22 @@ export default function TVDashboard() {
           <h1 className="text-3xl font-bold text-primary">Dashboard TV - Tempo Real</h1>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={openCRM}
+            className="gap-2"
+          >
+            <ExternalLink className="h-4 w-4" />
+            <span className="hidden sm:inline">Abrir CRM</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            title={isDarkMode ? 'Modo Claro' : 'Modo Escuro'}
+          >
+            {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </Button>
           <Button
             variant="outline"
             size="icon"
@@ -114,6 +143,11 @@ export default function TVDashboard() {
         />
       </div>
 
+      {/* Top Section - Leaderboard */}
+      <div className="mb-6">
+        <TVLeaderboard />
+      </div>
+
       {/* Main Content */}
       <div className="grid grid-cols-3 gap-6 mb-6">
         <div className="col-span-2">
@@ -125,9 +159,8 @@ export default function TVDashboard() {
       </div>
 
       {/* Bottom Section */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="mb-6">
         <TVPerformanceChart />
-        <TVLeaderboard />
       </div>
     </div>
   );

@@ -84,7 +84,7 @@ export default function TVActivityFeed() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[600px] pr-4">
+        <ScrollArea className="h-[400px] sm:h-[500px] lg:h-[600px] pr-4">
           <AnimatePresence>
             {activities.map((activity, index) => (
               <motion.div
@@ -126,14 +126,14 @@ export default function TVActivityFeed() {
                     </motion.div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm">{activity.title}</p>
+                    <p className="font-medium text-xs sm:text-sm">{activity.title}</p>
                     {activity.leads && (
                       <p className="text-xs text-muted-foreground truncate">
                         Lead: {activity.leads.name}
                       </p>
                     )}
                     {activity.description && (
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                         {activity.description}
                       </p>
                     )}

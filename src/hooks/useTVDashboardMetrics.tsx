@@ -3,9 +3,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from './useWorkspace';
 import { useMemo } from 'react';
 import { startOfDay, startOfMonth, subDays } from 'date-fns';
+import { useTVDashboardSettings } from './useTVDashboardSettings';
 
 export function useTVDashboardMetrics() {
   const { currentWorkspace } = useWorkspace();
+  const { settings } = useTVDashboardSettings();
 
   const { data: leads = [], isLoading: leadsLoading } = useQuery({
     queryKey: ['tv-dashboard-leads', currentWorkspace?.id],
@@ -41,7 +43,7 @@ export function useTVDashboardMetrics() {
       .filter(l => l.status === 'closed_won')
       .reduce((sum, l) => sum + Number(l.value || 0), 0);
     
-    const revenueGoal = 100000;
+    const revenueGoal = settings?.revenue_goal || 100000;
 
     const totalConverted = leads.filter(l => l.status === 'closed_won').length;
     const conversionRate = leads.length > 0 
@@ -66,7 +68,7 @@ export function useTVDashboardMetrics() {
       totalLeads,
       pipelineValue,
     };
-  }, [leads]);
+  }, [leads, settings]);
 
   return {
     metrics,

@@ -2069,6 +2069,47 @@ export type Database = {
           },
         ]
       }
+      tv_dashboard_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          revenue_goal: number | null
+          show_funnel: boolean | null
+          show_leaderboard: boolean | null
+          show_utm_chart: boolean | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          revenue_goal?: number | null
+          show_funnel?: boolean | null
+          show_leaderboard?: boolean | null
+          show_utm_chart?: boolean | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          revenue_goal?: number | null
+          show_funnel?: boolean | null
+          show_leaderboard?: boolean | null
+          show_utm_chart?: boolean | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tv_dashboard_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       webhooks: {
         Row: {
           created_at: string | null

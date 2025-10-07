@@ -56,43 +56,44 @@ export default function TVDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-background p-3 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <img src="/nexcrm-logo.png" alt="Logo" className="h-10" />
-          <h1 className="text-3xl font-bold text-primary">Dashboard TV - Tempo Real</h1>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <img src="/nexcrm-logo.png" alt="Logo" className="h-8 sm:h-10" />
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary">Dashboard TV</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
             variant="outline"
             onClick={openCRM}
-            className="gap-2"
+            className="gap-2 text-xs sm:text-sm"
+            size="sm"
           >
-            <ExternalLink className="h-4 w-4" />
-            <span className="hidden sm:inline">Abrir CRM</span>
+            <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span>CRM</span>
           </Button>
           <Button
             variant="outline"
-            size="icon"
+            size="sm"
             onClick={() => setIsDarkMode(!isDarkMode)}
             title={isDarkMode ? 'Modo Claro' : 'Modo Escuro'}
           >
-            {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
           <Button
             variant="outline"
-            size="icon"
+            size="sm"
             onClick={() => setShowSettings(!showSettings)}
           >
-            <Settings className="h-5 w-5" />
+            <Settings className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
-            size="icon"
+            size="sm"
             onClick={toggleFullscreen}
           >
-            {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
+            {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
           </Button>
         </div>
       </div>
@@ -104,7 +105,7 @@ export default function TVDashboard() {
       )}
 
       {/* Hero Metrics */}
-      <div className="grid grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6">
         <TVMetricCard
           title="Leads Hoje"
           value={metrics.leadsToday}
@@ -144,13 +145,13 @@ export default function TVDashboard() {
       </div>
 
       {/* Top Section - Leaderboard */}
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-6">
         <TVLeaderboard />
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-3 gap-6 mb-6">
-        <div className="col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
+        <div className="lg:col-span-2">
           <TVFunnelChart />
         </div>
         <div>
@@ -159,7 +160,7 @@ export default function TVDashboard() {
       </div>
 
       {/* Bottom Section */}
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-6">
         <TVPerformanceChart />
       </div>
     </div>

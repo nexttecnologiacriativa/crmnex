@@ -89,7 +89,7 @@ export default function TVPerformanceChart() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <motion.div
-                      className="w-2 h-6 rounded-full bg-gradient-to-b from-cyan-400 to-blue-500"
+                      className="w-2 h-6 rounded-full bg-gradient-to-b from-[hsl(87,57%,51%)] to-[hsl(87,57%,40%)]"
                       animate={{ 
                         scaleY: [1, 1.2, 1],
                       }}
@@ -109,11 +109,11 @@ export default function TVPerformanceChart() {
                       animate={{ scale: 1 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <div className="text-xl font-bold text-cyan-300">{item.count}</div>
+                      <div className="text-xl font-bold text-[hsl(87,57%,51%)]">{item.count}</div>
                       <div className="text-xs text-white/60">Leads</div>
                     </motion.div>
                     <div className="text-center">
-                      <div className="text-base font-semibold text-green-400">
+                      <div className="text-base font-semibold text-[hsl(87,57%,51%)]">
                         {conversionRate.toFixed(1)}%
                       </div>
                       <div className="text-xs text-white/60">Conv.</div>
@@ -134,12 +134,13 @@ export default function TVPerformanceChart() {
                 </div>
                 <div className="relative h-5 bg-white/10 rounded-full overflow-hidden">
                   <motion.div
-                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 rounded-full shadow-lg"
+                    className="absolute inset-y-0 left-0 rounded-full shadow-lg"
                     initial={{ width: 0 }}
                     animate={{ width: `${width}%` }}
                     transition={{ duration: 1, ease: "easeOut" }}
                     style={{
-                      boxShadow: '0 0 20px rgba(34, 211, 238, 0.5)'
+                      background: 'linear-gradient(90deg, hsl(209, 100%, 22%) 0%, hsl(87, 57%, 51%) 100%)',
+                      boxShadow: '0 0 20px rgba(135, 186, 73, 0.5)'
                     }}
                   />
                   <motion.div

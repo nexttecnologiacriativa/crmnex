@@ -50,11 +50,11 @@ export default function TVMetricCard({
   }, [value]);
 
   const variantStyles = {
-    primary: 'gradient-purple glow-purple border-0',
-    success: 'gradient-green glow-green border-0',
-    warning: 'gradient-orange border-0',
-    info: 'gradient-blue glow-blue border-0',
-    secondary: 'gradient-pink border-0',
+    primary: 'bg-gradient-to-br from-[hsl(209,100%,22%)] to-[hsl(209,80%,30%)] border-0 shadow-lg shadow-[hsl(209,100%,22%)]/30',
+    success: 'bg-gradient-to-br from-[hsl(87,57%,51%)] to-[hsl(87,57%,40%)] border-0 shadow-lg shadow-[hsl(87,57%,51%)]/30',
+    warning: 'bg-gradient-to-br from-[hsl(209,80%,30%)] to-[hsl(209,70%,25%)] border-0 shadow-lg shadow-[hsl(209,80%,30%)]/30',
+    info: 'bg-gradient-to-br from-[hsl(209,90%,35%)] to-[hsl(209,80%,25%)] border-0 shadow-lg shadow-[hsl(209,90%,35%)]/30',
+    secondary: 'bg-gradient-to-br from-[hsl(87,57%,45%)] to-[hsl(87,50%,35%)] border-0 shadow-lg shadow-[hsl(87,57%,45%)]/30',
   };
 
   const goalProgress = goal ? (value / goal) * 100 : null;

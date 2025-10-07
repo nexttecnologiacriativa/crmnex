@@ -46,24 +46,24 @@ export default function TVTopTags() {
   }, [tagRelations]);
 
   const colors = [
-    'bg-purple-500',
-    'bg-blue-500',
-    'bg-green-500',
-    'bg-yellow-500',
-    'bg-pink-500',
-    'bg-indigo-500',
-    'bg-red-500',
-    'bg-cyan-500',
+    'bg-[hsl(209,100%,22%)]',
+    'bg-[hsl(87,57%,51%)]',
+    'bg-[hsl(209,90%,35%)]',
+    'bg-[hsl(87,57%,40%)]',
+    'bg-[hsl(209,80%,30%)]',
+    'bg-[hsl(87,50%,35%)]',
+    'bg-[hsl(209,70%,25%)]',
+    'bg-[hsl(87,57%,45%)]',
   ];
 
   return (
-    <Card className="h-full glass-morphism border-white/20">
+    <Card className="h-full glass-morphism border-white/20 bg-gradient-to-br from-[hsl(209,100%,22%)]/80 to-[hsl(209,80%,15%)]/80">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-white">
           <Hash className="h-5 w-5" />
           Top Tags
           <motion.span
-            className="inline-block w-2 h-2 bg-cyan-400 rounded-full"
+            className="inline-block w-2 h-2 bg-[hsl(87,57%,51%)] rounded-full"
             animate={{ 
               scale: [1, 1.5, 1],
               opacity: [1, 0.5, 1]

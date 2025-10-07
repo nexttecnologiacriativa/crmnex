@@ -64,17 +64,17 @@ export default function TVActivityFeed() {
 
   const getActivityColor = (type: string) => {
     const colors: Record<string, string> = {
-      'lead_created': 'bg-green-500',
-      'stage_change': 'bg-blue-500',
-      'task_completed': 'bg-green-600',
-      'whatsapp_message': 'bg-yellow-500',
-      'sale_closed': 'bg-purple-500',
+      'lead_created': 'bg-[hsl(87,57%,51%)]',
+      'stage_change': 'bg-[hsl(209,100%,22%)]',
+      'task_completed': 'bg-[hsl(87,57%,40%)]',
+      'whatsapp_message': 'bg-[hsl(87,50%,35%)]',
+      'sale_closed': 'bg-[hsl(209,90%,35%)]',
     };
-    return colors[type] || 'bg-gray-500';
+    return colors[type] || 'bg-[hsl(209,80%,30%)]';
   };
 
   return (
-    <Card className="h-full glass-morphism border-white/20 overflow-hidden">
+    <Card className="h-full glass-morphism border-white/20 overflow-hidden bg-gradient-to-br from-[hsl(209,100%,22%)]/80 to-[hsl(209,80%,15%)]/80">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-white text-lg">
           <motion.span
@@ -92,7 +92,7 @@ export default function TVActivityFeed() {
           </motion.span>
           Atividades em Tempo Real
           <motion.span
-            className="inline-block w-2 h-2 bg-red-500 rounded-full ml-2"
+            className="inline-block w-2 h-2 bg-[hsl(87,57%,51%)] rounded-full ml-2"
             animate={{ 
               scale: [1, 1.5, 1],
               opacity: [1, 0.5, 1]
@@ -149,7 +149,7 @@ export default function TVActivityFeed() {
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm text-white">{activity.title}</p>
                     {activity.leads && (
-                      <p className="text-xs text-cyan-300 font-medium truncate">
+                      <p className="text-xs text-[hsl(87,57%,51%)] font-medium truncate">
                         Lead: {activity.leads.name}
                       </p>
                     )}

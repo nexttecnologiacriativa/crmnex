@@ -57,12 +57,12 @@ export default function TVDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-3 sm:p-4 overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-[hsl(209,100%,22%)] via-[hsl(209,80%,15%)] to-[hsl(209,100%,10%)] p-3 sm:p-4 overflow-hidden">
       {/* Animated background */}
-      <div className="fixed inset-0 opacity-30">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse" />
-        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse delay-700" />
-        <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse delay-1000" />
+      <div className="fixed inset-0 opacity-20">
+        <div className="absolute top-0 left-0 w-96 h-96 bg-[hsl(209,100%,22%)] rounded-full mix-blend-multiply filter blur-3xl animate-pulse" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-[hsl(87,57%,51%)] rounded-full mix-blend-multiply filter blur-3xl animate-pulse delay-700" />
+        <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[hsl(209,80%,30%)] rounded-full mix-blend-multiply filter blur-3xl animate-pulse delay-1000" />
       </div>
 
       {/* Content */}

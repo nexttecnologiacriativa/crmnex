@@ -51,7 +51,7 @@ export default function TVFunnelChart() {
   const maxCount = Math.max(...stages.map(s => s.count), 1);
 
   return (
-    <Card className="h-full glass-morphism border-white/20 overflow-hidden">
+    <Card className="h-full glass-morphism border-white/20 overflow-hidden bg-gradient-to-br from-[hsl(209,100%,22%)]/80 to-[hsl(209,80%,15%)]/80">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-white">
           Funil de Vendas - Tempo Real
@@ -105,7 +105,7 @@ export default function TVFunnelChart() {
                       R$ {stage.value.toLocaleString('pt-BR')}
                     </motion.span>
                     {index > 0 && (
-                      <span className="text-xs text-cyan-300 font-semibold">
+                      <span className="text-xs text-[hsl(87,57%,51%)] font-semibold">
                         {conversionRate.toFixed(0)}%
                       </span>
                     )}

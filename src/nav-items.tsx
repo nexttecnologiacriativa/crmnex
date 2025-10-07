@@ -20,6 +20,7 @@ import Atendimento from './pages/Atendimento';
 import CanalComunicacao from './pages/CanalComunicacao';
 import Auth from './pages/Auth';
 import NotFound from './pages/NotFound';
+import TVDashboard from './pages/TVDashboard';
 
 export interface NavItem {
   to: string;
@@ -46,6 +47,7 @@ export const navItems: NavItem[] = [
   
   { to: '/marketing', page: <Marketing />, protected: true },
   { to: '/webhooks', page: <Webhooks />, protected: true },
+  { to: '/tv-dashboard', page: <TVDashboard />, protected: true },
   { to: '/auth', page: <Auth />, protected: false },
   { to: '*', page: <NotFound />, protected: false },
 ];

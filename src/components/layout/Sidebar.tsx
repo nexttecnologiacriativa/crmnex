@@ -1,5 +1,5 @@
 
-import { Home, Users, BarChart3, CheckSquare, Workflow, Settings, LogOut, Webhook, Kanban, Menu, MessageCircle, Megaphone, Globe, Bot, FileText, Search, Headphones, Phone } from 'lucide-react';
+import { Home, Users, BarChart3, CheckSquare, Workflow, Settings, LogOut, Webhook, Kanban, Menu, MessageCircle, Megaphone, Globe, Bot, FileText, Search, Headphones, Phone, Tv } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ const navigation = [
   { name: 'Marketing', href: '/marketing', icon: Megaphone },
   { name: 'Outbound', href: '/outbound', icon: Search },
   { name: 'Relatórios', href: '/reports', icon: BarChart3 },
+  { name: 'Dashboard TV', href: '/tv-dashboard', icon: Tv },
   { name: 'Configurações', href: '/settings', icon: Settings },
 ];
 

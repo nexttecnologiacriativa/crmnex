@@ -45,35 +45,36 @@ export default function AppointmentsCard() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {/* Criados Hoje */}
           <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
-            <p className="text-sm text-muted-foreground mb-2">Criados Hoje</p>
+            <p className="text-sm font-semibold text-muted-foreground mb-2">Criados Hoje</p>
             <p className="text-3xl font-bold text-primary">{metrics.createdToday}</p>
             <div className="flex gap-2 mt-2">
-              <span className="text-xs text-green-600">✅ {metrics.createdTodayByStatus.compareceu}</span>
-              <span className="text-xs text-red-600">❌ {metrics.createdTodayByStatus.falhou}</span>
+              <span className="text-xs font-medium text-green-600">✅ {metrics.createdTodayByStatus.compareceu}</span>
+              <span className="text-xs font-medium text-red-600">❌ {metrics.createdTodayByStatus.falhou}</span>
             </div>
           </div>
 
           {/* Criados na Semana */}
           <div className="p-4 rounded-lg bg-blue-50 border border-blue-100">
-            <p className="text-sm text-muted-foreground mb-2">Criados na Semana</p>
+            <p className="text-sm font-semibold text-muted-foreground mb-2">Criados na Semana</p>
             <p className="text-3xl font-bold text-blue-600">{metrics.createdThisWeek}</p>
           </div>
 
           {/* Criados no Mês */}
           <div className="p-4 rounded-lg bg-purple-50 border border-purple-100">
-            <p className="text-sm text-muted-foreground mb-2">Criados no Mês</p>
+            <p className="text-sm font-semibold text-muted-foreground mb-2">Criados no Mês</p>
             <p className="text-3xl font-bold text-purple-600">{metrics.createdThisMonth}</p>
           </div>
 
           {/* Taxa de Comparecimento */}
           <div className="p-4 rounded-lg bg-green-50 border border-green-100">
-            <p className="text-sm text-muted-foreground mb-2">Taxa de Comparecimento</p>
+            <p className="text-sm font-semibold text-green-800 mb-2">Taxa de Comparecimento</p>
             <p className="text-3xl font-bold text-green-600">{metrics.taxa_comparecimento}%</p>
+            <p className="text-xs text-green-700 mt-1 font-medium">Compareceram vs Finalizados</p>
           </div>
 
           {/* Aguardando */}
           <div className="p-4 rounded-lg bg-gray-50 border border-gray-100">
-            <p className="text-sm text-muted-foreground mb-2">Aguardando</p>
+            <p className="text-sm font-semibold text-muted-foreground mb-2">Aguardando</p>
             <p className="text-3xl font-bold text-gray-600">{metrics.byStatus.aguardando}</p>
           </div>
         </div>

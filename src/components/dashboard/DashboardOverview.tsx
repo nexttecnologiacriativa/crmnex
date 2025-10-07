@@ -131,19 +131,20 @@ export default function DashboardOverview() {
       </div>
 
       {/* AI Insights Section */}
-      <div className="grid grid-cols-1 gap-6">
-        <AIInsightsCard />
-      </div>
+      <AIInsightsCard />
 
       {/* Leads Funnel Chart */}
       <LeadsFunnelChart />
 
       {/* Performance by Origin */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Leads por Origem (UTM)</CardTitle>
+      <Card className="border-0 shadow-lg">
+        <CardHeader className="bg-gradient-to-r from-nexcrm-blue/10 to-nexcrm-green/10 p-6">
+          <CardTitle className="flex items-center gap-2">
+            <PieChart className="h-5 w-5" />
+            Performance por Origem (UTM)
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           {utmData.length > 0 ? (
             <ChartContainer config={chartConfig} className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">

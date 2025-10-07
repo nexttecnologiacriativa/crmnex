@@ -62,10 +62,13 @@ export default function TVDashboard() {
       "min-h-screen p-3 sm:p-4 overflow-hidden",
       isDarkMode 
         ? "bg-gradient-to-br from-[hsl(209,100%,22%)] via-[hsl(209,80%,15%)] to-[hsl(209,100%,10%)]"
-        : "bg-gradient-to-br from-[hsl(209,60%,85%)] via-[hsl(209,50%,90%)] to-[hsl(87,40%,90%)]"
+        : "bg-white"
     )}>
       {/* Animated background */}
-      <div className="fixed inset-0 opacity-20">
+      <div className={cn(
+        "fixed inset-0",
+        isDarkMode ? "opacity-20" : "opacity-10"
+      )}>
         <div className={cn(
           "absolute top-0 left-0 w-96 h-96 rounded-full mix-blend-multiply filter blur-3xl animate-pulse",
           isDarkMode ? "bg-[hsl(209,100%,22%)]" : "bg-[hsl(209,70%,70%)]"
@@ -85,7 +88,7 @@ export default function TVDashboard() {
         {/* Header */}
         <div className={cn(
           "flex items-center justify-between mb-3 p-3 rounded-lg",
-          isDarkMode ? "bg-transparent" : "bg-white/60 backdrop-blur-sm shadow-sm"
+          "bg-white/60 backdrop-blur-sm shadow-sm"
         )}>
           <div className="flex items-center gap-3">
             <img src="/nexcrm-logo.png" alt="Logo" className="h-10" />
@@ -101,7 +104,7 @@ export default function TVDashboard() {
               className={cn(
                 "gap-2",
                 isDarkMode 
-                  ? "glass-morphism border-white/20 text-white hover:bg-white/20"
+                  ? "bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
                   : "bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
               )}
               size="sm"
@@ -115,7 +118,7 @@ export default function TVDashboard() {
               onClick={() => setIsDarkMode(!isDarkMode)}
               className={cn(
                 isDarkMode 
-                  ? "glass-morphism border-white/20 text-white hover:bg-white/20"
+                  ? "bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
                   : "bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
               )}
             >
@@ -127,7 +130,7 @@ export default function TVDashboard() {
               onClick={() => setShowSettings(!showSettings)}
               className={cn(
                 isDarkMode 
-                  ? "glass-morphism border-white/20 text-white hover:bg-white/20"
+                  ? "bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
                   : "bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
               )}
             >
@@ -139,7 +142,7 @@ export default function TVDashboard() {
               onClick={toggleFullscreen}
               className={cn(
                 isDarkMode 
-                  ? "glass-morphism border-white/20 text-white hover:bg-white/20"
+                  ? "bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
                   : "bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
               )}
             >

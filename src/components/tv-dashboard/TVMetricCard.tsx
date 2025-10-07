@@ -54,19 +54,19 @@ export default function TVMetricCard({
   const variantStyles = {
     primary: isDarkMode 
       ? 'bg-gradient-to-br from-[hsl(209,100%,22%)] to-[hsl(209,80%,30%)] border-0 shadow-lg shadow-[hsl(209,100%,22%)]/30'
-      : 'bg-gradient-to-br from-[hsl(209,70%,70%)] to-[hsl(209,60%,75%)] border border-white/40 shadow-lg shadow-[hsl(209,70%,70%)]/20',
+      : 'bg-gradient-to-br from-[hsl(209,100%,35%)] to-[hsl(209,90%,40%)] border border-white/60 shadow-lg shadow-[hsl(209,100%,35%)]/30',
     success: isDarkMode
       ? 'bg-gradient-to-br from-[hsl(87,57%,51%)] to-[hsl(87,57%,40%)] border-0 shadow-lg shadow-[hsl(87,57%,51%)]/30'
-      : 'bg-gradient-to-br from-[hsl(87,50%,75%)] to-[hsl(87,45%,70%)] border border-white/40 shadow-lg shadow-[hsl(87,50%,75%)]/20',
+      : 'bg-gradient-to-br from-[hsl(87,60%,45%)] to-[hsl(87,55%,40%)] border border-white/60 shadow-lg shadow-[hsl(87,60%,45%)]/30',
     warning: isDarkMode
       ? 'bg-gradient-to-br from-[hsl(209,80%,30%)] to-[hsl(209,70%,25%)] border-0 shadow-lg shadow-[hsl(209,80%,30%)]/30'
-      : 'bg-gradient-to-br from-[hsl(209,65%,75%)] to-[hsl(209,60%,70%)] border border-white/40 shadow-lg shadow-[hsl(209,65%,75%)]/20',
+      : 'bg-gradient-to-br from-[hsl(209,90%,40%)] to-[hsl(209,85%,35%)] border border-white/60 shadow-lg shadow-[hsl(209,90%,40%)]/30',
     info: isDarkMode
       ? 'bg-gradient-to-br from-[hsl(209,90%,35%)] to-[hsl(209,80%,25%)] border-0 shadow-lg shadow-[hsl(209,90%,35%)]/30'
-      : 'bg-gradient-to-br from-[hsl(209,75%,72%)] to-[hsl(209,70%,68%)] border border-white/40 shadow-lg shadow-[hsl(209,75%,72%)]/20',
+      : 'bg-gradient-to-br from-[hsl(209,95%,38%)] to-[hsl(209,90%,33%)] border border-white/60 shadow-lg shadow-[hsl(209,95%,38%)]/30',
     secondary: isDarkMode
       ? 'bg-gradient-to-br from-[hsl(87,57%,45%)] to-[hsl(87,50%,35%)] border-0 shadow-lg shadow-[hsl(87,57%,45%)]/30'
-      : 'bg-gradient-to-br from-[hsl(87,48%,72%)] to-[hsl(87,45%,68%)] border border-white/40 shadow-lg shadow-[hsl(87,48%,72%)]/20',
+      : 'bg-gradient-to-br from-[hsl(87,58%,43%)] to-[hsl(87,53%,38%)] border border-white/60 shadow-lg shadow-[hsl(87,58%,43%)]/30',
   };
 
   const goalProgress = goal ? (value / goal) * 100 : null;
@@ -108,7 +108,7 @@ export default function TVMetricCard({
             <motion.div 
               className={cn(
                 'flex items-center gap-1 text-sm font-bold px-2 py-1 rounded-full',
-                isDarkMode ? 'text-white bg-white/20' : 'text-[hsl(209,100%,22%)] bg-white/60'
+                isDarkMode ? 'text-white bg-white/20' : 'text-white bg-white/30'
               )}
               animate={{ scale: isUpdating ? [1, 1.1, 1] : 1 }}
             >
@@ -121,12 +121,12 @@ export default function TVMetricCard({
         <div className="space-y-2 relative z-10">
           <p className={cn(
             "text-sm font-semibold",
-            isDarkMode ? "text-white/80" : "text-[hsl(209,100%,22%)]/70"
+            isDarkMode ? "text-white/80" : "text-white/90"
           )}>{title}</p>
           <motion.p 
             className={cn(
               "text-3xl font-bold drop-shadow-lg",
-              isDarkMode ? "text-white" : "text-[hsl(209,100%,22%)]"
+              isDarkMode ? "text-white" : "text-white"
             )}
             animate={{ 
               scale: isUpdating ? [1, 1.05, 1] : 1
@@ -142,12 +142,12 @@ export default function TVMetricCard({
           <div className="space-y-1 mt-2">
             <div className={cn(
               "flex justify-between text-xs font-semibold",
-              isDarkMode ? "text-white/70" : "text-[hsl(209,100%,22%)]/60"
+              isDarkMode ? "text-white/70" : "text-white/80"
             )}>
               <span>Meta: {prefix}{goal.toLocaleString('pt-BR')}{suffix}</span>
               <span className={cn(
                 'font-bold px-2 rounded-full',
-                isDarkMode ? 'text-white bg-white/20' : 'text-[hsl(209,100%,22%)] bg-white/60'
+                isDarkMode ? 'text-white bg-white/20' : 'text-white bg-white/30'
               )}>
                 {goalProgress?.toFixed(0)}%
               </span>
@@ -159,9 +159,9 @@ export default function TVMetricCard({
               <motion.div
                 className={cn(
                   'h-2 rounded-full transition-all duration-1000',
-                  isAboveGoal && (isDarkMode ? 'bg-white' : 'bg-[hsl(87,57%,51%)]'),
-                  isNearGoal && (isDarkMode ? 'bg-yellow-300' : 'bg-[hsl(87,50%,60%)]'),
-                  !isAboveGoal && !isNearGoal && (isDarkMode ? 'bg-white/50' : 'bg-[hsl(209,100%,22%)]/40')
+                  isAboveGoal && 'bg-white',
+                  isNearGoal && (isDarkMode ? 'bg-yellow-300' : 'bg-white/80'),
+                  !isAboveGoal && !isNearGoal && (isDarkMode ? 'bg-white/50' : 'bg-white/60')
                 )}
                 initial={{ width: 0 }}
                 animate={{ width: `${Math.min(goalProgress || 0, 100)}%` }}

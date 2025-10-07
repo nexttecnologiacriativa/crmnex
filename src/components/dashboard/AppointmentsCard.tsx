@@ -42,7 +42,7 @@ export default function AppointmentsCard() {
           </div>
         ) : (
           <div className="space-y-8">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
           {/* Criados Hoje */}
           <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
             <p className="text-sm font-semibold text-muted-foreground mb-2">Criados Hoje</p>
@@ -51,6 +51,12 @@ export default function AppointmentsCard() {
               <span className="text-xs font-medium text-green-600">✅ {metrics.createdTodayByStatus.compareceu}</span>
               <span className="text-xs font-medium text-red-600">❌ {metrics.createdTodayByStatus.falhou}</span>
             </div>
+          </div>
+
+          {/* Agendados para Hoje */}
+          <div className="p-4 rounded-lg bg-orange-50 border border-orange-100">
+            <p className="text-sm font-semibold text-muted-foreground mb-2">Agendados para Hoje</p>
+            <p className="text-3xl font-bold text-orange-600">{metrics.scheduledForToday}</p>
           </div>
 
           {/* Criados na Semana */}
@@ -69,7 +75,7 @@ export default function AppointmentsCard() {
           <div className="p-4 rounded-lg bg-green-50 border border-green-100">
             <p className="text-sm font-semibold text-green-800 mb-2">Taxa de Comparecimento</p>
             <p className="text-3xl font-bold text-green-600">{metrics.taxa_comparecimento}%</p>
-            <p className="text-xs text-green-700 mt-1 font-medium">Compareceram vs Finalizados</p>
+            <p className="text-xs text-green-700 mt-1 font-medium">Agendados para o Período</p>
           </div>
 
           {/* Aguardando */}

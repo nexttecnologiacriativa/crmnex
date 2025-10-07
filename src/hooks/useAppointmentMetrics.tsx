@@ -10,6 +10,7 @@ export interface AppointmentMetrics {
   createdToday: number;
   createdThisWeek: number;
   createdThisMonth: number;
+  scheduledForToday: number;
   byStatus: {
     aguardando: number;
     compareceu: number;
@@ -152,6 +153,12 @@ export function useAppointmentMetrics(period: PeriodFilter = 'day') {
       ? Math.round(((currentTotal - previousTotal) / previousTotal) * 100)
       : 0;
 
+    // Agendamentos marcados para hoje (scheduled_date = hoje)
+    const scheduledForToday = appointments.filter(apt => {
+      const aptDate = new Date(apt.scheduled_date);
+      return aptDate >= todayStart && aptDate <= todayEnd;
+    }).length;
+
     // Próximos agendamentos de hoje
     const upcomingToday = appointments
       .filter(apt => {
@@ -182,6 +189,7 @@ export function useAppointmentMetrics(period: PeriodFilter = 'day') {
       createdToday: createdToday.length,
       createdThisWeek,
       createdThisMonth,
+      scheduledForToday,
       byStatus,
       createdTodayByStatus,
       taxa_comparecimento,

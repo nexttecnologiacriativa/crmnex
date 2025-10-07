@@ -57,7 +57,7 @@ export default function TVTopTags() {
   ];
 
   return (
-    <Card className="h-full glass-morphism border-white/20 bg-gradient-to-br from-[hsl(209,100%,22%)]/80 to-[hsl(209,80%,15%)]/80">
+    <Card className="h-full glass-morphism border-2 border-white/20 bg-gradient-to-br from-[hsl(209,100%,22%)]/80 to-[hsl(209,80%,15%)]/80">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-white">
           <Hash className="h-5 w-5" />

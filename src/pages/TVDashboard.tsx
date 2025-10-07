@@ -86,27 +86,16 @@ export default function TVDashboard() {
       {/* Content */}
       <div className="relative z-10 h-screen flex flex-col">
         {/* Header */}
-        <div className={cn(
-          "flex items-center justify-between mb-3 p-3 rounded-lg",
-          "bg-white/60 backdrop-blur-sm shadow-sm"
-        )}>
+        <div className="flex items-center justify-between mb-3 p-3 rounded-lg bg-white/60 backdrop-blur-sm shadow-sm">
           <div className="flex items-center gap-3">
             <img src="/nexcrm-logo.png" alt="Logo" className="h-10" />
-            <h1 className={cn(
-              "text-2xl font-bold",
-              isDarkMode ? "text-white" : "text-[hsl(209,100%,22%)]"
-            )}>Dashboard TV</h1>
+            <h1 className="text-2xl font-bold text-[hsl(209,100%,22%)]">Dashboard TV</h1>
           </div>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               onClick={openCRM}
-              className={cn(
-                "gap-2",
-                isDarkMode 
-                  ? "bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
-                  : "bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
-              )}
+              className="gap-2 bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
               size="sm"
             >
               <ExternalLink className="h-4 w-4" />
@@ -116,11 +105,7 @@ export default function TVDashboard() {
               variant="outline"
               size="sm"
               onClick={() => setIsDarkMode(!isDarkMode)}
-              className={cn(
-                isDarkMode 
-                  ? "bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
-                  : "bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
-              )}
+              className="bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
             >
               {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
@@ -128,11 +113,7 @@ export default function TVDashboard() {
               variant="outline"
               size="sm"
               onClick={() => setShowSettings(!showSettings)}
-              className={cn(
-                isDarkMode 
-                  ? "bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
-                  : "bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
-              )}
+              className="bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
             >
               <Settings className="h-4 w-4" />
             </Button>
@@ -140,11 +121,7 @@ export default function TVDashboard() {
               variant="outline"
               size="sm"
               onClick={toggleFullscreen}
-              className={cn(
-                isDarkMode 
-                  ? "bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
-                  : "bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
-              )}
+              className="bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
             >
               {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
             </Button>

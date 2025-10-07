@@ -53,12 +53,12 @@ export default function TVPerformanceChart() {
   const maxCount = Math.max(...utmData.map(d => d.count), 1);
 
   return (
-    <Card className="h-full glass-morphism border-white/20 overflow-hidden">
+    <Card className="h-full glass-morphism border-2 border-white/20 overflow-hidden bg-gradient-to-br from-[hsl(209,100%,22%)]/80 to-[hsl(209,80%,15%)]/80">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-white">
           📊 Performance por Origem (UTM)
           <motion.span
-            className="inline-block w-2 h-2 bg-blue-500 rounded-full"
+            className="inline-block w-2 h-2 bg-[hsl(87,57%,51%)] rounded-full"
             animate={{ 
               scale: [1, 1.5, 1],
               opacity: [1, 0.5, 1]

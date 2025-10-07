@@ -77,7 +77,7 @@ export default function TVLeaderboard() {
   };
 
   return (
-    <Card className="h-full glass-morphism border-white/20 overflow-hidden bg-gradient-to-br from-[hsl(209,100%,22%)]/80 to-[hsl(209,80%,15%)]/80">
+    <Card className="h-full glass-morphism border-2 border-white/20 overflow-hidden bg-gradient-to-br from-[hsl(209,100%,22%)]/80 to-[hsl(209,80%,15%)]/80">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-white">
           🏆 Top 5 Vendedores do Mês

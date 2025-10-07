@@ -191,24 +191,9 @@ export function useAddTagToLead() {
       if (error) throw error;
       return data;
     },
-    onSuccess: async (_, { leadId, tagId }) => {
+    onSuccess: (_, { leadId }) => {
       queryClient.invalidateQueries({ queryKey: ['lead-tag-relations', leadId] });
       toast.success('Tag adicionada ao lead!');
-
-      try {
-        if (currentWorkspace?.id) {
-          await supabase.functions.invoke('automation-engine', {
-            body: {
-              action: 'process_tag_applied',
-              lead_id: leadId,
-              tag_id: tagId,
-              workspace_id: currentWorkspace.id,
-            },
-          });
-        }
-      } catch (e) {
-        console.warn('Automation engine invocation failed (tag_applied):', e);
-      }
     },
     onError: (error) => {
       toast.error('Erro ao adicionar tag: ' + error.message);

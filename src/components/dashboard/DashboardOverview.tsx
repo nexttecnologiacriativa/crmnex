@@ -140,10 +140,8 @@ export default function DashboardOverview() {
         <LeadsFunnelChart />
       </div>
 
-      {/* Appointments Card */}
-      <div className="mb-6 md:mb-8">
-        <AppointmentsCard />
-      </div>
+      {/* Appointments Card - Full Width */}
+      <AppointmentsCard />
 
       {/* Recent Content */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">

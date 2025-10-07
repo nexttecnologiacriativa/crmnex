@@ -25,11 +25,11 @@ export default function AppointmentsCard() {
   }));
 
   return (
-    <Card className="border-0 shadow-lg">
-      <CardHeader className="bg-gradient-to-r from-nexcrm-blue/10 to-nexcrm-green/10">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg font-semibold text-nexcrm-blue">
-            <Calendar className="h-5 w-5" />
+    <Card className="border-0 shadow-lg mb-6 md:mb-8">
+      <CardHeader className="bg-gradient-to-r from-nexcrm-blue/10 to-nexcrm-green/10 p-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <CardTitle className="flex items-center gap-2 text-xl font-bold text-nexcrm-blue">
+            <Calendar className="h-6 w-6" />
             Agendamentos
           </CardTitle>
           <PeriodFilter value={period} onChange={setPeriod} />
@@ -37,76 +37,102 @@ export default function AppointmentsCard() {
       </CardHeader>
       <CardContent className="p-6">
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-nexcrm-blue"></div>
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-nexcrm-blue"></div>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Métricas principais */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Total</p>
+          <div className="space-y-8">
+            {/* Métricas principais em grid responsivo */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Total de Agendamentos</p>
                 <div className="flex items-baseline gap-2">
-                  <p className="text-3xl font-bold text-nexcrm-blue">{metrics.total}</p>
+                  <p className="text-4xl font-bold text-nexcrm-blue">{metrics.total}</p>
                   {metrics.change !== 0 && (
-                    <div className={`flex items-center text-sm ${metrics.change > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {metrics.change > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                    <div className={`flex items-center gap-1 text-sm font-semibold ${metrics.change > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {metrics.change > 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
                       <span>{Math.abs(metrics.change)}%</span>
                     </div>
                   )}
                 </div>
               </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Taxa Comparecimento</p>
-                <p className="text-3xl font-bold text-green-600">{metrics.taxa_comparecimento}%</p>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Taxa de Comparecimento</p>
+                <p className="text-4xl font-bold text-green-600">{metrics.taxa_comparecimento}%</p>
               </div>
-              <div className="space-y-1 col-span-2 md:col-span-1">
-                <p className="text-sm text-muted-foreground">Aguardando</p>
-                <p className="text-3xl font-bold text-gray-600">{metrics.byStatus.aguardando}</p>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Aguardando</p>
+                <p className="text-4xl font-bold text-gray-600">{metrics.byStatus.aguardando}</p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Compareceram</p>
+                <p className="text-4xl font-bold text-green-600">{metrics.byStatus.compareceu}</p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Faltaram</p>
+                <p className="text-4xl font-bold text-red-600">{metrics.byStatus.falhou}</p>
               </div>
             </div>
 
-            {/* Status badges */}
-            <div className="flex flex-wrap gap-2">
+            {/* Status badges em linha */}
+            <div className="flex flex-wrap gap-3">
               {Object.entries(metrics.byStatus).map(([status, count]) => {
                 const config = statusConfig[status as keyof typeof statusConfig];
                 return (
                   <Badge
                     key={status}
                     variant="outline"
-                    className="px-3 py-1"
-                    style={{ borderColor: config.color, color: config.color }}
+                    className="px-4 py-2 text-base font-semibold"
+                    style={{ 
+                      borderColor: config.color, 
+                      color: config.color,
+                      backgroundColor: `${config.color}10`
+                    }}
                   >
-                    <span className="mr-1">{config.icon}</span>
-                    {config.label}: {count}
+                    <span className="mr-2 text-lg">{config.icon}</span>
+                    {config.label}: <span className="ml-1 font-bold">{count}</span>
                   </Badge>
                 );
               })}
             </div>
 
-            {/* Gráfico */}
+            {/* Gráfico em tela inteira */}
             {metrics.total > 0 ? (
-              <div className="h-[200px]">
+              <div className="h-[350px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData}>
+                  <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                     <XAxis 
                       dataKey="name" 
-                      tick={{ fontSize: 11 }}
+                      tick={{ fontSize: 13, fontWeight: 500 }}
                       angle={-45}
                       textAnchor="end"
                       height={80}
                     />
-                    <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip />
-                    <Bar dataKey="value" radius={[4, 4, 0, 0]} />
+                    <YAxis tick={{ fontSize: 13 }} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        padding: '12px'
+                      }}
+                    />
+                    <Bar 
+                      dataKey="value" 
+                      radius={[8, 8, 0, 0]}
+                      maxBarSize={80}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             ) : (
-              <p className="text-center text-muted-foreground py-8">
-                Nenhum agendamento encontrado neste período
-              </p>
+              <div className="text-center py-16 bg-gray-50 rounded-lg">
+                <Calendar className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+                <p className="text-lg text-muted-foreground font-medium">
+                  Nenhum agendamento encontrado neste período
+                </p>
+              </div>
             )}
           </div>
         )}

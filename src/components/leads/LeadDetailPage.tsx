@@ -301,6 +301,27 @@ export default function LeadDetailPage() {
                         
                         <LeadTagSelector leadId={lead.id} />
                       </div>
+
+                      {/* Custom Fields */}
+                      {lead.custom_fields && Object.keys(lead.custom_fields).length > 0 && (
+                        <div className="border-t pt-4">
+                          <h4 className="font-medium mb-3">Campos Personalizados</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {Object.entries(lead.custom_fields).map(([key, value]) => (
+                              <div key={key} className="bg-gray-50 p-3 rounded-lg">
+                                <p className="text-xs text-gray-500 mb-1">
+                                  {key.split('_').map(word => 
+                                    word.charAt(0).toUpperCase() + word.slice(1)
+                                  ).join(' ')}
+                                </p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {value as string || '-'}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </TabsContent>
 
                     {/* Tab: Pipelines */}

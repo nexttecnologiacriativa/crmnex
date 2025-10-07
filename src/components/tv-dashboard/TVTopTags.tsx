@@ -10,14 +10,17 @@ import { Hash } from 'lucide-react';
 export default function TVTopTags() {
   const { currentWorkspace } = useWorkspace();
 
-  const { data: leadTags = [] } = useQuery({
+  const { data: tagRelations = [] } = useQuery({
     queryKey: ['tv-top-tags', currentWorkspace?.id],
     queryFn: async () => {
       if (!currentWorkspace?.id) return [];
       const { data, error } = await supabase
-        .from('lead_tags')
-        .select('tag_id, tags(name)')
-        .eq('workspace_id', currentWorkspace.id);
+        .from('lead_tag_relations')
+        .select(`
+          tag_id,
+          lead_tags!inner(name, workspace_id)
+        `)
+        .eq('lead_tags.workspace_id', currentWorkspace.id);
 
       if (error) throw error;
       return data;
@@ -29,9 +32,10 @@ export default function TVTopTags() {
   const topTags = useMemo(() => {
     const tagCount = new Map<string, number>();
     
-    leadTags.forEach(item => {
-      if (item.tags?.name) {
-        tagCount.set(item.tags.name, (tagCount.get(item.tags.name) || 0) + 1);
+    tagRelations.forEach(relation => {
+      if (relation.lead_tags?.name) {
+        const tagName = relation.lead_tags.name;
+        tagCount.set(tagName, (tagCount.get(tagName) || 0) + 1);
       }
     });
 
@@ -39,7 +43,7 @@ export default function TVTopTags() {
       .map(([tag, count]) => ({ tag, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 8);
-  }, [leads]);
+  }, [tagRelations]);
 
   const colors = [
     'bg-purple-500',

@@ -60,6 +60,12 @@ export default function AppSidebar() {
   };
 
   const handleNavigation = (href: string) => {
+    // Dashboard TV abre em nova janela
+    if (href === '/tv-dashboard') {
+      window.open(href, '_blank');
+      return;
+    }
+    
     navigate(href);
     // Close mobile sidebar after navigation
     if (isMobile) {

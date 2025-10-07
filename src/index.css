@@ -157,3 +157,13 @@
     background: rgba(0, 51, 102, 0.5);
   }
 }
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+

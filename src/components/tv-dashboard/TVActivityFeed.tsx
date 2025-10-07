@@ -55,8 +55,32 @@ export default function TVActivityFeed() {
     <Card className="h-full">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <span className="animate-pulse">⚡</span>
+          <motion.span
+            animate={{ 
+              scale: [1, 1.2, 1],
+              rotate: [0, 5, -5, 0]
+            }}
+            transition={{ 
+              duration: 1,
+              repeat: Infinity,
+              repeatDelay: 2
+            }}
+          >
+            ⚡
+          </motion.span>
           Atividades em Tempo Real
+          <motion.span
+            className="inline-block w-2 h-2 bg-red-500 rounded-full ml-2"
+            animate={{ 
+              scale: [1, 1.5, 1],
+              opacity: [1, 0.5, 1]
+            }}
+            transition={{ 
+              duration: 1.5,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -65,17 +89,41 @@ export default function TVActivityFeed() {
             {activities.map((activity, index) => (
               <motion.div
                 key={activity.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ delay: index * 0.05 }}
+                initial={{ opacity: 0, x: -30, scale: 0.9 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 20, scale: 0.9 }}
+                transition={{ 
+                  delay: index * 0.05,
+                  type: "spring",
+                  stiffness: 200,
+                  damping: 20
+                }}
+                whileHover={{ 
+                  scale: 1.02,
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
+                }}
                 className="mb-4 p-3 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
               >
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0">
-                    <div className={`w-8 h-8 rounded-full ${getActivityColor(activity.activity_type)} flex items-center justify-center text-white`}>
+                    <motion.div 
+                      className={`w-8 h-8 rounded-full ${getActivityColor(activity.activity_type)} flex items-center justify-center text-white`}
+                      animate={{ 
+                        scale: [1, 1.1, 1],
+                        boxShadow: [
+                          '0 0 0px rgba(0,0,0,0)',
+                          '0 0 10px rgba(255,255,255,0.5)',
+                          '0 0 0px rgba(0,0,0,0)'
+                        ]
+                      }}
+                      transition={{ 
+                        duration: 2,
+                        repeat: Infinity,
+                        repeatDelay: 3
+                      }}
+                    >
                       {getActivityIcon(activity.activity_type)}
-                    </div>
+                    </motion.div>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm">{activity.title}</p>

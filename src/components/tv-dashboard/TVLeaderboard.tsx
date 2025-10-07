@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useMemo } from 'react';
 import { Trophy, Medal, Award } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export default function TVLeaderboard() {
   const { currentWorkspace } = useWorkspace();
@@ -80,18 +81,49 @@ export default function TVLeaderboard() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           🏆 Top 5 Vendedores do Mês
+          <motion.span
+            className="inline-block w-2 h-2 bg-yellow-500 rounded-full"
+            animate={{ 
+              scale: [1, 1.5, 1],
+              opacity: [1, 0.5, 1]
+            }}
+            transition={{ 
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
         </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           {leaderboard.map((user, index) => (
-            <div
+            <motion.div
               key={user.id}
               className="flex items-center gap-4 p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
+              initial={{ opacity: 0, x: -50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ 
+                delay: index * 0.1,
+                type: "spring",
+                stiffness: 100
+              }}
+              whileHover={{ scale: 1.02 }}
             >
-              <div className="flex-shrink-0 w-10 flex items-center justify-center">
+              <motion.div 
+                className="flex-shrink-0 w-10 flex items-center justify-center"
+                animate={{ 
+                  rotate: index === 0 ? [0, -10, 10, 0] : 0,
+                  scale: index === 0 ? [1, 1.1, 1] : 1
+                }}
+                transition={{ 
+                  duration: 2,
+                  repeat: Infinity,
+                  repeatDelay: 3
+                }}
+              >
                 {getMedalIcon(index)}
-              </div>
+              </motion.div>
               
               <Avatar className="h-12 w-12">
                 <AvatarFallback className="bg-primary text-primary-foreground font-bold">
@@ -101,20 +133,32 @@ export default function TVLeaderboard() {
 
               <div className="flex-1 min-w-0">
                 <p className="font-semibold truncate">{user.name}</p>
-                <p className="text-sm text-muted-foreground">
+                <motion.p 
+                  className="text-sm text-muted-foreground"
+                  key={`deals-${user.closedDeals}-${user.totalLeads}`}
+                  initial={{ opacity: 0.5 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5 }}
+                >
                   {user.closedDeals} vendas • {user.totalLeads} leads
-                </p>
+                </motion.p>
               </div>
 
               <div className="text-right">
-                <p className="text-2xl font-bold text-primary">
+                <motion.p 
+                  className="text-2xl font-bold text-primary"
+                  key={`value-${user.totalValue}`}
+                  initial={{ scale: 1.2 }}
+                  animate={{ scale: 1 }}
+                  transition={{ duration: 0.5 }}
+                >
                   R$ {user.totalValue.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
-                </p>
+                </motion.p>
                 <p className="text-xs text-muted-foreground">
                   {user.closedDeals > 0 ? `R$ ${(user.totalValue / user.closedDeals).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} / venda` : 'Sem vendas'}
                 </p>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </CardContent>

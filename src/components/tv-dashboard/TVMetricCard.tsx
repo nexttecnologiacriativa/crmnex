@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 
 interface TVMetricCardProps {
   title: string;
@@ -25,18 +26,21 @@ export default function TVMetricCard({
   suffix = '',
 }: TVMetricCardProps) {
   const [displayValue, setDisplayValue] = useState(0);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
+    setIsUpdating(true);
     const duration = 1000;
     const steps = 60;
     const increment = value / steps;
-    let current = 0;
+    let current = displayValue;
 
     const timer = setInterval(() => {
       current += increment;
       if (current >= value) {
         setDisplayValue(value);
         clearInterval(timer);
+        setTimeout(() => setIsUpdating(false), 500);
       } else {
         setDisplayValue(Math.floor(current));
       }
@@ -58,24 +62,60 @@ export default function TVMetricCard({
   const isNearGoal = goalProgress && goalProgress >= 80 && goalProgress < 100;
 
   return (
-    <Card className={cn('p-6 transition-all hover:scale-105', variantStyles[variant])}>
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-4xl">{icon}</span>
-        {change !== undefined && (
-          <div className={cn('flex items-center gap-1 text-sm font-medium', change >= 0 ? 'text-green-600' : 'text-red-600')}>
-            {change >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-            {Math.abs(change)}%
-          </div>
+    <motion.div
+      initial={{ scale: 1 }}
+      animate={{ 
+        scale: isUpdating ? [1, 1.02, 1] : 1,
+        boxShadow: isUpdating ? [
+          '0 0 0px rgba(var(--primary), 0)',
+          '0 0 20px rgba(var(--primary), 0.3)',
+          '0 0 0px rgba(var(--primary), 0)'
+        ] : '0 0 0px rgba(var(--primary), 0)'
+      }}
+      transition={{ duration: 0.5 }}
+    >
+      <Card className={cn('p-6 transition-all hover:scale-105 relative overflow-hidden', variantStyles[variant])}>
+        {isUpdating && (
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-[shimmer_1s_ease-in-out]" 
+            style={{
+              backgroundSize: '200% 100%',
+              animation: 'shimmer 1s ease-in-out'
+            }}
+          />
         )}
-      </div>
+        
+        <div className="flex items-center justify-between mb-4">
+          <motion.span 
+            className="text-4xl"
+            animate={{ rotate: isUpdating ? [0, 10, -10, 0] : 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            {icon}
+          </motion.span>
+          {change !== undefined && (
+            <motion.div 
+              className={cn('flex items-center gap-1 text-sm font-medium', change >= 0 ? 'text-green-600' : 'text-red-600')}
+              animate={{ scale: isUpdating ? [1, 1.1, 1] : 1 }}
+            >
+              {change >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+              {Math.abs(change)}%
+            </motion.div>
+          )}
+        </div>
 
-      <div className="space-y-2">
-        <p className="text-sm text-muted-foreground font-medium">{title}</p>
-        <p className="text-4xl font-bold">
-          {prefix}
-          {displayValue.toLocaleString('pt-BR')}
-          {suffix}
-        </p>
+        <div className="space-y-2 relative z-10">
+          <p className="text-sm text-muted-foreground font-medium">{title}</p>
+          <motion.p 
+            className="text-4xl font-bold"
+            animate={{ 
+              color: isUpdating ? ['currentColor', 'hsl(var(--primary))', 'currentColor'] : 'currentColor'
+            }}
+            transition={{ duration: 0.5 }}
+          >
+            {prefix}
+            {displayValue.toLocaleString('pt-BR')}
+            {suffix}
+          </motion.p>
 
         {goal && (
           <div className="space-y-1">
@@ -103,7 +143,9 @@ export default function TVMetricCard({
             </div>
           </div>
         )}
-      </div>
-    </Card>
+        </div>
+      </Card>
+    </motion.div>
   );
 }
+

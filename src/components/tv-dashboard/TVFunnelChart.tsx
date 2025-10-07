@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useMemo } from 'react';
+import { motion } from 'framer-motion';
 
 export default function TVFunnelChart() {
   const { currentWorkspace } = useWorkspace();
@@ -52,7 +53,21 @@ export default function TVFunnelChart() {
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle>Funil de Vendas - Tempo Real</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          Funil de Vendas - Tempo Real
+          <motion.span
+            className="inline-block w-2 h-2 bg-green-500 rounded-full"
+            animate={{ 
+              scale: [1, 1.5, 1],
+              opacity: [1, 0.5, 1]
+            }}
+            transition={{ 
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -61,16 +76,34 @@ export default function TVFunnelChart() {
             const conversionRate = index > 0 ? (stage.count / stages[0].count) * 100 : 100;
 
             return (
-              <div key={stage.name} className="space-y-2">
+              <motion.div 
+                key={stage.name} 
+                className="space-y-2"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium">{stage.name}</span>
                   <div className="flex items-center gap-4">
-                    <span className="text-muted-foreground">
+                    <motion.span 
+                      className="text-muted-foreground"
+                      key={`count-${stage.count}`}
+                      initial={{ scale: 1.2, color: 'hsl(var(--primary))' }}
+                      animate={{ scale: 1, color: 'hsl(var(--muted-foreground))' }}
+                      transition={{ duration: 0.5 }}
+                    >
                       {stage.count} leads
-                    </span>
-                    <span className="font-bold text-primary">
+                    </motion.span>
+                    <motion.span 
+                      className="font-bold text-primary"
+                      key={`value-${stage.value}`}
+                      initial={{ scale: 1.2 }}
+                      animate={{ scale: 1 }}
+                      transition={{ duration: 0.5 }}
+                    >
                       R$ {stage.value.toLocaleString('pt-BR')}
-                    </span>
+                    </motion.span>
                     {index > 0 && (
                       <span className="text-xs text-muted-foreground">
                         {conversionRate.toFixed(0)}% conv.
@@ -79,19 +112,26 @@ export default function TVFunnelChart() {
                   </div>
                 </div>
                 <div className="relative h-12 bg-muted rounded-lg overflow-hidden">
-                  <div
-                    className="absolute inset-y-0 left-0 rounded-lg transition-all duration-1000 flex items-center justify-center"
+                  <motion.div
+                    className="absolute inset-y-0 left-0 rounded-lg flex items-center justify-center"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${width}%` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
                     style={{
-                      width: `${width}%`,
                       backgroundColor: stage.color,
                     }}
                   >
-                    <span className="text-white font-bold text-lg px-4">
+                    <motion.span 
+                      className="text-white font-bold text-lg px-4"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.5 }}
+                    >
                       {stage.count}
-                    </span>
-                  </div>
+                    </motion.span>
+                  </motion.div>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>

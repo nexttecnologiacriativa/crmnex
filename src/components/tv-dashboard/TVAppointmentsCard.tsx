@@ -53,7 +53,7 @@ export default function TVAppointmentsCard({ isDarkMode }: TVAppointmentsCardPro
           </div>
         </div>
 
-        <div className="grid grid-cols-5 gap-4 mb-5">
+        <div className="grid grid-cols-6 gap-4 mb-5">
           {/* Criados Hoje */}
           <div className={cn(
             "p-4 rounded-lg",
@@ -80,6 +80,30 @@ export default function TVAppointmentsCard({ isDarkMode }: TVAppointmentsCardPro
               <span className="text-xs text-green-500">✅ {metrics.createdTodayByStatus.compareceu}</span>
               <span className="text-xs text-red-500">❌ {metrics.createdTodayByStatus.falhou}</span>
             </div>
+          </div>
+
+          {/* Agendados para Hoje */}
+          <div className={cn(
+            "p-4 rounded-lg",
+            isDarkMode ? "bg-orange-500/10" : "bg-orange-50"
+          )}>
+            <p className={cn(
+              "text-xs font-medium mb-1",
+              isDarkMode ? "text-orange-300" : "text-orange-700"
+            )}>
+              Agendados Hoje
+            </p>
+            <motion.p
+              key={metrics.scheduledForToday}
+              initial={{ scale: 1.2, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className={cn(
+                "text-3xl font-bold",
+                isDarkMode ? "text-orange-400" : "text-orange-600"
+              )}
+            >
+              {metrics.scheduledForToday}
+            </motion.p>
           </div>
 
           {/* Criados na Semana */}

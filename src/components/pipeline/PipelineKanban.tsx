@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Plus, Trash2, GripVertical, CheckSquare, Square, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import LeadKanbanCard from './LeadKanbanCard';
 import CreatePipelineStageDialog from './CreatePipelineStageDialog';
 import EditPipelineStageDialog from './EditPipelineStageDialog';
@@ -397,9 +398,10 @@ export default function PipelineKanban({
       </div>
 
       <div className="flex-1 overflow-hidden">
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="stages" direction="horizontal" type="stage">
-            {provided => <div ref={provided.innerRef} {...provided.droppableProps} className="flex gap-6 h-full overflow-x-auto overflow-y-hidden pb-4">
+        <ScrollArea className="h-full">
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId="stages" direction="horizontal" type="stage">
+              {provided => <div ref={provided.innerRef} {...provided.droppableProps} className="flex gap-6 h-full pb-4">
               {stages?.map((stage, index) => {
             const stageLeads = filteredLeads(leadsByStage?.[stage.id] || []);
             const visibleLeads = getVisibleLeads(stage.id, stageLeads);
@@ -508,6 +510,8 @@ export default function PipelineKanban({
             </div>}
           </Droppable>
         </DragDropContext>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
       </div>
 
       <CreatePipelineStageDialog open={isCreateStageOpen} onOpenChange={setIsCreateStageOpen} pipelineId={selectedPipelineId} nextPosition={stages?.length || 0} />

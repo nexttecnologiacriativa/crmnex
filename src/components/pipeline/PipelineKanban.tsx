@@ -401,7 +401,7 @@ export default function PipelineKanban({
         <ScrollArea className="h-full">
           <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable droppableId="stages" direction="horizontal" type="stage">
-              {provided => <div ref={provided.innerRef} {...provided.droppableProps} className="flex gap-6 h-full pb-4">
+              {provided => <div ref={provided.innerRef} {...provided.droppableProps} className="flex gap-6 h-full pb-6">
               {stages?.map((stage, index) => {
             const stageLeads = filteredLeads(leadsByStage?.[stage.id] || []);
             const visibleLeads = getVisibleLeads(stage.id, stageLeads);
@@ -510,7 +510,7 @@ export default function PipelineKanban({
             </div>}
           </Droppable>
         </DragDropContext>
-        <ScrollBar orientation="horizontal" />
+        <ScrollBar orientation="horizontal" className="opacity-100 h-3 bg-gray-100 rounded-lg" />
       </ScrollArea>
       </div>
 

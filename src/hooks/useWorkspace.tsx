@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useEffect } from 'react';
+import React from 'react';
 
 export interface Workspace {
   id: string;
@@ -44,7 +45,19 @@ export function useWorkspaces() {
 
 export function useWorkspace() {
   const { data: workspaces = [], isLoading, error } = useWorkspaces();
-  const workspace = workspaces[0];
+  const { user } = useAuth();
+  
+  // Priorizar workspaces compartilhados (onde o usuário não é owner)
+  const workspace = React.useMemo(() => {
+    if (!workspaces || workspaces.length === 0) return undefined;
+    
+    // Primeiro: workspace compartilhado (não é owner)
+    const sharedWorkspace = workspaces.find(w => w.owner_id !== user?.id);
+    if (sharedWorkspace) return sharedWorkspace;
+    
+    // Segundo: qualquer workspace
+    return workspaces[0];
+  }, [workspaces, user?.id]);
 
   return {
     currentWorkspace: workspace,

@@ -284,7 +284,15 @@ serve(async (req) => {
     // Also include any additional fields that weren't mapped to custom fields
     const additionalFields: Record<string, any> = {};
     for (const [key, value] of Object.entries(formData)) {
-      const isBasicField = ['name', 'nome', 'full_name', 'first_name', 'email', 'e_mail', 'email_address', 'phone', 'telefone', 'whatsapp', 'celular', 'company', 'empresa'].includes(key.toLowerCase());
+      const isBasicField = [
+        'name', 'nome', 'full_name', 'first_name', 
+        'email', 'e_mail', 'email_address', 
+        'phone', 'telefone', 'whatsapp', 'celular', 
+        'company', 'empresa',
+        'origem', 'source',
+        'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+        'tag', 'tags'
+      ].includes(key.toLowerCase());
       const isMappedToCustomField = Object.values(customFieldsData).includes(value);
       
       if (!isBasicField && !isMappedToCustomField) {
@@ -301,11 +309,19 @@ serve(async (req) => {
       email,
       phone,
       company,
-      source: `${platform}_form`,
+      source: formData.source || formData.origem || `${platform}_form`,
+      utm_source: formData.utm_source || null,
+      utm_medium: formData.utm_medium || null,
+      utm_campaign: formData.utm_campaign || null,
+      utm_term: formData.utm_term || null,
+      utm_content: formData.utm_content || null,
       custom_fields: { ...customFieldsData, ...additionalFields },
       notes: `Lead criado via formulário ${platform} em ${new Date().toLocaleString('pt-BR')}`
     };
 
+    console.log('📋 Custom fields data:', JSON.stringify(customFieldsData, null, 2));
+    console.log('📋 Additional fields:', JSON.stringify(additionalFields, null, 2));
+    console.log('📋 Final custom_fields:', JSON.stringify({ ...customFieldsData, ...additionalFields }, null, 2));
     console.log('Creating lead with data:', leadData);
 
     const { data: newLead, error: leadError } = await supabase

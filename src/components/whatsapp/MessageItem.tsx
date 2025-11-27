@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AudioPlayer from './AudioPlayer';
+import WhatsAppImage from './WhatsAppImage';
 
 interface WhatsAppMessage {
   id: string;
@@ -80,16 +81,11 @@ export function MessageItem({ message, isFromCurrentUser }: MessageItemProps) {
           <div className="space-y-2">
             {message.media_url && (
               <div className="relative max-w-xs">
-                <img
-                  src={message.media_url}
+                <WhatsAppImage
+                  mediaUrl={message.media_url}
                   alt="Imagem compartilhada"
                   className="w-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                   onClick={() => window.open(message.media_url!, '_blank')}
-                  crossOrigin="anonymous"
-                  onError={(e) => {
-                    console.error('Erro ao carregar imagem:', message.media_url);
-                    e.currentTarget.style.display = 'none';
-                  }}
                 />
                 <Button
                   variant="secondary"

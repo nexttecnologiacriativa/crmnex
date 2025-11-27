@@ -1,15 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 
 interface WhatsAppImageProps {
   mediaUrl: string;
   alt: string;
   className?: string;
+  onClick?: () => void;
 }
 
-export default function WhatsAppImage({ mediaUrl, alt, className = "" }: WhatsAppImageProps) {
+export default function WhatsAppImage({ mediaUrl, alt, className = "", onClick }: WhatsAppImageProps) {
   const [hasError, setHasError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [finalUrl, setFinalUrl] = useState<string>('');
+  const blobUrlRef = useRef<string | null>(null);
 
   console.log('🖼️ WhatsAppImage render:', {
     mediaUrl,
@@ -65,6 +69,7 @@ export default function WhatsAppImage({ mediaUrl, alt, className = "" }: WhatsAp
             // Para imagens, criar uma URL blob
             const blob = await response.blob();
             const blobUrl = URL.createObjectURL(blob);
+            blobUrlRef.current = blobUrl;
             setFinalUrl(blobUrl);
           } else {
             console.error('❌ Proxy failed, using original URL');
@@ -81,14 +86,17 @@ export default function WhatsAppImage({ mediaUrl, alt, className = "" }: WhatsAp
       // Para outras URLs, usar diretamente
       setFinalUrl(mediaUrl);
     }
+  }, [mediaUrl]);
 
-    // Cleanup blob URLs
+  // Cleanup blob URLs em efeito separado
+  useEffect(() => {
     return () => {
-      if (finalUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(finalUrl);
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
       }
     };
-  }, [mediaUrl, finalUrl]);
+  }, []);
 
   console.log('🔄 URL final para imagem:', { original: mediaUrl, final: finalUrl });
 
@@ -101,15 +109,25 @@ export default function WhatsAppImage({ mediaUrl, alt, className = "" }: WhatsAp
   }
 
   return (
-    <img 
-      src={finalUrl}
-      alt={alt}
-      className={className}
-      onError={(e) => {
-        console.error('❌ Failed to load image:', { original: mediaUrl, final: finalUrl });
-        setHasError(true);
-      }}
-      onLoad={() => console.log('✅ Image loaded successfully from URL:', { original: mediaUrl, final: finalUrl })}
-    />
+    <>
+      {isLoading && (
+        <div className={cn("animate-pulse bg-muted rounded w-full h-32", className)} />
+      )}
+      <img 
+        src={finalUrl}
+        alt={alt}
+        className={cn(className, isLoading && 'hidden')}
+        onClick={onClick}
+        onError={(e) => {
+          console.error('❌ Failed to load image:', { original: mediaUrl, final: finalUrl });
+          setHasError(true);
+          setIsLoading(false);
+        }}
+        onLoad={() => {
+          console.log('✅ Image loaded successfully from URL:', { original: mediaUrl, final: finalUrl });
+          setIsLoading(false);
+        }}
+      />
+    </>
   );
 }

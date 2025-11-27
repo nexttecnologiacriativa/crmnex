@@ -453,14 +453,16 @@ export default function UnifiedAtendimento() {
       const cfgRaw = currentWorkspace?.id ? localStorage.getItem(`evolution_config_${currentWorkspace.id}`) : null;
       const cfg = cfgRaw ? JSON.parse(cfgRaw) : null;
       
-      // Send image via Evolution API
+      // Send image via Evolution API using direct URL (avoid 413 error with Base64)
       const { data: sendResult, error: sendError } = await supabase.functions.invoke('whatsapp-evolution', {
         body: {
-          action: 'send_image',
+          action: 'sendMediaUrl',
           instanceName: selectedInstanceName,
-          phone: phoneToSend,
-          imageUrl: pub.publicUrl,
-          caption: message?.trim() || undefined,
+          number: phoneToSend,
+          mediaUrl: pub.publicUrl,
+          mediaType: 'image',
+          fileName: fileName,
+          caption: message?.trim() || '',
           workspaceId: currentWorkspace?.id,
           apiKey: cfg?.global_api_key,
           apiUrl: cfg?.api_url

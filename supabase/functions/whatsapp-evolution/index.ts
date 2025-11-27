@@ -1074,9 +1074,18 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
       throw new Error(`Failed to download image: ${imageResponse.status}`);
     }
 
-    // PASSO 2: Converter para base64
+    // PASSO 2: Converter para base64 (usando chunks para evitar stack overflow)
     const imageBuffer = await imageResponse.arrayBuffer();
-    const base64Image = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
+    const uint8Array = new Uint8Array(imageBuffer);
+    let binaryString = '';
+    const chunkSize = 8192; // Process in 8KB chunks
+    
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.subarray(i, i + chunkSize);
+      binaryString += String.fromCharCode(...chunk);
+    }
+    
+    const base64Image = btoa(binaryString);
     console.log(`✅ Image converted to base64 (${imageBuffer.byteLength} bytes)`);
 
     // PASSO 3: Detectar mimetype a partir da extensão

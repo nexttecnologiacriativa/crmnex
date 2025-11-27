@@ -8,11 +8,13 @@ import {
   Clock, 
   AlertCircle, 
   FileText, 
-  Download
+  Download,
+  Eye
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AudioPlayer from './AudioPlayer';
 import WhatsAppImage from './WhatsAppImage';
+import WhatsAppVideo from './WhatsAppVideo';
 
 interface WhatsAppMessage {
   id: string;
@@ -129,11 +131,10 @@ export function MessageItem({ message, isFromCurrentUser }: MessageItemProps) {
           <div className="space-y-2">
             {message.media_url && (
               <div className="relative max-w-xs">
-                <video 
-                  src={message.media_url}
-                  controls
+                <WhatsAppVideo
+                  mediaUrl={message.media_url}
+                  alt="Vídeo compartilhado"
                   className="w-full rounded-lg"
-                  style={{ maxHeight: '300px' }}
                 />
                 <Button
                   variant="secondary"
@@ -166,14 +167,29 @@ export function MessageItem({ message, isFromCurrentUser }: MessageItemProps) {
               </p>
             </div>
             {message.media_url && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => window.open(message.media_url!, '_blank')}
-                className="flex-shrink-0"
-              >
-                <Download className="h-3 w-3" />
-              </Button>
+              <div className="flex gap-1 flex-shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(message.media_url!, '_blank')}
+                  title="Visualizar"
+                >
+                  <Eye className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = message.media_url!;
+                    link.download = message.attachment_name || 'documento';
+                    link.click();
+                  }}
+                  title="Download"
+                >
+                  <Download className="h-3 w-3" />
+                </Button>
+              </div>
             )}
           </div>
         );

@@ -10,6 +10,7 @@ import { useWorkspace } from '@/hooks/useWorkspace';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MessageCircle, Send, Users, Wifi, WifiOff, Search } from 'lucide-react';
+import { MessageItem } from '../MessageItem';
 
 export default function EvolutionChat() {
   const { currentWorkspace } = useWorkspace();
@@ -132,14 +133,11 @@ export default function EvolutionChat() {
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-3">
                 {messages.map((m: any) => (
-                  <div key={m.id} className={`flex ${m.is_from_lead ? 'justify-start' : 'justify-end'}`}>
-                    <div className={`max-w-[70%] rounded-lg p-3 ${m.is_from_lead ? 'bg-gray-100 text-gray-900' : 'bg-blue-600 text-white'}`}>
-                      <p className="text-sm whitespace-pre-wrap">{m.message_text}</p>
-                      <div className={`mt-2 text-[10px] ${m.is_from_lead ? 'text-gray-500' : 'text-blue-100'}`}>
-                        {format(new Date(m.timestamp), 'dd/MM HH:mm', { locale: ptBR })}
-                      </div>
-                    </div>
-                  </div>
+                  <MessageItem 
+                    key={m.id}
+                    message={m} 
+                    isFromCurrentUser={!m.is_from_lead} 
+                  />
                 ))}
               </div>
             </ScrollArea>

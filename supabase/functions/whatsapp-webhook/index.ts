@@ -94,10 +94,16 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
       console.log('Message object:', JSON.stringify(message, null, 2));
       
       const remoteJid = message.key?.remoteJid || '';
+      const remoteJidAlt = message.key?.remoteJidAlt || '';
+      
+      // PRIORIZAR remoteJidAlt (contém número real) sobre remoteJid (pode ser LID)
+      const phoneSource = remoteJidAlt || remoteJid;
+      
+      console.log('📞 Phone extraction:', { remoteJid, remoteJidAlt, phoneSource });
       
       // FILTRAR MENSAGENS DE GRUPOS - Ignorar JIDs que terminam em @g.us
-      if (remoteJid.endsWith('@g.us')) {
-        console.log('⏭️ Skipping group message:', remoteJid);
+      if (phoneSource.endsWith('@g.us')) {
+        console.log('⏭️ Skipping group message:', phoneSource);
         continue;
       }
       
@@ -141,7 +147,7 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
       const messageContent = message.message;
       const messageType = message.messageType || 'text';
       const fromMe = message.key?.fromMe || false;
-      const phoneNumber = normalizePhoneNumber(remoteJid);
+      const phoneNumber = normalizePhoneNumber(phoneSource);
       const pushName = message.pushName || 'Usuário';
       const messageId = message.key?.id;
       const messageStatus = message.status;

@@ -19,13 +19,14 @@ import { normalizeForMatch, ensureCountryCode55, phonesMatch } from '@/lib/phone
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { MessageCircle, Search, Send, Users, Wifi, WifiOff, Plus, UserSearch, UserPlus, Image as ImageIcon, Trash2, Download, AlertCircle, Video, FileText } from 'lucide-react';
+import { MessageCircle, Search, Send, Users, Wifi, WifiOff, Plus, UserSearch, UserPlus, Image as ImageIcon, Trash2, Download, AlertCircle, Video, FileText, Eye } from 'lucide-react';
 import CreateLeadFromConversationDialog from '@/components/whatsapp/CreateLeadFromConversationDialog';
 import ConversationCard from '@/components/whatsapp/ConversationCard';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import AudioPlayer from '@/components/whatsapp/AudioPlayer';
 import WhatsAppImage from '@/components/whatsapp/WhatsAppImage';
+import WhatsAppVideo from '@/components/whatsapp/WhatsAppVideo';
 import ChatAudioSender from '@/components/whatsapp/ChatAudioSender';
 import { useDeleteConversation } from '@/hooks/useWhatsApp';
 import { useWhatsAppSyncStatus } from '@/hooks/useWhatsAppSync';
@@ -1096,6 +1097,35 @@ export default function UnifiedAtendimento() {
                               <WhatsAppImage mediaUrl={m.media_url} alt="Imagem enviada" className="max-w-48 rounded-lg" />
                             </div> : null}
                           
+                          {/* Video Message */}
+                          {m.message_type === 'video' && m.media_url ? <div className="mb-2">
+                              <WhatsAppVideo mediaUrl={m.media_url} className="max-w-xs rounded-lg" />
+                              {m.message_text && m.message_text !== 'Vídeo' && <p className="text-sm mt-1">{m.message_text}</p>}
+                            </div> : null}
+                          
+                          {/* Document Message */}
+                          {m.message_type === 'document' && m.media_url ? <div className="mb-2 flex items-center gap-2 p-2 border rounded-lg bg-background/50">
+                              <FileText className="h-6 w-6 text-muted-foreground flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">
+                                  {m.attachment_name || m.message_text || 'Documento'}
+                                </p>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="sm" onClick={() => window.open(m.media_url, '_blank')} title="Visualizar">
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => {
+                              const link = document.createElement('a');
+                              link.href = m.media_url;
+                              link.download = m.attachment_name || 'documento';
+                              link.click();
+                            }} title="Download">
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div> : null}
+                          
                           {/* Audio Message */}
                           {m.message_type === 'audio' ? <div className="mb-2 space-y-2">
                               {m.permanent_audio_url || m.media_url ? m.permanent_audio_url ? <div className="space-y-1">
@@ -1107,7 +1137,10 @@ export default function UnifiedAtendimento() {
                                   <AlertCircle className="h-4 w-4" />
                                   {m.message_text || 'Áudio não disponível'}
                                 </div>}
-                            </div> : <p className="text-sm whitespace-pre-wrap">{m.message_text}</p>}
+                            </div> : null}
+                          
+                          {/* Text Message - só mostra se não for mídia */}
+                          {!['image', 'video', 'document', 'audio'].includes(m.message_type) && <p className="text-sm whitespace-pre-wrap">{m.message_text}</p>}
                           <div className={`mt-2 text-[10px] ${m.is_from_lead ? 'text-muted-foreground' : 'text-primary-foreground/80'}`}>
                             {m.timestamp ? format(new Date(m.timestamp), 'dd/MM HH:mm', {
                         locale: ptBR

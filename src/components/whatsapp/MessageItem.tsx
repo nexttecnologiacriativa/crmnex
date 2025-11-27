@@ -126,9 +126,30 @@ export function MessageItem({ message, isFromCurrentUser }: MessageItemProps) {
         
       case 'video':
         return (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <AlertCircle className="h-4 w-4" />
-            Tipo de mensagem não suportada no momento
+          <div className="space-y-2">
+            {message.media_url && (
+              <div className="relative max-w-xs">
+                <video 
+                  src={message.media_url}
+                  controls
+                  className="w-full rounded-lg"
+                  style={{ maxHeight: '300px' }}
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="absolute top-2 right-2 opacity-70 hover:opacity-100"
+                  onClick={() => window.open(message.media_url!, '_blank')}
+                >
+                  <Download className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+            {message.message_text && message.message_text !== 'Vídeo' && (
+              <div className="text-sm">
+                {message.message_text}
+              </div>
+            )}
           </div>
         );
 

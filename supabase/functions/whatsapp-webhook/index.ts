@@ -354,11 +354,237 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
         msgType = 'video';
         mediaUrl = messageContent.videoMessage.url;
         mediaBase64 = messageContent.videoMessage.base64 || '';
+        
+        const originalMimetype = messageContent.videoMessage?.mimetype || 'video/mp4';
+        const isEncryptedUrl = mediaUrl?.includes('.enc');
+        
+        console.log('🎬 Video processing:', {
+          messageId,
+          hasBase64: !!mediaBase64,
+          hasUrl: !!mediaUrl,
+          isEncryptedUrl,
+          originalMimetype
+        });
+        
+        // Processar vídeo
+        try {
+          let videoData: Uint8Array | ArrayBuffer;
+          
+          // Priorizar Base64 se disponível
+          if (mediaBase64) {
+            console.log('✅ Processing video from base64...');
+            videoData = Uint8Array.from(atob(mediaBase64), c => c.charCodeAt(0));
+          } 
+          // Se URL for .enc, usar Evolution API
+          else if (isEncryptedUrl) {
+            console.log('🔐 Video URL is encrypted - downloading via Evolution API...');
+            const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
+            const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY');
+            
+            if (!evolutionApiUrl || !evolutionApiKey) {
+              throw new Error('Evolution API credentials not configured');
+            }
+            
+            const downloadUrl = `${evolutionApiUrl}/chat/getBase64FromMediaMessage/${instanceName}`;
+            console.log('📥 Downloading video from Evolution:', downloadUrl);
+            
+            const response = await fetch(downloadUrl, {
+              method: 'POST',
+              headers: { 
+                'apikey': evolutionApiKey,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                message: { key: { id: messageId } },
+                convertToMp4: true
+              })
+            });
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              throw new Error(`Evolution API error: ${response.status} - ${errorText}`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.base64) {
+              videoData = Uint8Array.from(atob(result.base64), c => c.charCodeAt(0));
+              console.log('✅ Downloaded via Evolution API:', videoData.byteLength, 'bytes');
+            } else {
+              throw new Error('No base64 data in Evolution API response');
+            }
+          }
+          // Se não for .enc, tentar download direto
+          else if (mediaUrl) {
+            console.log('📥 Downloading video from URL...');
+            const videoResponse = await fetch(mediaUrl, {
+              headers: { 'User-Agent': 'Mozilla/5.0' }
+            });
+            
+            if (!videoResponse.ok) {
+              throw new Error(`Failed to fetch video: ${videoResponse.status}`);
+            }
+            
+            videoData = await videoResponse.arrayBuffer();
+            console.log('✅ Downloaded from URL:', videoData.byteLength, 'bytes');
+          } else {
+            throw new Error('No video data available');
+          }
+          
+          // Detectar extensão correta
+          const getVideoExtension = (mime: string): string => {
+            if (mime.includes('mp4')) return 'mp4';
+            if (mime.includes('3gpp') || mime.includes('3gp')) return '3gp';
+            if (mime.includes('quicktime') || mime.includes('mov')) return 'mov';
+            return 'mp4';
+          };
+          
+          const extension = getVideoExtension(originalMimetype);
+          const timestamp = message.messageTimestamp || Date.now();
+          const fileName = `video_${timestamp}_${messageId}.${extension}`;
+          const filePath = `${instance.workspace_id}/videos/${fileName}`;
+          
+          console.log('📤 Uploading video:', { fileName, contentType: originalMimetype, size: videoData.byteLength });
+          
+          const { error: uploadError } = await supabase.storage
+            .from('whatsapp-media')
+            .upload(filePath, videoData, {
+              contentType: originalMimetype,
+              upsert: true,
+              cacheControl: '3600'
+            });
+
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage
+              .from('whatsapp-media')
+              .getPublicUrl(filePath);
+            
+            mediaUrl = urlData.publicUrl;
+            console.log('✅ Video uploaded successfully:', mediaUrl);
+          } else {
+            console.error('❌ Video upload error:', uploadError);
+          }
+        } catch (error) {
+          console.error('❌ Video processing error:', error);
+          // Mantém URL original como fallback
+        }
       } else if (messageContent?.documentMessage) {
-        messageText = messageContent.documentMessage.fileName || 'Documento';
+        const docMsg = messageContent.documentMessage;
+        messageText = docMsg.fileName || 'Documento';
         msgType = 'document';
-        mediaUrl = messageContent.documentMessage.url;
-        mediaBase64 = messageContent.documentMessage.base64 || '';
+        mediaUrl = docMsg.url;
+        mediaBase64 = docMsg.base64 || '';
+        
+        const originalMimetype = docMsg.mimetype || 'application/octet-stream';
+        const isEncryptedUrl = mediaUrl?.includes('.enc');
+        const originalFileName = docMsg.fileName || `document_${message.messageTimestamp || Date.now()}`;
+        
+        console.log('📄 Document processing:', {
+          messageId,
+          fileName: originalFileName,
+          hasBase64: !!mediaBase64,
+          hasUrl: !!mediaUrl,
+          isEncryptedUrl,
+          originalMimetype
+        });
+        
+        // Processar documento
+        try {
+          let docData: Uint8Array | ArrayBuffer;
+          
+          if (mediaBase64) {
+            console.log('✅ Processing document from base64...');
+            docData = Uint8Array.from(atob(mediaBase64), c => c.charCodeAt(0));
+          } 
+          else if (isEncryptedUrl) {
+            console.log('🔐 Document URL is encrypted - downloading via Evolution API...');
+            const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
+            const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY');
+            
+            if (!evolutionApiUrl || !evolutionApiKey) {
+              throw new Error('Evolution API credentials not configured');
+            }
+            
+            const downloadUrl = `${evolutionApiUrl}/chat/getBase64FromMediaMessage/${instanceName}`;
+            
+            const response = await fetch(downloadUrl, {
+              method: 'POST',
+              headers: { 
+                'apikey': evolutionApiKey,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                message: { key: { id: messageId } },
+                convertToMp4: false
+              })
+            });
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              throw new Error(`Evolution API error: ${response.status} - ${errorText}`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.base64) {
+              docData = Uint8Array.from(atob(result.base64), c => c.charCodeAt(0));
+              console.log('✅ Downloaded via Evolution API:', docData.byteLength, 'bytes');
+            } else {
+              throw new Error('No base64 data in Evolution API response');
+            }
+          }
+          else if (mediaUrl) {
+            console.log('📥 Downloading document from URL...');
+            const docResponse = await fetch(mediaUrl, {
+              headers: { 'User-Agent': 'Mozilla/5.0' }
+            });
+            
+            if (!docResponse.ok) {
+              throw new Error(`Failed to fetch document: ${docResponse.status}`);
+            }
+            
+            docData = await docResponse.arrayBuffer();
+          } else {
+            throw new Error('No document data available');
+          }
+          
+          // Sanitizar nome do arquivo para storage
+          const sanitizeFileName = (name: string): string => {
+            return name
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .replace(/[^\w\s.-]/g, '')
+              .replace(/\s+/g, '_')
+              .trim() || 'document';
+          };
+          
+          const timestamp = message.messageTimestamp || Date.now();
+          const safeFileName = `${timestamp}_${sanitizeFileName(originalFileName)}`;
+          const filePath = `${instance.workspace_id}/documents/${safeFileName}`;
+          
+          console.log('📤 Uploading document:', { fileName: safeFileName, contentType: originalMimetype, size: docData.byteLength });
+          
+          const { error: uploadError } = await supabase.storage
+            .from('whatsapp-media')
+            .upload(filePath, docData, {
+              contentType: originalMimetype,
+              upsert: true,
+              cacheControl: '3600'
+            });
+
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage
+              .from('whatsapp-media')
+              .getPublicUrl(filePath);
+            
+            mediaUrl = urlData.publicUrl;
+            console.log('✅ Document uploaded successfully:', mediaUrl);
+          } else {
+            console.error('❌ Document upload error:', uploadError);
+          }
+        } catch (error) {
+          console.error('❌ Document processing error:', error);
+        }
       } else {
         messageText = '[Mídia não suportada]';
         msgType = 'unknown';

@@ -1188,43 +1188,77 @@ export default function UnifiedAtendimento() {
                  </ScrollArea>
 
                 <div className="border-t p-4 bg-card">
-                  <div className="flex items-center gap-2 mb-3">
-                    <ChatAudioSender selectedConv={selectedConv} selectedInstanceName={selectedInstanceName} currentWorkspace={currentWorkspace} onAudioSent={() => {
-                  queryClient.invalidateQueries({
-                    queryKey: ['whatsapp-messages', selectedConv?.id]
-                  });
-                  queryClient.invalidateQueries({
-                    queryKey: ['whatsapp-conversations', currentWorkspace?.id]
-                  });
-                  setTimeout(() => messagesEndRef.current?.scrollIntoView({
-                    behavior: 'smooth'
-                  }), 200);
-                }} />
+                  <Textarea
+                    placeholder="Digite uma mensagem..."
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    className="w-full resize-none mb-3"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                      }
+                    }}
+                  />
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ChatAudioSender
+                        selectedConv={selectedConv}
+                        selectedInstanceName={selectedInstanceName}
+                        currentWorkspace={currentWorkspace}
+                        onAudioSent={() => {
+                          queryClient.invalidateQueries({
+                            queryKey: ['whatsapp-messages', selectedConv?.id]
+                          });
+                          queryClient.invalidateQueries({
+                            queryKey: ['whatsapp-conversations', currentWorkspace?.id]
+                          });
+                          setTimeout(() => {
+                            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                          }, 200);
+                        }}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={!selectedInstanceName || isUploadingImage}
+                        title="Enviar imagem"
+                      >
+                        <ImageIcon className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => videoInputRef.current?.click()}
+                        disabled={!selectedInstanceName || isUploadingVideo}
+                        title="Enviar vídeo"
+                      >
+                        <Video className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => documentInputRef.current?.click()}
+                        disabled={!selectedInstanceName || isUploadingDocument}
+                        title="Enviar documento"
+                      >
+                        <FileText className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    <Button
+                      onClick={handleSend}
+                      size="lg"
+                      className="px-6"
+                      disabled={!message.trim() || !selectedInstanceName || isSendingMessage}
+                    >
+                      <Send className="h-5 w-5 mr-2" />
+                      Enviar
+                    </Button>
                   </div>
                   
-                   <div className="flex items-end gap-2">
-                     <Textarea placeholder="Digite uma mensagem..." value={message} onChange={e => setMessage(e.target.value)} className="flex-1 resize-none" onKeyDown={e => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }} />
-                     <div className="flex gap-1">
-                       <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={!selectedInstanceName || isUploadingImage}>
-                         <ImageIcon className="h-4 w-4" />
-                       </Button>
-                       <Button variant="outline" size="sm" onClick={() => videoInputRef.current?.click()} disabled={!selectedInstanceName || isUploadingVideo}>
-                         <Video className="h-4 w-4" />
-                       </Button>
-                       <Button variant="outline" size="sm" onClick={() => documentInputRef.current?.click()} disabled={!selectedInstanceName || isUploadingDocument}>
-                         <FileText className="h-4 w-4" />
-                       </Button>
-                       <Button onClick={handleSend} size="sm" disabled={!message.trim() || !selectedInstanceName || isSendingMessage}>
-                          <Send className="h-4 w-4" />
-                        </Button>
-                     </div>
-                   </div>
-
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileInputChange} />
                   <input ref={videoInputRef} type="file" accept="video/mp4,video/3gpp,video/quicktime" className="hidden" onChange={handleVideoInputChange} />
                   <input ref={documentInputRef} type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,application/pdf,application/msword" className="hidden" onChange={handleDocumentInputChange} />

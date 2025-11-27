@@ -75,8 +75,14 @@ export default function AudioPlayer({
       setError(null);
     };
 
-    const handleError = () => {
-      console.error('🎵 Audio load error');
+    const handleError = (e: Event) => {
+      const audio = e.target as HTMLAudioElement;
+      console.error('🎵 Audio load error:', {
+        src: audio.src,
+        error: audio.error,
+        networkState: audio.networkState,
+        readyState: audio.readyState
+      });
       setError('Não foi possível carregar o áudio');
       setIsFormatSupported(false);
     };
@@ -189,7 +195,6 @@ export default function AudioPlayer({
         ref={audioRef}
         src={finalUrl}
         preload="auto"
-        crossOrigin="anonymous"
       >
         <source src={finalUrl} type={getAudioFormat(finalUrl)} />
         <source src={finalUrl} type="audio/ogg; codecs=opus" />

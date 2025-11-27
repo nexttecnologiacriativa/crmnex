@@ -209,27 +209,8 @@ serve(async (req) => {
             conversation = newConversation;
           }
 
-          // Download image from Supabase Storage and convert to base64
-          console.log('📥 Downloading image from Supabase Storage:', mediaUrl);
-          const imageResponse = await fetch(mediaUrl);
-          
-          if (!imageResponse.ok) {
-            throw new Error(`Failed to download image from storage: ${imageResponse.status}`);
-          }
-
-          // Convert to base64 using chunks to avoid stack overflow
-          const imageBuffer = await imageResponse.arrayBuffer();
-          const uint8Array = new Uint8Array(imageBuffer);
-          let binaryString = '';
-          const chunkSize = 8192; // Process in 8KB chunks
-          
-          for (let i = 0; i < uint8Array.length; i += chunkSize) {
-            const chunk = uint8Array.subarray(i, i + chunkSize);
-            binaryString += String.fromCharCode(...chunk);
-          }
-          
-          const base64Image = btoa(binaryString);
-          console.log(`✅ Image downloaded and converted to base64 (${imageBuffer.byteLength} bytes)`);
+          // Download media from Supabase Storage and convert to base64
+          console.log('📥 Downloading media from Supabase Storage:', mediaUrl);
 
           // Helper function to detect mimetype from file extension
           function getMimetypeFromFileName(fileName: string): string {
@@ -274,8 +255,8 @@ serve(async (req) => {
           };
           const mimetype = getMimetypeFromFileName(mediaUrlFileName) || mimetypeMap[mediaUrlType] || 'application/octet-stream';
           
-          // Send to Evolution API with base64 image - flat structure as per official docs
-          console.log('📎 Sending media with base64 to Evolution API...');
+          // Send to Evolution API using URL directly (avoids 413 errors with large files)
+          console.log('📎 Sending media URL to Evolution API...');
           const response = await fetch(`${currentApiUrl}/message/sendMedia/${mediaUrlInstanceName}`, {
             method: 'POST',
             headers: {
@@ -286,7 +267,7 @@ serve(async (req) => {
               number: mediaUrlNumber.replace(/\D/g, ''),
               mediatype: mediaUrlType,  // lowercase as per Evolution API
               mimetype: mimetype,       // required field
-              media: base64Image,       // base64 at root level
+              media: mediaUrl,          // Send URL directly instead of base64
               fileName: mediaUrlFileName,
               caption: mediaUrlCaption
             })
@@ -1109,29 +1090,10 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
       throw new Error('Número inválido');
     }
 
-    // PASSO 1: Baixar imagem da URL (Supabase Storage)
-    console.log('📥 Downloading image from URL:', imageUrl);
-    const imageResponse = await fetch(imageUrl);
-    
-    if (!imageResponse.ok) {
-      throw new Error(`Failed to download image: ${imageResponse.status}`);
-    }
+    // Use URL directly instead of base64 to avoid 413 errors with large files
+    console.log('📤 Sending image URL to Evolution API:', imageUrl);
 
-    // PASSO 2: Converter para base64 (usando chunks para evitar stack overflow)
-    const imageBuffer = await imageResponse.arrayBuffer();
-    const uint8Array = new Uint8Array(imageBuffer);
-    let binaryString = '';
-    const chunkSize = 8192; // Process in 8KB chunks
-    
-    for (let i = 0; i < uint8Array.length; i += chunkSize) {
-      const chunk = uint8Array.subarray(i, i + chunkSize);
-      binaryString += String.fromCharCode(...chunk);
-    }
-    
-    const base64Image = btoa(binaryString);
-    console.log(`✅ Image converted to base64 (${imageBuffer.byteLength} bytes)`);
-
-    // PASSO 3: Detectar mimetype a partir da extensão
+    // Detectar mimetype a partir da extensão
     const extension = imageUrl.split('.').pop()?.toLowerCase() || 'jpeg';
     const mimetypeMap: Record<string, string> = {
       'jpg': 'image/jpeg',
@@ -1142,8 +1104,7 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
     };
     const mimetype = mimetypeMap[extension] || 'image/jpeg';
 
-    // PASSO 4: Enviar no formato FLAT correto
-    console.log('📤 Sending image to Evolution API with flat format...');
+    // Send using URL instead of base64 (Evolution API will download it)
     const response = await fetch(`${apiUrl}/message/sendMedia/${instanceName}`, {
       method: 'POST',
       headers: {
@@ -1154,7 +1115,7 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
         number: normalizedPhone,
         mediatype: 'image',
         mimetype: mimetype,
-        media: base64Image,
+        media: imageUrl, // Send URL directly instead of base64
         fileName: `image.${extension}`,
         caption: caption || ''
       }),

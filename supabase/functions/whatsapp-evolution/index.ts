@@ -209,26 +209,6 @@ serve(async (req) => {
             conversation = newConversation;
           }
 
-          // Download image from Supabase Storage and convert to base64
-          console.log('📥 Downloading image from Supabase Storage:', mediaUrl);
-          const imageResponse = await fetch(mediaUrl);
-          
-          if (!imageResponse.ok) {
-            throw new Error(`Failed to download image from storage: ${imageResponse.status}`);
-          }
-
-          const imageBuffer = await imageResponse.arrayBuffer();
-          const uint8Array = new Uint8Array(imageBuffer);
-          let binaryString = '';
-          
-          for (let i = 0; i < uint8Array.length; i++) {
-            binaryString += String.fromCharCode(uint8Array[i]);
-          }
-
-          const base64Image = btoa(binaryString);
-          
-          console.log(`✅ Image downloaded and converted to base64 (${imageBuffer.byteLength} bytes)`);
-
           // Detect mimetype based on file extension for more accuracy
           const getMimeType = (mediaType: string, fileName: string): string => {
             const ext = fileName.split('.').pop()?.toLowerCase();
@@ -268,23 +248,76 @@ serve(async (req) => {
 
           const mimetype = getMimeType(mediaUrlType, mediaUrlFileName);
           
-          // Send to Evolution API with base64 image - flat structure as per official docs
-          console.log('📎 Sending media with base64 to Evolution API...');
-          const response = await fetch(`${currentApiUrl}/message/sendMedia/${mediaUrlInstanceName}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': currentApiKey,
-            },
-            body: JSON.stringify({
+          // For videos and documents: send URL directly (avoids 413 error)
+          // For images: use base64 (more reliable and already working)
+          let body: any;
+          let response: Response;
+          
+          if (mediaUrlType === 'video' || mediaUrlType === 'document') {
+            console.log(`📎 Sending ${mediaUrlType} via direct URL (no base64 to avoid 413 error)`);
+            
+            body = {
               number: mediaUrlNumber.replace(/\D/g, ''),
-              mediatype: mediaUrlType,  // lowercase as per Evolution API
-              mimetype: mimetype,       // required field
-              media: base64Image,       // base64 at root level
+              mediatype: mediaUrlType,
+              mimetype: mimetype,
+              media: mediaUrl, // Direct URL (no base64)
+              fileName: mediaUrlFileName,
+              caption: mediaUrlCaption || ''
+            };
+            
+            console.log('📎 Request to Evolution API:', {
+              url: `${currentApiUrl}/message/sendMedia/${mediaUrlInstanceName}`,
+              body: { ...body, media: '[URL]' }
+            });
+            
+            response = await fetch(`${currentApiUrl}/message/sendMedia/${mediaUrlInstanceName}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': currentApiKey,
+              },
+              body: JSON.stringify(body)
+            });
+          } else {
+            // Images: download and convert to base64 (existing behavior)
+            console.log('📥 Downloading image from Supabase Storage:', mediaUrl);
+            const imageResponse = await fetch(mediaUrl);
+            
+            if (!imageResponse.ok) {
+              throw new Error(`Failed to download image from storage: ${imageResponse.status}`);
+            }
+
+            const imageBuffer = await imageResponse.arrayBuffer();
+            const uint8Array = new Uint8Array(imageBuffer);
+            let binaryString = '';
+            
+            for (let i = 0; i < uint8Array.length; i++) {
+              binaryString += String.fromCharCode(uint8Array[i]);
+            }
+
+            const base64Image = btoa(binaryString);
+            
+            console.log(`✅ Image downloaded and converted to base64 (${imageBuffer.byteLength} bytes)`);
+            
+            body = {
+              number: mediaUrlNumber.replace(/\D/g, ''),
+              mediatype: mediaUrlType,
+              mimetype: mimetype,
+              media: base64Image, // base64 at root level
               fileName: mediaUrlFileName,
               caption: mediaUrlCaption
-            })
-          });
+            };
+
+            console.log('📎 Sending image with base64 to Evolution API...');
+            response = await fetch(`${currentApiUrl}/message/sendMedia/${mediaUrlInstanceName}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': currentApiKey,
+              },
+              body: JSON.stringify(body)
+            });
+          }
 
           // Get response as text first to handle non-JSON responses
           const responseText = await response.text();

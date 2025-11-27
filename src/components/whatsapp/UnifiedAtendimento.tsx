@@ -58,6 +58,21 @@ const ACCEPTED_DOCUMENT_TYPES = [
   'text/plain'
 ];
 
+// Sanitize filename to remove emojis and special characters
+const sanitizeFileName = (fileName: string): string => {
+  // Remove emojis
+  const withoutEmoji = fileName.replace(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F900}-\u{1F9FF}]/gu, '');
+  
+  // Remove non-ASCII characters and replace spaces with underscore
+  return withoutEmoji
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[^\w\s.-]/g, '')       // Remove special characters (except . - _)
+    .replace(/\s+/g, '_')            // Replace spaces with underscore
+    .replace(/_+/g, '_')             // Remove duplicate underscores
+    .trim();
+};
+
 // Compress and resize image using Canvas API
 const compressImage = async (file: File): Promise<File> => {
   return new Promise((resolve, reject) => {
@@ -679,8 +694,9 @@ export default function UnifiedAtendimento() {
       setIsUploadingVideo(true);
       toast.info('Enviando vídeo...');
       
-      // Upload to Supabase Storage
-      const fileName = `${Date.now()}_${file.name}`;
+      // Upload to Supabase Storage with sanitized filename
+      const sanitizedName = sanitizeFileName(file.name);
+      const fileName = `${Date.now()}_${sanitizedName}`;
       const path = `${currentWorkspace?.id}/videos/${fileName}`;
       
       const { data: up, error: upErr } = await supabase.storage
@@ -757,8 +773,9 @@ export default function UnifiedAtendimento() {
       setIsUploadingDocument(true);
       toast.info('Enviando documento...');
       
-      // Upload to Supabase Storage
-      const fileName = `${Date.now()}_${file.name}`;
+      // Upload to Supabase Storage with sanitized filename
+      const sanitizedName = sanitizeFileName(file.name);
+      const fileName = `${Date.now()}_${sanitizedName}`;
       const path = `${currentWorkspace?.id}/documents/${fileName}`;
       
       const { data: up, error: upErr } = await supabase.storage

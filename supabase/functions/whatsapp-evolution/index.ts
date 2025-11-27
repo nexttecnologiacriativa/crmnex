@@ -217,19 +217,62 @@ serve(async (req) => {
             throw new Error(`Failed to download image from storage: ${imageResponse.status}`);
           }
 
+          // Convert to base64 using chunks to avoid stack overflow
           const imageBuffer = await imageResponse.arrayBuffer();
-          const base64Image = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
+          const uint8Array = new Uint8Array(imageBuffer);
+          let binaryString = '';
+          const chunkSize = 8192; // Process in 8KB chunks
           
+          for (let i = 0; i < uint8Array.length; i += chunkSize) {
+            const chunk = uint8Array.subarray(i, i + chunkSize);
+            binaryString += String.fromCharCode(...chunk);
+          }
+          
+          const base64Image = btoa(binaryString);
           console.log(`✅ Image downloaded and converted to base64 (${imageBuffer.byteLength} bytes)`);
 
-          // Map mediaType to correct mimetype
+          // Helper function to detect mimetype from file extension
+          function getMimetypeFromFileName(fileName: string): string {
+            const ext = fileName.split('.').pop()?.toLowerCase() || '';
+            const extensionMap: Record<string, string> = {
+              // Images
+              'jpg': 'image/jpeg',
+              'jpeg': 'image/jpeg',
+              'png': 'image/png',
+              'gif': 'image/gif',
+              'webp': 'image/webp',
+              // Documents
+              'pdf': 'application/pdf',
+              'doc': 'application/msword',
+              'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+              'xls': 'application/vnd.ms-excel',
+              'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              'ppt': 'application/vnd.ms-powerpoint',
+              'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+              'txt': 'text/plain',
+              'csv': 'text/csv',
+              'zip': 'application/zip',
+              'rar': 'application/x-rar-compressed',
+              // Video
+              'mp4': 'video/mp4',
+              'mov': 'video/quicktime',
+              // Audio
+              'mp3': 'audio/mpeg',
+              'wav': 'audio/wav',
+              'm4a': 'audio/mp4',
+              'ogg': 'audio/ogg',
+            };
+            return extensionMap[ext] || 'application/octet-stream';
+          }
+
+          // Detect mimetype intelligently from fileName or fallback to mediaType
           const mimetypeMap: Record<string, string> = {
             'image': 'image/jpeg',
             'video': 'video/mp4',
             'audio': 'audio/mpeg',
             'document': 'application/pdf'
           };
-          const mimetype = mimetypeMap[mediaUrlType] || 'application/octet-stream';
+          const mimetype = getMimetypeFromFileName(mediaUrlFileName) || mimetypeMap[mediaUrlType] || 'application/octet-stream';
           
           // Send to Evolution API with base64 image - flat structure as per official docs
           console.log('📎 Sending media with base64 to Evolution API...');

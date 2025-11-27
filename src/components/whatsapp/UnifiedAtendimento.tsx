@@ -37,6 +37,75 @@ import { useQuery } from '@tanstack/react-query';
 // Image size limit: 5MB (to ensure compatibility with WhatsApp/Evolution API)
 const MAX_IMAGE_SIZE_MB = 5;
 const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024; // 5MB in bytes
+const MAX_IMAGE_DIMENSION = 1920; // Maximum pixel dimension - images larger will be resized
+
+// Compress and resize image using Canvas API
+const compressImage = async (file: File): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    
+    img.onload = () => {
+      URL.revokeObjectURL(img.src);
+      
+      let { width, height } = img;
+      const originalDimensions = `${width}x${height}`;
+      
+      // Check if resize is needed
+      const needsResize = width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION;
+      
+      if (needsResize) {
+        // Calculate new dimensions maintaining aspect ratio
+        if (width > height) {
+          height = Math.round((height * MAX_IMAGE_DIMENSION) / width);
+          width = MAX_IMAGE_DIMENSION;
+        } else {
+          width = Math.round((width * MAX_IMAGE_DIMENSION) / height);
+          height = MAX_IMAGE_DIMENSION;
+        }
+      }
+      
+      // Create canvas and draw resized image
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Falha ao criar contexto do canvas'));
+        return;
+      }
+      
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Convert to JPEG with 80% quality
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            const newName = file.name.replace(/\.[^.]+$/, '.jpg');
+            const compressedFile = new File([blob], newName, {
+              type: 'image/jpeg',
+              lastModified: Date.now()
+            });
+            
+            console.log(`📸 Imagem processada: ${originalDimensions} → ${width}x${height}, ${(file.size/1024/1024).toFixed(2)}MB → ${(compressedFile.size/1024/1024).toFixed(2)}MB`);
+            resolve(compressedFile);
+          } else {
+            reject(new Error('Falha ao comprimir imagem'));
+          }
+        },
+        'image/jpeg',
+        0.8 // 80% quality
+      );
+    };
+    
+    img.onerror = () => {
+      URL.revokeObjectURL(img.src);
+      reject(new Error('Falha ao carregar imagem'));
+    };
+    
+    img.src = URL.createObjectURL(file);
+  });
+};
 
 export default function UnifiedAtendimento() {
   const {
@@ -433,28 +502,55 @@ export default function UnifiedAtendimento() {
       return;
     }
     
-    // Validate image size
-    if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      setImageSizeError({
-        open: true,
-        fileName: file.name,
-        fileSize: file.size,
-        maxSize: MAX_IMAGE_SIZE_BYTES
-      });
-      return;
-    }
     try {
       setIsUploadingImage(true);
+      
+      // Always compress/resize images larger than 1MB
+      let fileToUpload = file;
+      const needsCompression = file.size > 1 * 1024 * 1024; // Compress if > 1MB
+      
+      if (needsCompression) {
+        toast.info('Otimizando imagem...');
+        try {
+          fileToUpload = await compressImage(file);
+          
+          // If still too large after compression
+          if (fileToUpload.size > MAX_IMAGE_SIZE_BYTES) {
+            setImageSizeError({
+              open: true,
+              fileName: file.name,
+              fileSize: fileToUpload.size,
+              maxSize: MAX_IMAGE_SIZE_BYTES
+            });
+            return;
+          }
+          
+          toast.success(`Imagem otimizada: ${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB`);
+        } catch (compressError) {
+          console.error('Erro ao comprimir:', compressError);
+          // If compression fails but original file is small enough, try to send
+          if (file.size > MAX_IMAGE_SIZE_BYTES) {
+            setImageSizeError({
+              open: true,
+              fileName: file.name,
+              fileSize: file.size,
+              maxSize: MAX_IMAGE_SIZE_BYTES
+            });
+            return;
+          }
+        }
+      }
+      
       toast.info('Enviando imagem...');
       
       const fileName = `${Date.now()}_${file.name}`;
       const path = `${currentWorkspace?.id}/images/${fileName}`;
       
-      // Upload to correct bucket: whatsapp-media
+      // Upload to correct bucket: whatsapp-media using optimized file
       const {
         data: up,
         error: upErr
-      } = await supabase.storage.from('whatsapp-media').upload(path, file, {
+      } = await supabase.storage.from('whatsapp-media').upload(path, fileToUpload, {
         contentType: file.type,
         cacheControl: '3600'
       });
@@ -969,21 +1065,16 @@ export default function UnifiedAtendimento() {
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
               <p>
-                O arquivo <strong>{imageSizeError?.fileName}</strong> tem{' '}
+                Não foi possível reduzir a imagem <strong>{imageSizeError?.fileName}</strong> para um tamanho aceitável.
+              </p>
+              <p>
+                Após otimização automática, o arquivo ainda tem{' '}
                 <strong>{((imageSizeError?.fileSize || 0) / (1024 * 1024)).toFixed(2)} MB</strong>,
                 mas o limite máximo é de <strong>{MAX_IMAGE_SIZE_MB} MB</strong>.
               </p>
               <p className="text-muted-foreground text-sm">
-                Para enviar esta imagem, reduza o tamanho ou comprima antes de selecionar.
+                A imagem original pode ser muito complexa ou conter muitos detalhes. Por favor, use uma imagem com menor resolução ou qualidade.
               </p>
-              <div className="bg-muted p-3 rounded-md text-sm">
-                <strong>Dicas:</strong>
-                <ul className="list-disc list-inside mt-1 space-y-1">
-                  <li>Use ferramentas online como TinyPNG ou Squoosh</li>
-                  <li>Redimensione a imagem para resolução menor</li>
-                  <li>Converta para formato JPEG com compressão</li>
-                </ul>
-              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

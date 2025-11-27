@@ -13,19 +13,18 @@ export default function Atendimento() {
   const { currentWorkspace } = useWorkspace();
   const navigate = useNavigate();
 
-  const { data: evolutionConfig, isLoading } = useQuery({
-    queryKey: ['whatsapp-evolution-config', currentWorkspace?.id],
+  const { data: whatsappInstances, isLoading } = useQuery({
+    queryKey: ['whatsapp-instances', currentWorkspace?.id],
     queryFn: async () => {
-      if (!currentWorkspace?.id) return null;
+      if (!currentWorkspace?.id) return [];
       
       const { data, error } = await supabase
-        .from('whatsapp_evolution_configs')
+        .from('whatsapp_instances')
         .select('*')
-        .eq('workspace_id', currentWorkspace.id)
-        .maybeSingle();
+        .eq('workspace_id', currentWorkspace.id);
 
       if (error) throw error;
-      return data;
+      return data || [];
     },
     enabled: !!currentWorkspace?.id
   });
@@ -40,7 +39,7 @@ export default function Atendimento() {
     );
   }
 
-  if (!evolutionConfig || !evolutionConfig.api_url || !evolutionConfig.global_api_key) {
+  if (!whatsappInstances || whatsappInstances.length === 0) {
     return (
       <DashboardLayout>
         <div className="space-y-6 mt-4">
@@ -48,8 +47,7 @@ export default function Atendimento() {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Atendimento não disponível</AlertTitle>
             <AlertDescription>
-              A aba de atendimento ainda não está disponível para este usuário. 
-              É necessário configurar a Evolution API nas configurações do WhatsApp.
+              Nenhuma instância WhatsApp encontrada. Crie uma instância nas configurações para usar o Atendimento.
             </AlertDescription>
           </Alert>
           <div className="flex justify-center">

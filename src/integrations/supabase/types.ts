@@ -2812,10 +2812,7 @@ export type Database = {
         Args: { p_user_id: string; p_workspace_name: string }
         Returns: string
       }
-      debug_auth_context: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      debug_auth_context: { Args: never; Returns: Json }
       get_appointment_stats: {
         Args: {
           p_end_date?: string
@@ -2837,39 +2834,24 @@ export type Database = {
           trigger_type: string
           workspace_id: string
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "automation_queue"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
-      get_scheduler_stats: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      get_workspace_stats: {
-        Args: { p_workspace_id: string }
-        Returns: Json
-      }
-      get_workspace_usage: {
-        Args: { p_workspace_id: string }
-        Returns: Json
-      }
-      is_super_admin: {
-        Args: { user_id: string }
-        Returns: boolean
-      }
-      normalize_phone_number: {
-        Args: { phone: string }
-        Returns: string
-      }
-      reset_workspace: {
-        Args: { p_workspace_id: string }
-        Returns: undefined
-      }
+      get_scheduler_stats: { Args: never; Returns: Json }
+      get_workspace_stats: { Args: { p_workspace_id: string }; Returns: Json }
+      get_workspace_usage: { Args: { p_workspace_id: string }; Returns: Json }
+      is_super_admin: { Args: { user_id: string }; Returns: boolean }
+      normalize_phone_number: { Args: { phone: string }; Returns: string }
+      reset_workspace: { Args: { p_workspace_id: string }; Returns: undefined }
       setup_default_workspace_data: {
         Args: { p_workspace_id: string }
         Returns: undefined
       }
-      sync_lead_pipeline_relations: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      sync_lead_pipeline_relations: { Args: never; Returns: undefined }
       sync_workspace_lead_relations: {
         Args: { p_workspace_id: string }
         Returns: undefined

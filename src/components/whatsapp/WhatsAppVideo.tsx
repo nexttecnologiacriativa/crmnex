@@ -40,7 +40,7 @@ export default function WhatsAppVideo({
         
         try {
           const { data, error: proxyError } = await supabase.functions.invoke('whatsapp-media-proxy', {
-            body: { mediaUrl }
+            body: { url: mediaUrl }
           });
 
           if (proxyError) {

@@ -1122,11 +1122,11 @@ export default function UnifiedAtendimento() {
                           {/* Audio Message */}
                           {m.message_type === 'audio' ? <div className="mb-2 space-y-2">
                               {m.permanent_audio_url || m.media_url ? m.permanent_audio_url ? <div className="space-y-1">
-                                    <audio controls className="w-full max-w-xs" src={m.permanent_audio_url} preload="metadata">
+                                    <audio controls className="w-full min-w-[50%]" src={m.permanent_audio_url} preload="metadata">
                                       Seu navegador não suporta o elemento de áudio.
                                     </audio>
                                     <div className="text-xs text-green-400">​</div>
-                                  </div> : <AudioPlayer audioUrl={m.media_url || ''} permanentUrl={m.permanent_audio_url || undefined} messageId={m.id} className="max-w-xs" /> : <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  </div> : <AudioPlayer audioUrl={m.media_url || ''} permanentUrl={m.permanent_audio_url || undefined} messageId={m.id} className="min-w-[50%]" /> : <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                   <AlertCircle className="h-4 w-4" />
                                   {m.message_text || 'Áudio não disponível'}
                                 </div>}

@@ -44,34 +44,24 @@ const MAX_COMPRESSED_SIZE = 500 * 1024; // 500KB target to ensure base64 stays u
 // Video and document size limits
 const MAX_VIDEO_SIZE_MB = 16;
 const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024;
-
 const MAX_DOCUMENT_SIZE_MB = 16;
 const MAX_DOCUMENT_SIZE_BYTES = MAX_DOCUMENT_SIZE_MB * 1024 * 1024;
 
 // Accepted file types
 const ACCEPTED_VIDEO_TYPES = ['video/mp4', 'video/3gpp', 'video/quicktime'];
-const ACCEPTED_DOCUMENT_TYPES = [
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'text/plain'
-];
+const ACCEPTED_DOCUMENT_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/plain'];
 
 // Sanitize filename to remove emojis and special characters
 const sanitizeFileName = (fileName: string): string => {
   // Remove emojis
   const withoutEmoji = fileName.replace(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F900}-\u{1F9FF}]/gu, '');
-  
+
   // Remove non-ASCII characters and replace spaces with underscore
-  return withoutEmoji
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove accents
-    .replace(/[^\w\s.-]/g, '')       // Remove special characters (except . - _)
-    .replace(/\s+/g, '_')            // Replace spaces with underscore
-    .replace(/_+/g, '_')             // Remove duplicate underscores
-    .trim();
+  return withoutEmoji.normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remove accents
+  .replace(/[^\w\s.-]/g, '') // Remove special characters (except . - _)
+  .replace(/\s+/g, '_') // Replace spaces with underscore
+  .replace(/_+/g, '_') // Remove duplicate underscores
+  .trim();
 };
 
 // Compress and resize image using Canvas API
@@ -666,19 +656,18 @@ export default function UnifiedAtendimento() {
     if (file) handleImageSelect(file);
     e.currentTarget.value = '';
   };
-
   const handleVideoSelect = async (file: File) => {
     if (!selectedConv || !selectedInstanceName) {
       if (!selectedInstanceName) toast.error('Selecione uma instância Evolution');
       return;
     }
-    
+
     // Validate video type
     if (!ACCEPTED_VIDEO_TYPES.includes(file.type)) {
       toast.error('Formato de vídeo não suportado. Use MP4, MOV ou 3GPP.');
       return;
     }
-    
+
     // Validate size
     if (file.size > MAX_VIDEO_SIZE_BYTES) {
       setFileSizeError({
@@ -690,33 +679,32 @@ export default function UnifiedAtendimento() {
       });
       return;
     }
-    
     try {
       setIsUploadingVideo(true);
       toast.info('Enviando vídeo...');
-      
+
       // Upload to Supabase Storage with sanitized filename
       const sanitizedName = sanitizeFileName(file.name);
       const fileName = `${Date.now()}_${sanitizedName}`;
       const path = `${currentWorkspace?.id}/videos/${fileName}`;
-      
-      const { data: up, error: upErr } = await supabase.storage
-        .from('whatsapp-media')
-        .upload(path, file, {
-          contentType: file.type,
-          cacheControl: '3600'
-        });
-        
+      const {
+        data: up,
+        error: upErr
+      } = await supabase.storage.from('whatsapp-media').upload(path, file, {
+        contentType: file.type,
+        cacheControl: '3600'
+      });
       if (upErr) throw new Error(`Erro ao fazer upload: ${upErr.message}`);
-      
-      const { data: pub } = supabase.storage
-        .from('whatsapp-media')
-        .getPublicUrl(up.path);
-      
+      const {
+        data: pub
+      } = supabase.storage.from('whatsapp-media').getPublicUrl(up.path);
       const phoneToSend = ensureCountryCode55(selectedConv.phone_number || '');
-      
+
       // Send via Evolution API
-      const { data: sendResult, error: sendError } = await supabase.functions.invoke('whatsapp-evolution', {
+      const {
+        data: sendResult,
+        error: sendError
+      } = await supabase.functions.invoke('whatsapp-evolution', {
         body: {
           action: 'sendMediaUrl',
           instanceName: selectedInstanceName,
@@ -728,14 +716,16 @@ export default function UnifiedAtendimento() {
           workspaceId: currentWorkspace?.id
         }
       });
-      
       if (sendError || sendResult?.error) {
         throw new Error(sendResult?.error || sendError?.message || 'Falha ao enviar vídeo');
       }
-      
       setMessage('');
-      queryClient.invalidateQueries({ queryKey: ['whatsapp-messages', selectedConv.id] });
-      queryClient.invalidateQueries({ queryKey: ['whatsapp-conversations', currentWorkspace?.id] });
+      queryClient.invalidateQueries({
+        queryKey: ['whatsapp-messages', selectedConv.id]
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['whatsapp-conversations', currentWorkspace?.id]
+      });
       setTimeout(scrollToBottom, 200);
       toast.success('Vídeo enviado com sucesso!');
     } catch (e: any) {
@@ -745,19 +735,17 @@ export default function UnifiedAtendimento() {
       setIsUploadingVideo(false);
     }
   };
-
   const handleVideoInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) handleVideoSelect(file);
     e.currentTarget.value = '';
   };
-
   const handleDocumentSelect = async (file: File) => {
     if (!selectedConv || !selectedInstanceName) {
       if (!selectedInstanceName) toast.error('Selecione uma instância Evolution');
       return;
     }
-    
+
     // Validate size
     if (file.size > MAX_DOCUMENT_SIZE_BYTES) {
       setFileSizeError({
@@ -769,52 +757,54 @@ export default function UnifiedAtendimento() {
       });
       return;
     }
-    
     try {
       setIsUploadingDocument(true);
       toast.info('Enviando documento...');
-      
+
       // Upload to Supabase Storage with sanitized filename
       const sanitizedName = sanitizeFileName(file.name);
       const fileName = `${Date.now()}_${sanitizedName}`;
       const path = `${currentWorkspace?.id}/documents/${fileName}`;
-      
-      const { data: up, error: upErr } = await supabase.storage
-        .from('whatsapp-media')
-        .upload(path, file, {
-          contentType: file.type,
-          cacheControl: '3600'
-        });
-        
+      const {
+        data: up,
+        error: upErr
+      } = await supabase.storage.from('whatsapp-media').upload(path, file, {
+        contentType: file.type,
+        cacheControl: '3600'
+      });
       if (upErr) throw new Error(`Erro ao fazer upload: ${upErr.message}`);
-      
-      const { data: pub } = supabase.storage
-        .from('whatsapp-media')
-        .getPublicUrl(up.path);
-      
+      const {
+        data: pub
+      } = supabase.storage.from('whatsapp-media').getPublicUrl(up.path);
       const phoneToSend = ensureCountryCode55(selectedConv.phone_number || '');
-      
+
       // Send via Evolution API
-      const { data: sendResult, error: sendError } = await supabase.functions.invoke('whatsapp-evolution', {
+      const {
+        data: sendResult,
+        error: sendError
+      } = await supabase.functions.invoke('whatsapp-evolution', {
         body: {
           action: 'sendMediaUrl',
           instanceName: selectedInstanceName,
           number: phoneToSend,
           mediaUrl: pub.publicUrl,
           mediaType: 'document',
-          fileName: file.name, // Keep original name for documents
+          fileName: file.name,
+          // Keep original name for documents
           caption: message?.trim() || '',
           workspaceId: currentWorkspace?.id
         }
       });
-      
       if (sendError || sendResult?.error) {
         throw new Error(sendResult?.error || sendError?.message || 'Falha ao enviar documento');
       }
-      
       setMessage('');
-      queryClient.invalidateQueries({ queryKey: ['whatsapp-messages', selectedConv.id] });
-      queryClient.invalidateQueries({ queryKey: ['whatsapp-conversations', currentWorkspace?.id] });
+      queryClient.invalidateQueries({
+        queryKey: ['whatsapp-messages', selectedConv.id]
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['whatsapp-conversations', currentWorkspace?.id]
+      });
       setTimeout(scrollToBottom, 200);
       toast.success('Documento enviado com sucesso!');
     } catch (e: any) {
@@ -824,7 +814,6 @@ export default function UnifiedAtendimento() {
       setIsUploadingDocument(false);
     }
   };
-
   const handleDocumentInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) handleDocumentSelect(file);
@@ -1094,12 +1083,7 @@ export default function UnifiedAtendimento() {
                           
                           {/* Image Message */}
                           {m.message_type === 'image' && m.media_url ? <div className="mb-2">
-                              <WhatsAppImage 
-                                mediaUrl={m.media_url} 
-                                alt="Imagem enviada" 
-                                className="max-w-48 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                                onClick={() => window.open(m.media_url, '_blank')}
-                              />
+                              <WhatsAppImage mediaUrl={m.media_url} alt="Imagem enviada" className="max-w-48 rounded-lg cursor-pointer hover:opacity-90 transition-opacity" onClick={() => window.open(m.media_url, '_blank')} />
                             </div> : null}
                           
                           {/* Video Message */}
@@ -1117,20 +1101,20 @@ export default function UnifiedAtendimento() {
                                 </p>
                               </div>
                               <Button variant="ghost" size="sm" onClick={async () => {
-                                try {
-                                  const response = await fetch(m.media_url);
-                                  const blob = await response.blob();
-                                  const blobUrl = URL.createObjectURL(blob);
-                                  const link = document.createElement('a');
-                                  link.href = blobUrl;
-                                  link.download = m.attachment_name || 'documento';
-                                  link.click();
-                                  URL.revokeObjectURL(blobUrl);
-                                } catch (error) {
-                                  console.error('Download failed:', error);
-                                  window.open(m.media_url, '_blank');
-                                }
-                              }} title="Download">
+                        try {
+                          const response = await fetch(m.media_url);
+                          const blob = await response.blob();
+                          const blobUrl = URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = blobUrl;
+                          link.download = m.attachment_name || 'documento';
+                          link.click();
+                          URL.revokeObjectURL(blobUrl);
+                        } catch (error) {
+                          console.error('Download failed:', error);
+                          window.open(m.media_url, '_blank');
+                        }
+                      }} title="Download">
                                 <Download className="h-4 w-4" />
                               </Button>
                             </div> : null}
@@ -1141,7 +1125,7 @@ export default function UnifiedAtendimento() {
                                     <audio controls className="w-full max-w-xs" src={m.permanent_audio_url} preload="metadata">
                                       Seu navegador não suporta o elemento de áudio.
                                     </audio>
-                                    <div className="text-xs text-green-400">✅ Áudio processado</div>
+                                    <div className="text-xs text-green-400">​</div>
                                   </div> : <AudioPlayer audioUrl={m.media_url || ''} permanentUrl={m.permanent_audio_url || undefined} messageId={m.id} className="max-w-xs" /> : <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                   <AlertCircle className="h-4 w-4" />
                                   {m.message_text || 'Áudio não disponível'}

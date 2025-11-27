@@ -34,6 +34,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useQuery } from '@tanstack/react-query';
 
 // Audio functionality has been removed from this component
+// Image size limit: 5MB (to ensure compatibility with WhatsApp/Evolution API)
+const MAX_IMAGE_SIZE_MB = 5;
+const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024; // 5MB in bytes
+
 export default function UnifiedAtendimento() {
   const {
     currentWorkspace
@@ -310,6 +314,12 @@ export default function UnifiedAtendimento() {
   const clearAllConversations = useClearAllConversations();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [imageSizeError, setImageSizeError] = useState<{
+    open: boolean;
+    fileName: string;
+    fileSize: number;
+    maxSize: number;
+  } | null>(null);
 
   // Scroll automático para última mensagem
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -420,6 +430,17 @@ export default function UnifiedAtendimento() {
     }
     if (!file.type.startsWith('image/')) {
       toast.error('Selecione uma imagem');
+      return;
+    }
+    
+    // Validate image size
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setImageSizeError({
+        open: true,
+        fileName: file.name,
+        fileSize: file.size,
+        maxSize: MAX_IMAGE_SIZE_BYTES
+      });
       return;
     }
     try {
@@ -934,6 +955,44 @@ export default function UnifiedAtendimento() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Image Size Error Dialog */}
+      <AlertDialog 
+        open={imageSizeError?.open ?? false} 
+        onOpenChange={(open) => !open && setImageSizeError(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              Imagem muito grande
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                O arquivo <strong>{imageSizeError?.fileName}</strong> tem{' '}
+                <strong>{((imageSizeError?.fileSize || 0) / (1024 * 1024)).toFixed(2)} MB</strong>,
+                mas o limite máximo é de <strong>{MAX_IMAGE_SIZE_MB} MB</strong>.
+              </p>
+              <p className="text-muted-foreground text-sm">
+                Para enviar esta imagem, reduza o tamanho ou comprima antes de selecionar.
+              </p>
+              <div className="bg-muted p-3 rounded-md text-sm">
+                <strong>Dicas:</strong>
+                <ul className="list-disc list-inside mt-1 space-y-1">
+                  <li>Use ferramentas online como TinyPNG ou Squoosh</li>
+                  <li>Redimensione a imagem para resolução menor</li>
+                  <li>Converta para formato JPEG com compressão</li>
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setImageSizeError(null)}>
+              Entendi
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Dialog Criar Lead */}
       <CreateLeadFromConversationDialog open={createLeadOpen} onOpenChange={setCreateLeadOpen} phoneNumber={selectedConvForLead?.phone_number || ''} contactName={selectedConvForLead?.contact_name} conversationId={selectedConvForLead?.id || ''} onLeadCreated={leadId => {

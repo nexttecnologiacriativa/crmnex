@@ -220,11 +220,9 @@ serve(async (req) => {
           const imageBuffer = await imageResponse.arrayBuffer();
           const uint8Array = new Uint8Array(imageBuffer);
           let binaryString = '';
-          const chunkSize = 8192; // process in 8KB chunks to avoid stack overflow
-
-          for (let i = 0; i < uint8Array.length; i += chunkSize) {
-            const chunk = uint8Array.subarray(i, i + chunkSize);
-            binaryString += String.fromCharCode(...chunk);
+          
+          for (let i = 0; i < uint8Array.length; i++) {
+            binaryString += String.fromCharCode(uint8Array[i]);
           }
 
           const base64Image = btoa(binaryString);
@@ -1083,15 +1081,13 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
       throw new Error(`Failed to download image: ${imageResponse.status}`);
     }
 
-    // PASSO 2: Converter para base64 (usando chunks para evitar stack overflow)
+    // PASSO 2: Converter para base64 sem usar spread para evitar stack overflow
     const imageBuffer = await imageResponse.arrayBuffer();
     const uint8Array = new Uint8Array(imageBuffer);
     let binaryString = '';
-    const chunkSize = 8192; // Process in 8KB chunks
     
-    for (let i = 0; i < uint8Array.length; i += chunkSize) {
-      const chunk = uint8Array.subarray(i, i + chunkSize);
-      binaryString += String.fromCharCode(...chunk);
+    for (let i = 0; i < uint8Array.length; i++) {
+      binaryString += String.fromCharCode(uint8Array[i]);
     }
     
     const base64Image = btoa(binaryString);

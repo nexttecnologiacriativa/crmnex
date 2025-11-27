@@ -44,70 +44,61 @@ const MAX_COMPRESSED_SIZE = 500 * 1024; // 500KB target to ensure base64 stays u
 const compressImage = async (file: File): Promise<File> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    
     img.onload = () => {
       URL.revokeObjectURL(img.src);
-      
-      let { width, height } = img;
+      let {
+        width,
+        height
+      } = img;
       const originalDimensions = `${width}x${height}`;
-      
+
       // Check if resize is needed
       const needsResize = width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION;
-      
       if (needsResize) {
         // Calculate new dimensions maintaining aspect ratio
         if (width > height) {
-          height = Math.round((height * MAX_IMAGE_DIMENSION) / width);
+          height = Math.round(height * MAX_IMAGE_DIMENSION / width);
           width = MAX_IMAGE_DIMENSION;
         } else {
-          width = Math.round((width * MAX_IMAGE_DIMENSION) / height);
+          width = Math.round(width * MAX_IMAGE_DIMENSION / height);
           height = MAX_IMAGE_DIMENSION;
         }
       }
-      
+
       // Create canvas and draw resized image
       const canvas = document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
-      
       const ctx = canvas.getContext('2d');
       if (!ctx) {
         reject(new Error('Falha ao criar contexto do canvas'));
         return;
       }
-      
       ctx.drawImage(img, 0, 0, width, height);
-      
+
       // Convert to JPEG with 70% quality (more aggressive compression)
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            const newName = file.name.replace(/\.[^.]+$/, '.jpg');
-            const compressedFile = new File([blob], newName, {
-              type: 'image/jpeg',
-              lastModified: Date.now()
-            });
-            
-            console.log(`📸 Imagem processada: ${originalDimensions} → ${width}x${height}, ${(file.size/1024).toFixed(0)}KB → ${(compressedFile.size/1024).toFixed(0)}KB`);
-            resolve(compressedFile);
-          } else {
-            reject(new Error('Falha ao comprimir imagem'));
-          }
-        },
-        'image/jpeg',
-        0.7 // 70% quality for smaller size
+      canvas.toBlob(blob => {
+        if (blob) {
+          const newName = file.name.replace(/\.[^.]+$/, '.jpg');
+          const compressedFile = new File([blob], newName, {
+            type: 'image/jpeg',
+            lastModified: Date.now()
+          });
+          console.log(`📸 Imagem processada: ${originalDimensions} → ${width}x${height}, ${(file.size / 1024).toFixed(0)}KB → ${(compressedFile.size / 1024).toFixed(0)}KB`);
+          resolve(compressedFile);
+        } else {
+          reject(new Error('Falha ao comprimir imagem'));
+        }
+      }, 'image/jpeg', 0.7 // 70% quality for smaller size
       );
     };
-    
     img.onerror = () => {
       URL.revokeObjectURL(img.src);
       reject(new Error('Falha ao carregar imagem'));
     };
-    
     img.src = URL.createObjectURL(file);
   });
 };
-
 export default function UnifiedAtendimento() {
   const {
     currentWorkspace
@@ -202,32 +193,27 @@ export default function UnifiedAtendimento() {
   };
 
   // Buscar perfis dos responsáveis (assigned_to) dos leads
-  const { data: profiles = [] } = useQuery({
+  const {
+    data: profiles = []
+  } = useQuery({
     queryKey: ['profiles-for-leads', currentWorkspace?.id],
     queryFn: async () => {
       if (!currentWorkspace?.id || !leads?.length) return [];
-      
-      const assigneeIds = leads
-        .map(l => l.assigned_to)
-        .filter(Boolean) as string[];
-      
+      const assigneeIds = leads.map(l => l.assigned_to).filter(Boolean) as string[];
       if (assigneeIds.length === 0) return [];
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, email, avatar_url')
-        .in('id', assigneeIds);
-      
+      const {
+        data,
+        error
+      } = await supabase.from('profiles').select('id, full_name, email, avatar_url').in('id', assigneeIds);
       if (error) {
         console.error('Error fetching profiles:', error);
         return [];
       }
-      
       return data || [];
     },
     enabled: !!currentWorkspace?.id && !!leads?.length
   });
-  
+
   // Instance selection - DEVE VIR ANTES DOS useEffect QUE USAM ESTAS VARIÁVEIS
   const connectedInstances = (instances || []).filter(i => i.status === 'open');
   const firstInstance = connectedInstances[0]?.instance_name || '';
@@ -240,7 +226,6 @@ export default function UnifiedAtendimento() {
       setSelectedInstanceName(firstInstance);
     }
   }, [firstInstance, selectedInstanceName]);
-  
   useEffect(() => {
     if (hasProcessedNavRef.current) return;
 
@@ -284,13 +269,12 @@ export default function UnifiedAtendimento() {
         companyName,
         companyPhone
       } = location.state;
-      
+
       // Garantir que uma instância está selecionada
       if (!selectedInstanceName && firstInstance) {
         console.log('🔌 Selecionando instância automaticamente ao abrir conversa de outbound:', firstInstance);
         setSelectedInstanceName(firstInstance);
       }
-      
       if (companyPhone) {
         const normalizedPhone = normalizeForMatch(companyPhone);
 
@@ -315,13 +299,12 @@ export default function UnifiedAtendimento() {
   }, [location.state, leads, conversations, selectedInstanceName, firstInstance]);
   const handleCreateConversationForLead = async (leadId: string, phoneDigits: string, lead: any) => {
     if (!currentWorkspace?.id) return;
-    
+
     // Garantir que uma instância está selecionada
     if (!selectedInstanceName && firstInstance) {
       console.log('🔌 Selecionando instância automaticamente para lead:', firstInstance);
       setSelectedInstanceName(firstInstance);
     }
-    
     try {
       const created = await createConversation.mutateAsync({
         workspace_id: currentWorkspace.id,
@@ -344,13 +327,12 @@ export default function UnifiedAtendimento() {
   };
   const handleCreateConversationForCompany = async (companyName: string, phoneDigits: string) => {
     if (!currentWorkspace?.id) return;
-    
+
     // Garantir que uma instância está selecionada
     if (!selectedInstanceName && firstInstance) {
       console.log('🔌 Selecionando instância automaticamente para empresa:', firstInstance);
       setSelectedInstanceName(firstInstance);
     }
-    
     try {
       const created = await createConversation.mutateAsync({
         workspace_id: currentWorkspace.id,
@@ -371,7 +353,6 @@ export default function UnifiedAtendimento() {
       toast.error('Erro ao iniciar conversa: ' + (e?.message || 'Erro desconhecido'));
     }
   };
-
 
   // New message dialog state
   const [newMsgOpen, setNewMsgOpen] = useState(false);
@@ -466,10 +447,8 @@ export default function UnifiedAtendimento() {
       toast.error('Aguarde um momento antes de enviar outra mensagem');
       return;
     }
-
     setIsSendingMessage(true); // Trava imediata
     const phoneToSend = ensureCountryCode55(selectedConv.phone_number || '');
-    
     try {
       await sendEvolution.mutateAsync({
         instanceName: selectedInstanceName,
@@ -502,24 +481,23 @@ export default function UnifiedAtendimento() {
       toast.error('Selecione uma imagem');
       return;
     }
-    
     try {
       setIsUploadingImage(true);
-      
+
       // Always compress/resize images larger than 500KB to ensure base64 < 1MB
       let fileToUpload = file;
       const needsCompression = file.size > MAX_COMPRESSED_SIZE; // Compress if > 500KB
-      
+
       if (needsCompression) {
         toast.info('Otimizando imagem...');
         try {
           fileToUpload = await compressImage(file);
-          
+
           // If still above target, recompress with lower quality
           if (fileToUpload.size > MAX_COMPRESSED_SIZE) {
-            console.log(`⚠️ Imagem ainda grande (${(fileToUpload.size/1024).toFixed(0)}KB), recomprimindo com qualidade 50%...`);
+            console.log(`⚠️ Imagem ainda grande (${(fileToUpload.size / 1024).toFixed(0)}KB), recomprimindo com qualidade 50%...`);
             toast.info('Aplicando compressão adicional...');
-            
+
             // Recompress with 50% quality
             const img = new Image();
             await new Promise((resolve, reject) => {
@@ -527,14 +505,13 @@ export default function UnifiedAtendimento() {
               img.onerror = reject;
               img.src = URL.createObjectURL(fileToUpload);
             });
-            
             const canvas = document.createElement('canvas');
             canvas.width = img.width;
             canvas.height = img.height;
             const ctx = canvas.getContext('2d');
             if (ctx) {
               ctx.drawImage(img, 0, 0);
-              const blob = await new Promise<Blob | null>((resolve) => {
+              const blob = await new Promise<Blob | null>(resolve => {
                 canvas.toBlob(resolve, 'image/jpeg', 0.5); // 50% quality
               });
               if (blob) {
@@ -542,12 +519,12 @@ export default function UnifiedAtendimento() {
                   type: 'image/jpeg',
                   lastModified: Date.now()
                 });
-                console.log(`✅ Recompressão concluída: ${(blob.size/1024).toFixed(0)}KB`);
+                console.log(`✅ Recompressão concluída: ${(blob.size / 1024).toFixed(0)}KB`);
               }
             }
             URL.revokeObjectURL(img.src);
           }
-          
+
           // If STILL too large after recompression
           if (fileToUpload.size > MAX_IMAGE_SIZE_BYTES) {
             setImageSizeError({
@@ -558,7 +535,6 @@ export default function UnifiedAtendimento() {
             });
             return;
           }
-          
           toast.success(`Imagem otimizada: ${(fileToUpload.size / 1024).toFixed(0)}KB`);
         } catch (compressError) {
           console.error('Erro ao comprimir:', compressError);
@@ -574,12 +550,10 @@ export default function UnifiedAtendimento() {
           }
         }
       }
-      
       toast.info('Enviando imagem...');
-      
       const fileName = `${Date.now()}_${file.name}`;
       const path = `${currentWorkspace?.id}/images/${fileName}`;
-      
+
       // Upload to correct bucket: whatsapp-media using optimized file
       const {
         data: up,
@@ -588,24 +562,24 @@ export default function UnifiedAtendimento() {
         contentType: file.type,
         cacheControl: '3600'
       });
-      
       if (upErr) {
         console.error('Upload error:', upErr);
         throw new Error(`Erro ao fazer upload da imagem: ${upErr.message}`);
       }
-      
       const {
         data: pub
       } = supabase.storage.from('whatsapp-media').getPublicUrl(up.path);
-      
       const phoneToSend = ensureCountryCode55(selectedConv.phone_number || '');
-      
+
       // Evolution API config
       const cfgRaw = currentWorkspace?.id ? localStorage.getItem(`evolution_config_${currentWorkspace.id}`) : null;
       const cfg = cfgRaw ? JSON.parse(cfgRaw) : null;
-      
+
       // Send image via Evolution API using direct URL (avoid 413 error with Base64)
-      const { data: sendResult, error: sendError } = await supabase.functions.invoke('whatsapp-evolution', {
+      const {
+        data: sendResult,
+        error: sendError
+      } = await supabase.functions.invoke('whatsapp-evolution', {
         body: {
           action: 'sendMediaUrl',
           instanceName: selectedInstanceName,
@@ -619,16 +593,13 @@ export default function UnifiedAtendimento() {
           apiUrl: cfg?.api_url
         }
       });
-      
       if (sendError) {
         console.error('Send error:', sendError);
         throw new Error(`Erro ao enviar imagem: ${sendError.message}`);
       }
-      
       if (!sendResult || sendResult.error) {
         throw new Error(sendResult?.error || 'Falha ao enviar imagem');
       }
-      
       setMessage('');
       queryClient.invalidateQueries({
         queryKey: ['whatsapp-messages', selectedConv.id]
@@ -655,20 +626,18 @@ export default function UnifiedAtendimento() {
   const enrichedConversations = useMemo(() => {
     // First, group conversations by normalized phone number to eliminate duplicates
     const conversationsByNormalizedPhone = new Map<string, any[]>();
-    
     conversations.forEach((conv: any) => {
       const normalizedPhone = normalizeForMatch(conv.phone_number || '');
       if (!normalizedPhone) return;
-      
       if (!conversationsByNormalizedPhone.has(normalizedPhone)) {
         conversationsByNormalizedPhone.set(normalizedPhone, []);
       }
       conversationsByNormalizedPhone.get(normalizedPhone)!.push(conv);
     });
-    
+
     // For each group, keep only the most recent conversation
     const uniqueConversations: any[] = [];
-    conversationsByNormalizedPhone.forEach((convGroup) => {
+    conversationsByNormalizedPhone.forEach(convGroup => {
       // Sort by last_message_at descending and take the first one
       const sortedGroup = convGroup.sort((a, b) => {
         const dateA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
@@ -677,12 +646,11 @@ export default function UnifiedAtendimento() {
       });
       uniqueConversations.push(sortedGroup[0]);
     });
-    
+
     // Now enrich the unique conversations
     return uniqueConversations.map((conv: any) => {
       const foundLead = findLeadByPhone(conv.phone_number || '');
       const assignee = foundLead?.assigned_to ? profiles.find(p => p.id === foundLead.assigned_to) : null;
-      
       return {
         ...conv,
         leads: foundLead,
@@ -694,14 +662,16 @@ export default function UnifiedAtendimento() {
 
   // Buscar todas as tags dos leads nas conversas
   const leadIds = enrichedConversations.filter(c => c.leads?.id).map(c => c.leads.id);
-  const { data: leadTagsData = [] } = useQuery({
+  const {
+    data: leadTagsData = []
+  } = useQuery({
     queryKey: ['lead-tags-for-conversations', currentWorkspace?.id, leadIds],
     queryFn: async () => {
       if (!currentWorkspace?.id || leadIds.length === 0) return [];
-      
-      const { data, error } = await supabase
-        .from('lead_tag_relations')
-        .select(`
+      const {
+        data,
+        error
+      } = await supabase.from('lead_tag_relations').select(`
           id,
           lead_id,
           tag_id,
@@ -710,14 +680,11 @@ export default function UnifiedAtendimento() {
             name,
             color
           )
-        `)
-        .in('lead_id', leadIds);
-      
+        `).in('lead_id', leadIds);
       if (error) {
         console.error('Error fetching lead tags:', error);
         return [];
       }
-      
       return data || [];
     },
     enabled: !!currentWorkspace?.id && leadIds.length > 0
@@ -850,34 +817,18 @@ export default function UnifiedAtendimento() {
               <div className="divide-y">
                   {filteredConversations.map((conv: any) => {
                 const hasNewMessages = unreadConversations.has(conv.id);
-                const leadTags = conv.leads?.id 
-                  ? leadTagsData
-                      .filter((r: any) => r.lead_id === conv.leads.id)
-                      .map((r: any) => r.lead_tags)
-                      .filter(Boolean)
-                  : [];
-                
-                return <ConversationCard
-                    key={conv.id}
-                    conversation={conv}
-                    lead={conv.leads}
-                    assignee={conv.assignee}
-                    tags={leadTags}
-                    isSelected={selectedConvId === conv.id}
-                    unread={hasNewMessages || !conv.is_read}
-                    onClick={() => {
-                      setSelectedConvId(conv.id);
-                      setUnreadConversations(prev => {
-                        const newSet = new Set(prev);
-                        newSet.delete(conv.id);
-                        return newSet;
-                      });
-                    }}
-                    onCreateLead={() => {
-                      setSelectedConvForLead(conv);
-                      setCreateLeadOpen(true);
-                    }}
-                  />;
+                const leadTags = conv.leads?.id ? leadTagsData.filter((r: any) => r.lead_id === conv.leads.id).map((r: any) => r.lead_tags).filter(Boolean) : [];
+                return <ConversationCard key={conv.id} conversation={conv} lead={conv.leads} assignee={conv.assignee} tags={leadTags} isSelected={selectedConvId === conv.id} unread={hasNewMessages || !conv.is_read} onClick={() => {
+                  setSelectedConvId(conv.id);
+                  setUnreadConversations(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(conv.id);
+                    return newSet;
+                  });
+                }} onCreateLead={() => {
+                  setSelectedConvForLead(conv);
+                  setCreateLeadOpen(true);
+                }} />;
               })}
                </div>
             </ScrollArea>
@@ -900,20 +851,13 @@ export default function UnifiedAtendimento() {
                           {selectedConv.phone_number}
                         </p>
                       </div>
-                      {!findLeadByPhone(selectedConv.phone_number || '') && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-2 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700"
-                          onClick={() => {
-                            setSelectedConvForLead(selectedConv);
-                            setCreateLeadOpen(true);
-                          }}
-                        >
+                      {!findLeadByPhone(selectedConv.phone_number || '') && <Button variant="outline" size="sm" className="gap-2 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700" onClick={() => {
+                    setSelectedConvForLead(selectedConv);
+                    setCreateLeadOpen(true);
+                  }}>
                           <UserPlus className="h-4 w-4" />
                           Cadastrar Lead
-                        </Button>
-                      )}
+                        </Button>}
                     </div>
                     {/* Instance picker */}
                     <div className="flex items-center gap-4">
@@ -946,30 +890,16 @@ export default function UnifiedAtendimento() {
                           
                           {/* Audio Message */}
                           {m.message_type === 'audio' ? <div className="mb-2 space-y-2">
-                              {(m.permanent_audio_url || m.media_url) ? (
-                                m.permanent_audio_url ? (
-                                  <div className="space-y-1">
+                              {m.permanent_audio_url || m.media_url ? m.permanent_audio_url ? <div className="space-y-1">
                                     <audio controls className="w-full max-w-xs" src={m.permanent_audio_url} preload="metadata">
                                       Seu navegador não suporta o elemento de áudio.
                                     </audio>
                                     <div className="text-xs text-green-400">✅ Áudio processado</div>
-                                  </div>
-                                ) : (
-                                  <AudioPlayer
-                                    audioUrl={m.media_url || ''}
-                                    permanentUrl={m.permanent_audio_url || undefined}
-                                    messageId={m.id}
-                                    className="max-w-xs"
-                                  />
-                                )
-                              ) : (
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  </div> : <AudioPlayer audioUrl={m.media_url || ''} permanentUrl={m.permanent_audio_url || undefined} messageId={m.id} className="max-w-xs" /> : <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                   <AlertCircle className="h-4 w-4" />
                                   {m.message_text || 'Áudio não disponível'}
-                                </div>
-                              )}
-                            </div> : 
-                          <p className="text-sm whitespace-pre-wrap">{m.message_text}</p>}
+                                </div>}
+                            </div> : <p className="text-sm whitespace-pre-wrap">{m.message_text}</p>}
                           <div className={`mt-2 text-[10px] ${m.is_from_lead ? 'text-muted-foreground' : 'text-primary-foreground/80'}`}>
                             {m.timestamp ? format(new Date(m.timestamp), 'dd/MM HH:mm', {
                         locale: ptBR
@@ -1087,10 +1017,7 @@ export default function UnifiedAtendimento() {
       </Dialog>
 
       {/* Image Size Error Dialog */}
-      <AlertDialog 
-        open={imageSizeError?.open ?? false} 
-        onOpenChange={(open) => !open && setImageSizeError(null)}
-      >
+      <AlertDialog open={imageSizeError?.open ?? false} onOpenChange={open => !open && setImageSizeError(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-destructive">

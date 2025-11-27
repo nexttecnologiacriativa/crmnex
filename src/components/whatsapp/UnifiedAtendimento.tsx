@@ -37,7 +37,8 @@ import { useQuery } from '@tanstack/react-query';
 // Image size limit: 5MB (to ensure compatibility with WhatsApp/Evolution API)
 const MAX_IMAGE_SIZE_MB = 5;
 const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024; // 5MB in bytes
-const MAX_IMAGE_DIMENSION = 1920; // Maximum pixel dimension - images larger will be resized
+const MAX_IMAGE_DIMENSION = 1280; // Optimized for mobile - keeps base64 under 1MB nginx limit
+const MAX_COMPRESSED_SIZE = 500 * 1024; // 500KB target to ensure base64 stays under 1MB
 
 // Compress and resize image using Canvas API
 const compressImage = async (file: File): Promise<File> => {
@@ -77,7 +78,7 @@ const compressImage = async (file: File): Promise<File> => {
       
       ctx.drawImage(img, 0, 0, width, height);
       
-      // Convert to JPEG with 80% quality
+      // Convert to JPEG with 70% quality (more aggressive compression)
       canvas.toBlob(
         (blob) => {
           if (blob) {
@@ -87,14 +88,14 @@ const compressImage = async (file: File): Promise<File> => {
               lastModified: Date.now()
             });
             
-            console.log(`📸 Imagem processada: ${originalDimensions} → ${width}x${height}, ${(file.size/1024/1024).toFixed(2)}MB → ${(compressedFile.size/1024/1024).toFixed(2)}MB`);
+            console.log(`📸 Imagem processada: ${originalDimensions} → ${width}x${height}, ${(file.size/1024).toFixed(0)}KB → ${(compressedFile.size/1024).toFixed(0)}KB`);
             resolve(compressedFile);
           } else {
             reject(new Error('Falha ao comprimir imagem'));
           }
         },
         'image/jpeg',
-        0.8 // 80% quality
+        0.7 // 70% quality for smaller size
       );
     };
     
@@ -505,16 +506,49 @@ export default function UnifiedAtendimento() {
     try {
       setIsUploadingImage(true);
       
-      // Always compress/resize images larger than 1MB
+      // Always compress/resize images larger than 500KB to ensure base64 < 1MB
       let fileToUpload = file;
-      const needsCompression = file.size > 1 * 1024 * 1024; // Compress if > 1MB
+      const needsCompression = file.size > MAX_COMPRESSED_SIZE; // Compress if > 500KB
       
       if (needsCompression) {
         toast.info('Otimizando imagem...');
         try {
           fileToUpload = await compressImage(file);
           
-          // If still too large after compression
+          // If still above target, recompress with lower quality
+          if (fileToUpload.size > MAX_COMPRESSED_SIZE) {
+            console.log(`⚠️ Imagem ainda grande (${(fileToUpload.size/1024).toFixed(0)}KB), recomprimindo com qualidade 50%...`);
+            toast.info('Aplicando compressão adicional...');
+            
+            // Recompress with 50% quality
+            const img = new Image();
+            await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = reject;
+              img.src = URL.createObjectURL(fileToUpload);
+            });
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0);
+              const blob = await new Promise<Blob | null>((resolve) => {
+                canvas.toBlob(resolve, 'image/jpeg', 0.5); // 50% quality
+              });
+              if (blob) {
+                fileToUpload = new File([blob], fileToUpload.name, {
+                  type: 'image/jpeg',
+                  lastModified: Date.now()
+                });
+                console.log(`✅ Recompressão concluída: ${(blob.size/1024).toFixed(0)}KB`);
+              }
+            }
+            URL.revokeObjectURL(img.src);
+          }
+          
+          // If STILL too large after recompression
           if (fileToUpload.size > MAX_IMAGE_SIZE_BYTES) {
             setImageSizeError({
               open: true,
@@ -525,7 +559,7 @@ export default function UnifiedAtendimento() {
             return;
           }
           
-          toast.success(`Imagem otimizada: ${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB`);
+          toast.success(`Imagem otimizada: ${(fileToUpload.size / 1024).toFixed(0)}KB`);
         } catch (compressError) {
           console.error('Erro ao comprimir:', compressError);
           // If compression fails but original file is small enough, try to send

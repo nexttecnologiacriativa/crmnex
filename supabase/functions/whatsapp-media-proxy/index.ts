@@ -66,14 +66,23 @@ serve(async (req) => {
       .eq('is_active', true)
       .maybeSingle();
 
-    // If no official config, try Evolution API
+    // If no official config, try Evolution API from database
     const { data: evolutionConfig } = await supabase
       .from('whatsapp_evolution_configs')
       .select('api_url, global_api_key')
       .eq('workspace_id', workspaceMember.workspace_id)
       .maybeSingle();
 
+    // 🔥 FALLBACK: Use environment variables if no database config
+    const evolutionApiUrl = evolutionConfig?.api_url || Deno.env.get('EVOLUTION_API_URL');
+    const evolutionApiKey = evolutionConfig?.global_api_key || Deno.env.get('EVOLUTION_API_KEY');
+
     console.log('📥 Fetching media from WhatsApp:', mediaUrl);
+    console.log('🔧 Config:', { 
+      hasOfficialConfig: !!officialConfig?.access_token,
+      hasEvolutionDBConfig: !!evolutionConfig,
+      hasEvolutionEnvConfig: !!evolutionApiUrl && !!evolutionApiKey
+    });
 
     let mediaResponse;
     
@@ -85,7 +94,7 @@ serve(async (req) => {
           'Authorization': `Bearer ${officialConfig.access_token}`,
         },
       });
-    } else if (evolutionConfig?.api_url && evolutionConfig?.global_api_key) {
+    } else if (evolutionApiUrl && evolutionApiKey) {
       console.log('📥 Using Evolution API - direct download');
       // For Evolution API, try to fetch the media directly (URLs are usually accessible)
       mediaResponse = await fetch(mediaUrl, {
@@ -94,7 +103,11 @@ serve(async (req) => {
         },
       });
     } else {
-      return new Response(JSON.stringify({ error: 'WhatsApp not configured' }), { 
+      console.error('❌ No WhatsApp configuration found');
+      return new Response(JSON.stringify({ 
+        error: 'WhatsApp not configured',
+        details: 'Neither official config, evolution DB config, nor environment variables found'
+      }), { 
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });

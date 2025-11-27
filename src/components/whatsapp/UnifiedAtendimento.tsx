@@ -1089,7 +1089,7 @@ export default function UnifiedAtendimento() {
                           {/* Video Message */}
                           {m.message_type === 'video' && m.media_url ? <div className="mb-2">
                               <WhatsAppVideo mediaUrl={m.media_url} className="max-w-xs rounded-lg" />
-                              {m.message_text && m.message_text !== 'Vídeo' && <p className="text-sm mt-1">{m.message_text}</p>}
+                              {m.message_text && m.message_text !== 'Vídeo'}
                             </div> : null}
                           
                           {/* Document Message */}

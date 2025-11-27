@@ -585,6 +585,28 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
         } catch (error) {
           console.error('❌ Document processing error:', error);
         }
+      } else if (messageContent?.contactMessage) {
+        // Mensagem de contato (vCard)
+        const contactMsg = messageContent.contactMessage;
+        const displayName = contactMsg.displayName || 'Contato';
+        const vcard = contactMsg.vcard || '';
+        
+        // Extrair telefone do vCard se disponível
+        let contactPhone = '';
+        const telMatch = vcard.match(/TEL[^:]*:([+\d\s-]+)/i);
+        if (telMatch) {
+          contactPhone = telMatch[1].replace(/\D/g, '');
+        }
+        
+        // Formatar texto da mensagem com informações do contato
+        msgType = 'contact';
+        messageText = JSON.stringify({
+          displayName: displayName,
+          phone: contactPhone,
+          vcard: vcard
+        });
+        
+        console.log('👤 Contact message received:', { displayName, contactPhone });
       } else {
         messageText = '[Mídia não suportada]';
         msgType = 'unknown';

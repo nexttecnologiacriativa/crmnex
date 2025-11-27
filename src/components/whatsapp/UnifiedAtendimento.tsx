@@ -19,7 +19,7 @@ import { normalizeForMatch, ensureCountryCode55, phonesMatch } from '@/lib/phone
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { MessageCircle, Search, Send, Users, Wifi, WifiOff, Plus, UserSearch, UserPlus, Image as ImageIcon, Trash2, Download, AlertCircle, Video, FileText, Eye } from 'lucide-react';
+import { MessageCircle, Search, Send, Users, Wifi, WifiOff, Plus, UserSearch, UserPlus, Image as ImageIcon, Trash2, Download, AlertCircle, Video, FileText, Eye, User, Copy } from 'lucide-react';
 import CreateLeadFromConversationDialog from '@/components/whatsapp/CreateLeadFromConversationDialog';
 import ConversationCard from '@/components/whatsapp/ConversationCard';
 import { toast } from 'sonner';
@@ -1132,8 +1132,49 @@ export default function UnifiedAtendimento() {
                                 </div>}
                             </div> : null}
                           
+                          {/* Contact Message */}
+                          {m.message_type === 'contact' ? <div className="mb-2">
+                              {(() => {
+                                try {
+                                  const contactData = JSON.parse(m.message_text || '{}');
+                                  return (
+                                    <div className="flex items-center gap-3 p-3 border rounded-lg bg-background/50">
+                                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                        <User className="h-5 w-5 text-primary" />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-medium truncate">
+                                          {contactData.displayName || 'Contato'}
+                                        </p>
+                                        {contactData.phone && (
+                                          <p className="text-sm text-muted-foreground">
+                                            +{contactData.phone.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, '$1 $2 $3-$4')}
+                                          </p>
+                                        )}
+                                      </div>
+                                      {contactData.phone && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            navigator.clipboard.writeText(contactData.phone);
+                                            toast.success('Número copiado!');
+                                          }}
+                                          title="Copiar número"
+                                        >
+                                          <Copy className="h-4 w-4" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  );
+                                } catch {
+                                  return <p className="text-sm">{m.message_text}</p>;
+                                }
+                              })()}
+                            </div> : null}
+                          
                           {/* Text Message - só mostra se não for mídia */}
-                          {!['image', 'video', 'document', 'audio'].includes(m.message_type) && <p className="text-sm whitespace-pre-wrap">{m.message_text}</p>}
+                          {!['image', 'video', 'document', 'audio', 'contact'].includes(m.message_type) && <p className="text-sm whitespace-pre-wrap">{m.message_text}</p>}
                           <div className={`mt-2 text-[10px] ${m.is_from_lead ? 'text-muted-foreground' : 'text-primary-foreground/80'}`}>
                             {m.timestamp ? format(new Date(m.timestamp), 'dd/MM HH:mm', {
                         locale: ptBR

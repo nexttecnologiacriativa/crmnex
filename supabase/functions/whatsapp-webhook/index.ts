@@ -418,46 +418,146 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
             console.error('❌ Audio processing error:', error);
           }
         } else if (mediaUrl) {
-          console.log('🎵 Processing audio from URL (attempting download)...');
-          try {
-            // Try to download the audio file from WhatsApp
-            const response = await fetch(mediaUrl);
-            if (response.ok) {
-              const audioBuffer = await response.arrayBuffer();
-              const byteArray = new Uint8Array(audioBuffer);
+          // Check if URL is encrypted (requires Evolution API to download)
+          const isEncryptedUrl = mediaUrl?.includes('.enc');
+          
+          if (isEncryptedUrl) {
+            console.log('🔐 Audio URL is encrypted - downloading via Evolution API...');
+            try {
+              // Get Evolution API config from workspace localStorage (stored during instance creation)
+              const { data: instanceData } = await supabase
+                .from('whatsapp_instances')
+                .select('*')
+                .eq('instance_name', instanceName)
+                .single();
               
-              const isOgg = audioMimeType.includes('ogg');
-              const isPtt = !!messageContent.pttMessage;
-              const fileExt = isOgg ? 'ogg' : (isPtt ? 'ogg' : 'opus');
-              
-              const timestamp = message.messageTimestamp || Date.now();
-              const fileName = `${isPtt ? 'ptt' : 'audio'}_${timestamp}_${messageId}.${fileExt}`;
-              const filePath = `${instance.workspace_id}/audio/${fileName}`;
-              
-              console.log('📁 Uploading downloaded audio to storage:', { filePath, mimeType: audioMimeType, size: byteArray.length });
-              
-              const { error: uploadError } = await supabase.storage
-                .from('whatsapp-media')
-                .upload(filePath, byteArray, {
-                  contentType: audioMimeType,
-                  cacheControl: '3600'
-                });
-
-              if (!uploadError) {
-                const { data: urlData } = supabase.storage
-                  .from('whatsapp-media')
-                  .getPublicUrl(filePath);
-                
-                permanentAudioUrl = urlData.publicUrl;
-                console.log('✅ Downloaded audio uploaded to Supabase Storage:', permanentAudioUrl);
-              } else {
-                console.error('❌ Downloaded audio upload error:', uploadError);
+              if (!instanceData) {
+                throw new Error('Instance not found');
               }
-            } else {
-              console.warn('⚠️ Could not download audio from URL:', response.status);
+              
+              // Evolution API URL should be stored in workspace settings or env
+              // For now, we'll try to get it from environment or use a default
+              const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL') || 'https://evo.adrianopereira.com.br';
+              const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY');
+              
+              if (!evolutionApiKey) {
+                console.warn('⚠️ Evolution API key not configured, falling back to direct download');
+                throw new Error('Evolution API key not configured');
+              }
+              
+              // Endpoint CORRETO: /chat/getBase64FromMediaMessage/{instance}
+              const downloadUrl = `${evolutionApiUrl}/chat/getBase64FromMediaMessage/${instanceName}`;
+              console.log('📥 Downloading audio from Evolution:', downloadUrl);
+              
+              const response = await fetch(downloadUrl, {
+                method: 'POST',
+                headers: { 
+                  'apikey': evolutionApiKey,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  message: {
+                    key: {
+                      id: messageId
+                    }
+                  },
+                  convertToMp4: false
+                })
+              });
+              
+              if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ Evolution API error:', response.status, errorText);
+                throw new Error(`Evolution API error: ${response.status}`);
+              }
+              
+              const result = await response.json();
+              console.log('✅ Evolution API audio response:', { hasBase64: !!result.base64, size: result.base64?.length });
+              
+              if (result.base64) {
+                const byteArray = Uint8Array.from(atob(result.base64), c => c.charCodeAt(0));
+                
+                const isOgg = audioMimeType.includes('ogg');
+                const isPtt = !!messageContent.pttMessage;
+                const fileExt = isOgg ? 'ogg' : 'opus';
+                
+                const timestamp = message.messageTimestamp || Date.now();
+                const fileName = `${isPtt ? 'ptt' : 'audio'}_${timestamp}_${messageId}.${fileExt}`;
+                const filePath = `${instance.workspace_id}/audio/${fileName}`;
+                
+                console.log('📁 Uploading Evolution audio to storage:', { filePath, mimeType: audioMimeType, size: byteArray.length });
+                
+                const { error: uploadError } = await supabase.storage
+                  .from('whatsapp-media')
+                  .upload(filePath, byteArray, {
+                    contentType: audioMimeType,
+                    cacheControl: '3600',
+                    upsert: true
+                  });
+
+                if (!uploadError) {
+                  const { data: urlData } = supabase.storage
+                    .from('whatsapp-media')
+                    .getPublicUrl(filePath);
+                  
+                  permanentAudioUrl = urlData.publicUrl;
+                  console.log('✅ Audio downloaded via Evolution and uploaded:', permanentAudioUrl);
+                } else {
+                  console.error('❌ Evolution audio upload error:', uploadError);
+                }
+              } else {
+                console.warn('⚠️ No base64 data in Evolution API response');
+              }
+            } catch (error) {
+              console.error('❌ Evolution API audio download error:', error);
+              console.log('⚠️ Falling back to direct download attempt...');
+              // Fall through to direct download attempt
             }
-          } catch (error) {
-            console.error('❌ Audio download error:', error);
+          }
+          
+          // Try direct download if not encrypted or if Evolution API failed
+          if (!isEncryptedUrl || !permanentAudioUrl) {
+            console.log('🎵 Processing audio from URL (direct download)...');
+            try {
+              const response = await fetch(mediaUrl);
+              if (response.ok) {
+                const audioBuffer = await response.arrayBuffer();
+                const byteArray = new Uint8Array(audioBuffer);
+                
+                const isOgg = audioMimeType.includes('ogg');
+                const isPtt = !!messageContent.pttMessage;
+                const fileExt = isOgg ? 'ogg' : (isPtt ? 'ogg' : 'opus');
+                
+                const timestamp = message.messageTimestamp || Date.now();
+                const fileName = `${isPtt ? 'ptt' : 'audio'}_${timestamp}_${messageId}.${fileExt}`;
+                const filePath = `${instance.workspace_id}/audio/${fileName}`;
+                
+                console.log('📁 Uploading downloaded audio to storage:', { filePath, mimeType: audioMimeType, size: byteArray.length });
+                
+                const { error: uploadError } = await supabase.storage
+                  .from('whatsapp-media')
+                  .upload(filePath, byteArray, {
+                    contentType: audioMimeType,
+                    cacheControl: '3600',
+                    upsert: true
+                  });
+
+                if (!uploadError) {
+                  const { data: urlData } = supabase.storage
+                    .from('whatsapp-media')
+                    .getPublicUrl(filePath);
+                  
+                  permanentAudioUrl = urlData.publicUrl;
+                  console.log('✅ Downloaded audio uploaded to Supabase Storage:', permanentAudioUrl);
+                } else {
+                  console.error('❌ Downloaded audio upload error:', uploadError);
+                }
+              } else {
+                console.warn('⚠️ Could not download audio from URL:', response.status);
+              }
+            } catch (error) {
+              console.error('❌ Audio download error:', error);
+            }
           }
         }
       }

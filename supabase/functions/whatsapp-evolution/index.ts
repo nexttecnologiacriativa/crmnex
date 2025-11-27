@@ -229,14 +229,44 @@ serve(async (req) => {
           
           console.log(`✅ Image downloaded and converted to base64 (${imageBuffer.byteLength} bytes)`);
 
-          // Map mediaType to correct mimetype
-          const mimetypeMap: Record<string, string> = {
-            'image': 'image/jpeg',
-            'video': 'video/mp4',
-            'audio': 'audio/mpeg',
-            'document': 'application/pdf'
+          // Detect mimetype based on file extension for more accuracy
+          const getMimeType = (mediaType: string, fileName: string): string => {
+            const ext = fileName.split('.').pop()?.toLowerCase();
+            
+            if (mediaType === 'document') {
+              const docMimes: Record<string, string> = {
+                'pdf': 'application/pdf',
+                'doc': 'application/msword',
+                'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'xls': 'application/vnd.ms-excel',
+                'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'txt': 'text/plain'
+              };
+              return docMimes[ext || ''] || 'application/octet-stream';
+            }
+            
+            if (mediaType === 'video') {
+              const videoMimes: Record<string, string> = {
+                'mp4': 'video/mp4',
+                'mov': 'video/quicktime',
+                '3gp': 'video/3gpp',
+                '3gpp': 'video/3gpp'
+              };
+              return videoMimes[ext || ''] || 'video/mp4';
+            }
+            
+            if (mediaType === 'audio') {
+              return 'audio/mpeg';
+            }
+            
+            if (mediaType === 'image') {
+              return 'image/jpeg';
+            }
+            
+            return 'application/octet-stream';
           };
-          const mimetype = mimetypeMap[mediaUrlType] || 'application/octet-stream';
+
+          const mimetype = getMimeType(mediaUrlType, mediaUrlFileName);
           
           // Send to Evolution API with base64 image - flat structure as per official docs
           console.log('📎 Sending media with base64 to Evolution API...');

@@ -19,7 +19,7 @@ import { normalizeForMatch, ensureCountryCode55, phonesMatch } from '@/lib/phone
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { MessageCircle, Search, Send, Users, Wifi, WifiOff, Plus, UserSearch, UserPlus, Image as ImageIcon, Trash2, Download, AlertCircle } from 'lucide-react';
+import { MessageCircle, Search, Send, Users, Wifi, WifiOff, Plus, UserSearch, UserPlus, Image as ImageIcon, Trash2, Download, AlertCircle, Video, FileText } from 'lucide-react';
 import CreateLeadFromConversationDialog from '@/components/whatsapp/CreateLeadFromConversationDialog';
 import ConversationCard from '@/components/whatsapp/ConversationCard';
 import { toast } from 'sonner';
@@ -39,6 +39,24 @@ const MAX_IMAGE_SIZE_MB = 5;
 const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024; // 5MB in bytes
 const MAX_IMAGE_DIMENSION = 1280; // Optimized for mobile - keeps base64 under 1MB nginx limit
 const MAX_COMPRESSED_SIZE = 500 * 1024; // 500KB target to ensure base64 stays under 1MB
+
+// Video and document size limits
+const MAX_VIDEO_SIZE_MB = 16;
+const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024;
+
+const MAX_DOCUMENT_SIZE_MB = 16;
+const MAX_DOCUMENT_SIZE_BYTES = MAX_DOCUMENT_SIZE_MB * 1024 * 1024;
+
+// Accepted file types
+const ACCEPTED_VIDEO_TYPES = ['video/mp4', 'video/3gpp', 'video/quicktime'];
+const ACCEPTED_DOCUMENT_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain'
+];
 
 // Compress and resize image using Canvas API
 const compressImage = async (file: File): Promise<File> => {
@@ -364,12 +382,23 @@ export default function UnifiedAtendimento() {
   const deleteConversation = useDeleteConversation();
   const clearAllConversations = useClearAllConversations();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const documentInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  const [isUploadingDocument, setIsUploadingDocument] = useState(false);
   const [imageSizeError, setImageSizeError] = useState<{
     open: boolean;
     fileName: string;
     fileSize: number;
     maxSize: number;
+  } | null>(null);
+  const [fileSizeError, setFileSizeError] = useState<{
+    open: boolean;
+    fileName: string;
+    fileSize: number;
+    maxSize: number;
+    fileType: 'video' | 'document';
   } | null>(null);
 
   // Scroll automático para última mensagem
@@ -619,6 +648,168 @@ export default function UnifiedAtendimento() {
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) handleImageSelect(file);
+    e.currentTarget.value = '';
+  };
+
+  const handleVideoSelect = async (file: File) => {
+    if (!selectedConv || !selectedInstanceName) {
+      if (!selectedInstanceName) toast.error('Selecione uma instância Evolution');
+      return;
+    }
+    
+    // Validate video type
+    if (!ACCEPTED_VIDEO_TYPES.includes(file.type)) {
+      toast.error('Formato de vídeo não suportado. Use MP4, MOV ou 3GPP.');
+      return;
+    }
+    
+    // Validate size
+    if (file.size > MAX_VIDEO_SIZE_BYTES) {
+      setFileSizeError({
+        open: true,
+        fileName: file.name,
+        fileSize: file.size,
+        maxSize: MAX_VIDEO_SIZE_BYTES,
+        fileType: 'video'
+      });
+      return;
+    }
+    
+    try {
+      setIsUploadingVideo(true);
+      toast.info('Enviando vídeo...');
+      
+      // Upload to Supabase Storage
+      const fileName = `${Date.now()}_${file.name}`;
+      const path = `${currentWorkspace?.id}/videos/${fileName}`;
+      
+      const { data: up, error: upErr } = await supabase.storage
+        .from('whatsapp-media')
+        .upload(path, file, {
+          contentType: file.type,
+          cacheControl: '3600'
+        });
+        
+      if (upErr) throw new Error(`Erro ao fazer upload: ${upErr.message}`);
+      
+      const { data: pub } = supabase.storage
+        .from('whatsapp-media')
+        .getPublicUrl(up.path);
+      
+      const phoneToSend = ensureCountryCode55(selectedConv.phone_number || '');
+      
+      // Send via Evolution API
+      const { data: sendResult, error: sendError } = await supabase.functions.invoke('whatsapp-evolution', {
+        body: {
+          action: 'sendMediaUrl',
+          instanceName: selectedInstanceName,
+          number: phoneToSend,
+          mediaUrl: pub.publicUrl,
+          mediaType: 'video',
+          fileName: fileName,
+          caption: message?.trim() || '',
+          workspaceId: currentWorkspace?.id
+        }
+      });
+      
+      if (sendError || sendResult?.error) {
+        throw new Error(sendResult?.error || sendError?.message || 'Falha ao enviar vídeo');
+      }
+      
+      setMessage('');
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-messages', selectedConv.id] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-conversations', currentWorkspace?.id] });
+      setTimeout(scrollToBottom, 200);
+      toast.success('Vídeo enviado com sucesso!');
+    } catch (e: any) {
+      console.error('Video send error:', e);
+      toast.error(e?.message || 'Falha ao enviar vídeo');
+    } finally {
+      setIsUploadingVideo(false);
+    }
+  };
+
+  const handleVideoInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleVideoSelect(file);
+    e.currentTarget.value = '';
+  };
+
+  const handleDocumentSelect = async (file: File) => {
+    if (!selectedConv || !selectedInstanceName) {
+      if (!selectedInstanceName) toast.error('Selecione uma instância Evolution');
+      return;
+    }
+    
+    // Validate size
+    if (file.size > MAX_DOCUMENT_SIZE_BYTES) {
+      setFileSizeError({
+        open: true,
+        fileName: file.name,
+        fileSize: file.size,
+        maxSize: MAX_DOCUMENT_SIZE_BYTES,
+        fileType: 'document'
+      });
+      return;
+    }
+    
+    try {
+      setIsUploadingDocument(true);
+      toast.info('Enviando documento...');
+      
+      // Upload to Supabase Storage
+      const fileName = `${Date.now()}_${file.name}`;
+      const path = `${currentWorkspace?.id}/documents/${fileName}`;
+      
+      const { data: up, error: upErr } = await supabase.storage
+        .from('whatsapp-media')
+        .upload(path, file, {
+          contentType: file.type,
+          cacheControl: '3600'
+        });
+        
+      if (upErr) throw new Error(`Erro ao fazer upload: ${upErr.message}`);
+      
+      const { data: pub } = supabase.storage
+        .from('whatsapp-media')
+        .getPublicUrl(up.path);
+      
+      const phoneToSend = ensureCountryCode55(selectedConv.phone_number || '');
+      
+      // Send via Evolution API
+      const { data: sendResult, error: sendError } = await supabase.functions.invoke('whatsapp-evolution', {
+        body: {
+          action: 'sendMediaUrl',
+          instanceName: selectedInstanceName,
+          number: phoneToSend,
+          mediaUrl: pub.publicUrl,
+          mediaType: 'document',
+          fileName: file.name, // Keep original name for documents
+          caption: message?.trim() || '',
+          workspaceId: currentWorkspace?.id
+        }
+      });
+      
+      if (sendError || sendResult?.error) {
+        throw new Error(sendResult?.error || sendError?.message || 'Falha ao enviar documento');
+      }
+      
+      setMessage('');
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-messages', selectedConv.id] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-conversations', currentWorkspace?.id] });
+      setTimeout(scrollToBottom, 200);
+      toast.success('Documento enviado com sucesso!');
+    } catch (e: any) {
+      console.error('Document send error:', e);
+      toast.error(e?.message || 'Falha ao enviar documento');
+    } finally {
+      setIsUploadingDocument(false);
+    }
+  };
+
+  const handleDocumentInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleDocumentSelect(file);
     e.currentTarget.value = '';
   };
 
@@ -935,8 +1126,14 @@ export default function UnifiedAtendimento() {
                   }
                 }} />
                      <div className="flex gap-1">
-                       <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={!selectedInstanceName}>
+                       <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={!selectedInstanceName || isUploadingImage}>
                          <ImageIcon className="h-4 w-4" />
+                       </Button>
+                       <Button variant="outline" size="sm" onClick={() => videoInputRef.current?.click()} disabled={!selectedInstanceName || isUploadingVideo}>
+                         <Video className="h-4 w-4" />
+                       </Button>
+                       <Button variant="outline" size="sm" onClick={() => documentInputRef.current?.click()} disabled={!selectedInstanceName || isUploadingDocument}>
+                         <FileText className="h-4 w-4" />
                        </Button>
                        <Button onClick={handleSend} size="sm" disabled={!message.trim() || !selectedInstanceName || isSendingMessage}>
                           <Send className="h-4 w-4" />
@@ -945,6 +1142,8 @@ export default function UnifiedAtendimento() {
                    </div>
 
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileInputChange} />
+                  <input ref={videoInputRef} type="file" accept="video/mp4,video/3gpp,video/quicktime" className="hidden" onChange={handleVideoInputChange} />
+                  <input ref={documentInputRef} type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,application/pdf,application/msword" className="hidden" onChange={handleDocumentInputChange} />
                 </div>
               </> : <div className="flex-1 flex items-center justify-center">
                 <div className="text-center max-w-md mx-auto p-8">
@@ -1040,6 +1239,34 @@ export default function UnifiedAtendimento() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogAction onClick={() => setImageSizeError(null)}>
+              Entendi
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* File Size Error Dialog (Video/Document) */}
+      <AlertDialog open={fileSizeError?.open ?? false} onOpenChange={open => !open && setFileSizeError(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              {fileSizeError?.fileType === 'video' ? 'Vídeo muito grande' : 'Documento muito grande'}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                O arquivo <strong>{fileSizeError?.fileName}</strong> tem{' '}
+                <strong>{((fileSizeError?.fileSize || 0) / (1024 * 1024)).toFixed(2)} MB</strong>,
+                mas o limite máximo é de{' '}
+                <strong>{((fileSizeError?.maxSize || 0) / (1024 * 1024)).toFixed(0)} MB</strong>.
+              </p>
+              <p className="text-muted-foreground text-sm">
+                Por favor, escolha um arquivo menor ou comprima-o antes de enviar.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setFileSizeError(null)}>
               Entendi
             </AlertDialogAction>
           </AlertDialogFooter>

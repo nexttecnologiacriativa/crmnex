@@ -84,39 +84,87 @@ serve(async (req) => {
       hasEvolutionEnvConfig: !!evolutionApiUrl && !!evolutionApiKey
     });
 
-    let mediaResponse;
-    
-    if (officialConfig?.access_token) {
-      console.log('📥 Using WhatsApp Official API');
-      // Use WhatsApp Official API
-      mediaResponse = await fetch(mediaUrl, {
-        headers: {
-          'Authorization': `Bearer ${officialConfig.access_token}`,
-        },
-      });
-    } else if (evolutionApiUrl && evolutionApiKey) {
-      console.log('📥 Using Evolution API - direct download');
-      // For Evolution API, try to fetch the media directly (URLs are usually accessible)
-      mediaResponse = await fetch(mediaUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        },
-      });
-    } else {
-      console.error('❌ No WhatsApp configuration found');
-      return new Response(JSON.stringify({ 
-        error: 'WhatsApp not configured',
-        details: 'Neither official config, evolution DB config, nor environment variables found'
-      }), { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+    // Retry logic with exponential backoff
+    const maxRetries = 3;
+    const timeoutMs = 30000; // 30 seconds
+    let mediaResponse: Response | null = null;
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔄 Attempt ${attempt}/${maxRetries} to fetch media`);
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+        try {
+          if (officialConfig?.access_token) {
+            console.log('📥 Using WhatsApp Official API');
+            mediaResponse = await fetch(mediaUrl, {
+              headers: {
+                'Authorization': `Bearer ${officialConfig.access_token}`,
+              },
+              signal: controller.signal,
+            });
+          } else if (evolutionApiUrl && evolutionApiKey) {
+            console.log('📥 Using Evolution API - direct download');
+            mediaResponse = await fetch(mediaUrl, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': '*/*',
+                'Connection': 'keep-alive',
+              },
+              signal: controller.signal,
+            });
+          } else {
+            console.error('❌ No WhatsApp configuration found');
+            return new Response(JSON.stringify({ 
+              error: 'WhatsApp not configured',
+              details: 'Neither official config, evolution DB config, nor environment variables found'
+            }), { 
+              status: 400, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+        } finally {
+          clearTimeout(timeoutId);
+        }
+
+        if (mediaResponse.ok) {
+          console.log(`✅ Media fetched successfully on attempt ${attempt}`);
+          break;
+        }
+
+        console.warn(`⚠️ Attempt ${attempt} failed with status ${mediaResponse.status}`);
+        lastError = new Error(`HTTP ${mediaResponse.status}: ${await mediaResponse.text()}`);
+        
+        // Don't retry on 4xx errors (client errors)
+        if (mediaResponse.status >= 400 && mediaResponse.status < 500) {
+          break;
+        }
+
+      } catch (error) {
+        console.error(`❌ Attempt ${attempt} failed:`, error);
+        lastError = error as Error;
+        
+        // Wait before retrying (exponential backoff)
+        if (attempt < maxRetries) {
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+          console.log(`⏳ Waiting ${delay}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
     }
 
-    if (!mediaResponse.ok) {
-      console.error('❌ Failed to fetch media from WhatsApp:', mediaResponse.status, await mediaResponse.text());
-      return new Response(JSON.stringify({ error: 'Failed to fetch media' }), { 
-        status: 404, 
+    if (!mediaResponse || !mediaResponse.ok) {
+      const errorDetails = lastError?.message || 'Unknown error';
+      console.error('❌ Failed to fetch media after all retries:', errorDetails);
+      return new Response(JSON.stringify({ 
+        error: 'Failed to fetch media from WhatsApp',
+        details: errorDetails,
+        attempts: maxRetries
+      }), { 
+        status: 502, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }

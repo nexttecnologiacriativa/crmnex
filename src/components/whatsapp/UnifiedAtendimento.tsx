@@ -1116,28 +1116,23 @@ export default function UnifiedAtendimento() {
                                   {m.attachment_name || m.message_text || 'Documento'}
                                 </p>
                               </div>
-                              <div className="flex gap-1">
-                                <Button variant="ghost" size="sm" onClick={() => window.open(m.media_url, '_blank')} title="Visualizar">
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="sm" onClick={async () => {
-                              try {
-                                const response = await fetch(m.media_url);
-                                const blob = await response.blob();
-                                const blobUrl = URL.createObjectURL(blob);
-                                const link = document.createElement('a');
-                                link.href = blobUrl;
-                                link.download = m.attachment_name || 'documento';
-                                link.click();
-                                URL.revokeObjectURL(blobUrl);
-                              } catch (error) {
-                                console.error('Download failed:', error);
-                                window.open(m.media_url, '_blank');
-                              }
-                            }} title="Download">
-                                  <Download className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              <Button variant="ghost" size="sm" onClick={async () => {
+                                try {
+                                  const response = await fetch(m.media_url);
+                                  const blob = await response.blob();
+                                  const blobUrl = URL.createObjectURL(blob);
+                                  const link = document.createElement('a');
+                                  link.href = blobUrl;
+                                  link.download = m.attachment_name || 'documento';
+                                  link.click();
+                                  URL.revokeObjectURL(blobUrl);
+                                } catch (error) {
+                                  console.error('Download failed:', error);
+                                  window.open(m.media_url, '_blank');
+                                }
+                              }} title="Download">
+                                <Download className="h-4 w-4" />
+                              </Button>
                             </div> : null}
                           
                           {/* Audio Message */}

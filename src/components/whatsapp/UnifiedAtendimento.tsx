@@ -1094,7 +1094,12 @@ export default function UnifiedAtendimento() {
                           
                           {/* Image Message */}
                           {m.message_type === 'image' && m.media_url ? <div className="mb-2">
-                              <WhatsAppImage mediaUrl={m.media_url} alt="Imagem enviada" className="max-w-48 rounded-lg" />
+                              <WhatsAppImage 
+                                mediaUrl={m.media_url} 
+                                alt="Imagem enviada" 
+                                className="max-w-48 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => window.open(m.media_url, '_blank')}
+                              />
                             </div> : null}
                           
                           {/* Video Message */}
@@ -1115,11 +1120,20 @@ export default function UnifiedAtendimento() {
                                 <Button variant="ghost" size="sm" onClick={() => window.open(m.media_url, '_blank')} title="Visualizar">
                                   <Eye className="h-4 w-4" />
                                 </Button>
-                                <Button variant="ghost" size="sm" onClick={() => {
-                              const link = document.createElement('a');
-                              link.href = m.media_url;
-                              link.download = m.attachment_name || 'documento';
-                              link.click();
+                                <Button variant="ghost" size="sm" onClick={async () => {
+                              try {
+                                const response = await fetch(m.media_url);
+                                const blob = await response.blob();
+                                const blobUrl = URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.href = blobUrl;
+                                link.download = m.attachment_name || 'documento';
+                                link.click();
+                                URL.revokeObjectURL(blobUrl);
+                              } catch (error) {
+                                console.error('Download failed:', error);
+                                window.open(m.media_url, '_blank');
+                              }
                             }} title="Download">
                                   <Download className="h-4 w-4" />
                                 </Button>

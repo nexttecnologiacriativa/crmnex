@@ -256,12 +256,28 @@ serve(async (req) => {
             })
           });
 
-          const result = await response.json();
-          console.log('📎 Evolution API media send result:', result);
-
+          // Get response as text first to handle non-JSON responses
+          const responseText = await response.text();
+          
           if (!response.ok) {
-            throw new Error(`Failed to send media: ${result.error?.message || result.message || 'Unknown error'}`);
+            console.error('❌ Evolution API error response:', {
+              status: response.status,
+              statusText: response.statusText,
+              body: responseText.substring(0, 500)
+            });
+            throw new Error(`Failed to send media: ${response.status} - ${responseText.substring(0, 200)}`);
           }
+
+          // Try to parse as JSON
+          let result;
+          try {
+            result = JSON.parse(responseText);
+          } catch (parseError) {
+            console.error('❌ Failed to parse response as JSON:', responseText.substring(0, 500));
+            throw new Error('API returned invalid JSON response');
+          }
+          
+          console.log('📎 Evolution API media send result:', result);
 
           // Save message record to database with Storage URL (not WhatsApp URL)
           const { error: saveError } = await supabase

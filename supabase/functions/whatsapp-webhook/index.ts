@@ -246,7 +246,7 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
           } 
           // 🔥 FASE 2: Se não tiver base64 e URL for .enc, usar Evolution API
           else if (isEncryptedUrl) {
-            console.log('🔐 Encrypted URL detected - downloading via Evolution API...');
+            console.log('🔐 Image URL is encrypted - downloading via Evolution API...');
             const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
             const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY');
             
@@ -254,9 +254,9 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
               throw new Error('Evolution API credentials not configured');
             }
             
-            // Endpoint correto: /chat/fetchMedia/{instance}
-            const downloadUrl = `${evolutionApiUrl}/chat/fetchMedia/${instance.instance_name}`;
-            console.log('📥 Downloading from Evolution:', downloadUrl);
+            // Endpoint CORRETO: /chat/getBase64FromMediaMessage/{instance}
+            const downloadUrl = `${evolutionApiUrl}/chat/getBase64FromMediaMessage/${instance.instance_name}`;
+            console.log('📥 Downloading image from Evolution:', downloadUrl);
             
             const response = await fetch(downloadUrl, {
               method: 'POST',
@@ -267,11 +267,10 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
               body: JSON.stringify({
                 message: {
                   key: {
-                    id: messageId,
-                    remoteJid: `${phoneNumber}@s.whatsapp.net`,
-                    fromMe: fromMe
+                    id: messageId
                   }
-                }
+                },
+                convertToMp4: false
               })
             });
             

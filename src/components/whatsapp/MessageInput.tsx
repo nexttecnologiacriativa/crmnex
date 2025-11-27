@@ -216,8 +216,7 @@ export function MessageInput({ conversationId, phoneNumber, disabled, instanceNa
         phoneNumber,
         mediaId: uploadResult.mediaId,
         mediaType: 'document',
-        fileName: file.name,
-        permanentUrl: uploadResult.permanentUrl
+        fileName: file.name
       });
 
       // Reset input

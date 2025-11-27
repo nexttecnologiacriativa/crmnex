@@ -209,54 +209,30 @@ serve(async (req) => {
             conversation = newConversation;
           }
 
-          // Download media from Supabase Storage and convert to base64
-          console.log('📥 Downloading media from Supabase Storage:', mediaUrl);
-
-          // Helper function to detect mimetype from file extension
-          function getMimetypeFromFileName(fileName: string): string {
-            const ext = fileName.split('.').pop()?.toLowerCase() || '';
-            const extensionMap: Record<string, string> = {
-              // Images
-              'jpg': 'image/jpeg',
-              'jpeg': 'image/jpeg',
-              'png': 'image/png',
-              'gif': 'image/gif',
-              'webp': 'image/webp',
-              // Documents
-              'pdf': 'application/pdf',
-              'doc': 'application/msword',
-              'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-              'xls': 'application/vnd.ms-excel',
-              'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-              'ppt': 'application/vnd.ms-powerpoint',
-              'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-              'txt': 'text/plain',
-              'csv': 'text/csv',
-              'zip': 'application/zip',
-              'rar': 'application/x-rar-compressed',
-              // Video
-              'mp4': 'video/mp4',
-              'mov': 'video/quicktime',
-              // Audio
-              'mp3': 'audio/mpeg',
-              'wav': 'audio/wav',
-              'm4a': 'audio/mp4',
-              'ogg': 'audio/ogg',
-            };
-            return extensionMap[ext] || 'application/octet-stream';
+          // Download image from Supabase Storage and convert to base64
+          console.log('📥 Downloading image from Supabase Storage:', mediaUrl);
+          const imageResponse = await fetch(mediaUrl);
+          
+          if (!imageResponse.ok) {
+            throw new Error(`Failed to download image from storage: ${imageResponse.status}`);
           }
 
-          // Detect mimetype intelligently from fileName or fallback to mediaType
+          const imageBuffer = await imageResponse.arrayBuffer();
+          const base64Image = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
+          
+          console.log(`✅ Image downloaded and converted to base64 (${imageBuffer.byteLength} bytes)`);
+
+          // Map mediaType to correct mimetype
           const mimetypeMap: Record<string, string> = {
             'image': 'image/jpeg',
             'video': 'video/mp4',
             'audio': 'audio/mpeg',
             'document': 'application/pdf'
           };
-          const mimetype = getMimetypeFromFileName(mediaUrlFileName) || mimetypeMap[mediaUrlType] || 'application/octet-stream';
+          const mimetype = mimetypeMap[mediaUrlType] || 'application/octet-stream';
           
-          // Send to Evolution API using URL directly (avoids 413 errors with large files)
-          console.log('📎 Sending media URL to Evolution API...');
+          // Send to Evolution API with base64 image - flat structure as per official docs
+          console.log('📎 Sending media with base64 to Evolution API...');
           const response = await fetch(`${currentApiUrl}/message/sendMedia/${mediaUrlInstanceName}`, {
             method: 'POST',
             headers: {
@@ -267,7 +243,7 @@ serve(async (req) => {
               number: mediaUrlNumber.replace(/\D/g, ''),
               mediatype: mediaUrlType,  // lowercase as per Evolution API
               mimetype: mimetype,       // required field
-              media: mediaUrl,          // Send URL directly instead of base64
+              media: base64Image,       // base64 at root level
               fileName: mediaUrlFileName,
               caption: mediaUrlCaption
             })
@@ -1090,10 +1066,29 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
       throw new Error('Número inválido');
     }
 
-    // Use URL directly instead of base64 to avoid 413 errors with large files
-    console.log('📤 Sending image URL to Evolution API:', imageUrl);
+    // PASSO 1: Baixar imagem da URL (Supabase Storage)
+    console.log('📥 Downloading image from URL:', imageUrl);
+    const imageResponse = await fetch(imageUrl);
+    
+    if (!imageResponse.ok) {
+      throw new Error(`Failed to download image: ${imageResponse.status}`);
+    }
 
-    // Detectar mimetype a partir da extensão
+    // PASSO 2: Converter para base64 (usando chunks para evitar stack overflow)
+    const imageBuffer = await imageResponse.arrayBuffer();
+    const uint8Array = new Uint8Array(imageBuffer);
+    let binaryString = '';
+    const chunkSize = 8192; // Process in 8KB chunks
+    
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.subarray(i, i + chunkSize);
+      binaryString += String.fromCharCode(...chunk);
+    }
+    
+    const base64Image = btoa(binaryString);
+    console.log(`✅ Image converted to base64 (${imageBuffer.byteLength} bytes)`);
+
+    // PASSO 3: Detectar mimetype a partir da extensão
     const extension = imageUrl.split('.').pop()?.toLowerCase() || 'jpeg';
     const mimetypeMap: Record<string, string> = {
       'jpg': 'image/jpeg',
@@ -1104,7 +1099,8 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
     };
     const mimetype = mimetypeMap[extension] || 'image/jpeg';
 
-    // Send using URL instead of base64 (Evolution API will download it)
+    // PASSO 4: Enviar no formato FLAT correto
+    console.log('📤 Sending image to Evolution API with flat format...');
     const response = await fetch(`${apiUrl}/message/sendMedia/${instanceName}`, {
       method: 'POST',
       headers: {
@@ -1115,7 +1111,7 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
         number: normalizedPhone,
         mediatype: 'image',
         mimetype: mimetype,
-        media: imageUrl, // Send URL directly instead of base64
+        media: base64Image,
         fileName: `image.${extension}`,
         caption: caption || ''
       }),

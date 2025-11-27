@@ -1059,19 +1059,39 @@ async function sendMessage(instanceName: string, phone: string, message: string,
  */
 async function sendImage(instanceName: string, phone: string, imageUrl: string, caption: string, supabase: any, apiUrl: string, apiKey: string, workspaceId: string) {
   try {
-    // Normalizar telefone para garantir DDI 55 para números brasileiros
     const normalizedPhone = ensureCountryCode55(phone);
-    
-    console.log(`📷 Sending image to ${normalizedPhone} via instance ${instanceName} using official Evolution API`);
+    console.log(`📷 Sending image to ${normalizedPhone} via instance ${instanceName}`);
     
     if (!normalizedPhone) {
       throw new Error('Número inválido');
     }
 
-    // Use URL directly - Evolution API will download from Supabase Storage
-    console.log('📤 [SENDIMAGE] Sending image to Evolution API using URL:', imageUrl);
-    console.log('🔍 [SENDIMAGE] Using self-hosted Evolution API format with instanceName endpoint');
+    // PASSO 1: Baixar imagem da URL (Supabase Storage)
+    console.log('📥 Downloading image from URL:', imageUrl);
+    const imageResponse = await fetch(imageUrl);
     
+    if (!imageResponse.ok) {
+      throw new Error(`Failed to download image: ${imageResponse.status}`);
+    }
+
+    // PASSO 2: Converter para base64
+    const imageBuffer = await imageResponse.arrayBuffer();
+    const base64Image = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
+    console.log(`✅ Image converted to base64 (${imageBuffer.byteLength} bytes)`);
+
+    // PASSO 3: Detectar mimetype a partir da extensão
+    const extension = imageUrl.split('.').pop()?.toLowerCase() || 'jpeg';
+    const mimetypeMap: Record<string, string> = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'webp': 'image/webp'
+    };
+    const mimetype = mimetypeMap[extension] || 'image/jpeg';
+
+    // PASSO 4: Enviar no formato FLAT correto
+    console.log('📤 Sending image to Evolution API with flat format...');
     const response = await fetch(`${apiUrl}/message/sendMedia/${instanceName}`, {
       method: 'POST',
       headers: {
@@ -1080,36 +1100,22 @@ async function sendImage(instanceName: string, phone: string, imageUrl: string, 
       },
       body: JSON.stringify({
         number: normalizedPhone,
-        mediaMessage: {
-          mediatype: "image",
-          mediaUrl: imageUrl,
-          fileName: "image.jpg",
-          caption: caption || ''
-        }
+        mediatype: 'image',
+        mimetype: mimetype,
+        media: base64Image,
+        fileName: `image.${extension}`,
+        caption: caption || ''
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error('❌ API Error Response:', errorText);
-      
-      // Try to parse error as JSON for more details
-      let errorDetails;
-      try {
-        errorDetails = JSON.parse(errorText);
-      } catch {
-        errorDetails = errorText;
-      }
-      
-      const errorMessage = typeof errorDetails === 'object' 
-        ? JSON.stringify(errorDetails, null, 2)
-        : errorDetails;
-        
-      throw new Error(`Failed to send image: ${response.status} - ${errorMessage}`);
+      throw new Error(`Failed to send image: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    console.log(`✅ Image sent successfully to ${normalizedPhone}:`, data);
+    console.log('✅ Image sent successfully:', data);
 
     // Save message to Supabase for conversation tracking
     try {

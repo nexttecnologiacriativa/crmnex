@@ -11,7 +11,6 @@ import { usePipelines } from '@/hooks/usePipeline';
 import { useCreateLead } from '@/hooks/useLeads';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
 import { isBrazilianMobile } from '@/lib/phone';
 import { useWhatsAppValidation } from '@/hooks/useWhatsAppValidation';
 
@@ -40,7 +39,6 @@ export default function Outbound() {
   const { currentWorkspace } = useWorkspace();
   const { data: pipelines } = usePipelines(currentWorkspace?.id);
   const createLead = useCreateLead();
-  const navigate = useNavigate();
   const { validateWhatsAppBatch, isValidating } = useWhatsAppValidation();
 
   // Serper API search function
@@ -199,15 +197,19 @@ export default function Outbound() {
   };
 
   const handleStartConversation = (company: CompanyResult) => {
-    // Navigate to atendimento page with company data
-    navigate('/atendimento', {
-      state: {
-        companyName: company.name,
-        companyPhone: company.phone,
-        companyAddress: company.address,
-        source: 'outbound'
-      }
-    });
+    // Armazenar dados da empresa no sessionStorage para a nova janela
+    const outboundData = {
+      companyName: company.name,
+      companyPhone: company.phone,
+      companyAddress: company.address,
+      source: 'outbound'
+    };
+    sessionStorage.setItem('outbound-conversation', JSON.stringify(outboundData));
+    
+    // Abrir em nova aba
+    window.open('/atendimento?from=outbound', '_blank');
+    
+    toast.success(`Abrindo conversa com ${company.name} em nova aba`);
   };
 
   return (

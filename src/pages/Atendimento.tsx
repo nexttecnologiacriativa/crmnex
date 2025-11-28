@@ -7,11 +7,32 @@ import UnifiedAtendimento from '@/components/whatsapp/UnifiedAtendimento';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 
 export default function Atendimento() {
   const { currentWorkspace } = useWorkspace();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Processar dados do sessionStorage quando vindo do Outbound em nova aba
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get('from') === 'outbound') {
+      const outboundData = sessionStorage.getItem('outbound-conversation');
+      if (outboundData) {
+        try {
+          const data = JSON.parse(outboundData);
+          // Os dados serão processados pelo UnifiedAtendimento via location.state
+          // Simular o state do navigate
+          Object.assign(location, { state: data });
+          sessionStorage.removeItem('outbound-conversation');
+        } catch (e) {
+          console.error('Erro ao processar dados do outbound:', e);
+        }
+      }
+    }
+  }, [location]);
 
   const { data: whatsappInstances, isLoading } = useQuery({
     queryKey: ['whatsapp-instances', currentWorkspace?.id],

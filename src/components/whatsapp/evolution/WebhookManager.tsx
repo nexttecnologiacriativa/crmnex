@@ -17,7 +17,10 @@ export default function WebhookManager({ instanceName, workspaceId, apiUrl, apiK
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
   const [reconfiguring, setReconfiguring] = useState(false);
+  const [diagnosing, setDiagnosing] = useState(false);
+  const [fixing, setFixing] = useState(false);
   const [webhookStatus, setWebhookStatus] = useState<any>(null);
+  const [diagnostics, setDiagnostics] = useState<any>(null);
   const { toast } = useToast();
 
   const configureWebhook = async () => {
@@ -99,10 +102,83 @@ export default function WebhookManager({ instanceName, workspaceId, apiUrl, apiK
     }
   };
 
+  const handleDiagnoseAll = async () => {
+    setDiagnosing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
+        body: {
+          action: 'diagnose_all_instances',
+          workspaceId,
+          apiUrl,
+          apiKey
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        setDiagnostics(data);
+        toast({
+          title: "Diagnóstico Completo",
+          description: `${data.total_instances} instância(s) analisada(s). ${data.problem_instances} com problemas.`,
+        });
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro ao Diagnosticar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDiagnosing(false);
+    }
+  };
+
+  const handleFixWebhook = async (instanceToFix?: string) => {
+    const targetInstance = instanceToFix || instanceName;
+    setFixing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
+        body: {
+          action: 'fix_webhook',
+          instanceName: targetInstance,
+          workspaceId,
+          apiUrl,
+          apiKey
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast({
+          title: "Webhook Corrigido",
+          description: data.message,
+        });
+        
+        // Rediagnosticar após correção
+        setTimeout(() => {
+          handleDiagnoseAll();
+        }, 1000);
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro ao Corrigir Webhook",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setFixing(false);
+    }
+  };
+
   const handleReconfigureAllInstances = async () => {
     setReconfiguring(true);
     try {
-      // Reconfigurar todas as instâncias com o prefixo correto do workspace
       const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
         body: {
           action: 'reconfigure_all_instances',
@@ -117,19 +193,18 @@ export default function WebhookManager({ instanceName, workspaceId, apiUrl, apiK
       if (data.success) {
         toast({
           title: "Instâncias Reconfiguradas",
-          description: `${data.reconfigured_count} instâncias foram reconfiguradas com sucesso. Todas agora usam o prefixo correto e webhook atualizado.`,
+          description: `${data.reconfigured_count} instâncias foram reconfiguradas com sucesso.`,
         });
         
-        // Atualizar o status após reconfiguração
         setTimeout(() => {
-          testWebhook();
+          handleDiagnoseAll();
         }, 2000);
       } else {
-        throw new Error(data.error || 'Erro desconhecido ao reconfigurar instâncias');
+        throw new Error(data.error || 'Erro desconhecido');
       }
     } catch (error: any) {
       toast({
-        title: "Erro ao Reconfigurar Instâncias",
+        title: "Erro ao Reconfigurar",
         description: error.message,
         variant: "destructive",
       });
@@ -150,11 +225,21 @@ export default function WebhookManager({ instanceName, workspaceId, apiUrl, apiK
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={handleDiagnoseAll}
+            disabled={diagnosing}
+            variant="default"
+          >
+            {diagnosing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <AlertCircle className="mr-2 h-4 w-4" />
+            Diagnosticar Todas as Instâncias
+          </Button>
+          
           <Button
             onClick={configureWebhook}
             disabled={loading}
-            variant="default"
+            variant="outline"
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Configurar Webhook
@@ -169,45 +254,70 @@ export default function WebhookManager({ instanceName, workspaceId, apiUrl, apiK
             <RefreshCw className="mr-2 h-4 w-4" />
             Verificar Status
           </Button>
-
-          <Button
-            onClick={async () => {
-              const testData = {
-                event: 'MESSAGES_UPSERT',
-                instance: instanceName,
-                data: [{
-                  key: { fromMe: false, remoteJid: '5512974012534@s.whatsapp.net', id: 'test123' },
-                  message: { conversation: 'Teste de webhook direto!' },
-                  messageType: 'text',
-                  pushName: 'Teste'
-                }]
-              };
-              
-              try {
-                const response = await fetch('https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/whatsapp-webhook', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(testData)
-                });
-                const result = await response.text();
-                toast({
-                  title: "Teste Direto",
-                  description: `Status: ${response.status} - ${result}`,
-                });
-              } catch (error: any) {
-                toast({
-                  title: "Erro no Teste Direto",
-                  description: error.message,
-                  variant: "destructive",
-                });
-              }
-            }}
-            variant="secondary"
-            size="sm"
-          >
-            Testar Webhook Direto
-          </Button>
         </div>
+
+        {diagnostics && (
+          <div className="space-y-3 mt-4">
+            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+              <div>
+                <h3 className="font-medium">Resultado do Diagnóstico</h3>
+                <p className="text-sm text-muted-foreground">
+                  {diagnostics.total_instances} instância(s) | {diagnostics.problem_instances} com problema(s)
+                </p>
+              </div>
+              {diagnostics.problem_instances > 0 && (
+                <Badge variant="destructive">{diagnostics.problem_instances} problemas</Badge>
+              )}
+            </div>
+
+            {diagnostics.diagnostics?.map((diag: any, idx: number) => (
+              <div key={idx} className="p-4 border rounded-lg space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {diag.needsFix ? (
+                      <XCircle className="h-5 w-5 text-red-500" />
+                    ) : (
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                    )}
+                    <div>
+                      <p className="font-medium">{diag.instanceName}</p>
+                      <p className="text-xs text-muted-foreground">{diag.phone_number}</p>
+                    </div>
+                  </div>
+                  {diag.needsFix && (
+                    <Button
+                      onClick={() => handleFixWebhook(diag.instanceName)}
+                      disabled={fixing}
+                      size="sm"
+                      variant="destructive"
+                    >
+                      {fixing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Corrigir Automaticamente
+                    </Button>
+                  )}
+                </div>
+
+                {diag.issues && diag.issues.length > 0 && (
+                  <div className="space-y-1 pl-7">
+                    <p className="text-sm font-medium text-red-600">Problemas:</p>
+                    {diag.issues.map((issue: string, i: number) => (
+                      <p key={i} className="text-xs text-red-600">• {issue}</p>
+                    ))}
+                  </div>
+                )}
+
+                {diag.current_config && (
+                  <div className="pl-7 text-xs space-y-1">
+                    <p className="font-medium">Configuração Atual:</p>
+                    <p>URL: {diag.current_config.url?.substring(0, 50)}...</p>
+                    <p>Eventos: {diag.current_config.events?.join(', ') || 'Nenhum'}</p>
+                    <p>Base64: {diag.current_config.webhook_base64 ? '✅' : '❌'}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {webhookStatus && (
           <div className="space-y-3 p-4 border rounded-lg">

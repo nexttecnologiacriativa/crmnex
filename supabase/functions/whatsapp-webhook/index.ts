@@ -96,10 +96,12 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
       const remoteJid = message.key?.remoteJid || '';
       const remoteJidAlt = message.key?.remoteJidAlt || '';
       
-      // PRIORIZAR remoteJidAlt (contém número real) sobre remoteJid (pode ser LID)
-      const phoneSource = remoteJidAlt || remoteJid;
+      // CRITICAL FIX: Ignorar LIDs (@lid) - usar remoteJid nesse caso
+      // LIDs são identificadores internos do WhatsApp e não podem ser usados como número
+      const isLID = remoteJidAlt?.includes('@lid');
+      const phoneSource = isLID ? remoteJid : (remoteJidAlt || remoteJid);
       
-      console.log('📞 Phone extraction:', { remoteJid, remoteJidAlt, phoneSource });
+      console.log('📞 Phone extraction:', { remoteJid, remoteJidAlt, isLID, phoneSource });
       
       // FILTRAR MENSAGENS DE GRUPOS - Ignorar JIDs que terminam em @g.us
       if (phoneSource.endsWith('@g.us')) {

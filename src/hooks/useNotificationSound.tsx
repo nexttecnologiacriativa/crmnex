@@ -74,9 +74,15 @@ export function useNotificationSound() {
   });
 
   // Tocar som usando Web Audio API
-  const playGeneratedSound = (soundType: string) => {
+  const playGeneratedSound = async (soundType: string) => {
     try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Garantir que o AudioContext não está suspenso (bloqueado pelo navegador)
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
+      
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
       

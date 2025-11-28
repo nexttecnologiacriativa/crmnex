@@ -3,6 +3,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/s
 import { useNavigate } from 'react-router-dom';
 import AppSidebar from '@/components/layout/Sidebar';
 import { useAutomationProcessor } from '@/hooks/useAutomationProcessor';
+import { useWhatsAppNotifications } from '@/hooks/useWhatsAppNotifications';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -13,6 +14,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Processar automações periodicamente no frontend
   useAutomationProcessor();
+  
+  // Ativar notificações de WhatsApp globalmente
+  useWhatsAppNotifications();
 
   return (
     <SidebarProvider>

@@ -8,14 +8,10 @@ import { useWorkspace } from '@/hooks/useWorkspace';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { useWhatsAppNotifications } from '@/hooks/useWhatsAppNotifications';
 
 export default function Atendimento() {
   const { currentWorkspace } = useWorkspace();
   const navigate = useNavigate();
-  
-  // Ativar notificações de WhatsApp
-  useWhatsAppNotifications();
 
   const { data: whatsappInstances, isLoading } = useQuery({
     queryKey: ['whatsapp-instances', currentWorkspace?.id],

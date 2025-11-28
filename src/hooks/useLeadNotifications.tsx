@@ -5,10 +5,12 @@ import { useAuth } from './useAuth';
 import { useWorkspace } from './useWorkspace';
 import { getLeadDisplayName } from '@/lib/leadUtils';
 import { toast } from '@/hooks/use-toast';
+import { useNotificationSound } from './useNotificationSound';
 
 export function useLeadNotifications() {
   const { user } = useAuth();
   const { currentWorkspace } = useWorkspace();
+  const { playSound } = useNotificationSound();
 
   useEffect(() => {
     if (!user || !currentWorkspace?.id) {
@@ -31,6 +33,9 @@ export function useLeadNotifications() {
           const newLead = payload.new;
           
           console.log('New lead notification received:', newLead);
+          
+          // Tocar som de notificação
+          playSound('lead');
           
           // Mostrar notificação toast
           toast({

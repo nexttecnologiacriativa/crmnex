@@ -2183,6 +2183,57 @@ export type Database = {
           },
         ]
       }
+      user_notification_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          lead_sound_enabled: boolean | null
+          lead_sound_type: string | null
+          updated_at: string | null
+          user_id: string
+          whatsapp_sound_enabled: boolean | null
+          whatsapp_sound_type: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          lead_sound_enabled?: boolean | null
+          lead_sound_type?: string | null
+          updated_at?: string | null
+          user_id: string
+          whatsapp_sound_enabled?: boolean | null
+          whatsapp_sound_type?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          lead_sound_enabled?: boolean | null
+          lead_sound_type?: string | null
+          updated_at?: string | null
+          user_id?: string
+          whatsapp_sound_enabled?: boolean | null
+          whatsapp_sound_type?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_notification_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_notification_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       webhooks: {
         Row: {
           created_at: string | null

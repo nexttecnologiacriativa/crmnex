@@ -46,9 +46,11 @@ export function useWhatsAppNotifications() {
         },
         (payload) => {
           console.log('New WhatsApp message received:', payload);
+          console.log('is_from_lead:', (payload.new as any)?.is_from_lead);
           
           // Só toca som se a mensagem for recebida (não enviada pelo usuário)
-          if (payload.new && (payload.new as any).direction === 'incoming') {
+          if (payload.new && (payload.new as any).is_from_lead === true) {
+            console.log('Playing WhatsApp notification sound...');
             playSound('whatsapp');
           }
         }

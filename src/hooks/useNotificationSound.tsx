@@ -101,18 +101,21 @@ export function useNotificationSound() {
 
   // Tocar som de notificação
   const playSound = (type: 'whatsapp' | 'lead') => {
-    if (!settings) return;
+    // Se não há settings, usar valores padrão (som habilitado)
+    const defaultEnabled = true;
+    const defaultSoundType = 'notification-1';
     
-    const isEnabled = type === 'whatsapp' 
-      ? settings.whatsapp_sound_enabled 
-      : settings.lead_sound_enabled;
+    const isEnabled = settings 
+      ? (type === 'whatsapp' ? settings.whatsapp_sound_enabled : settings.lead_sound_enabled)
+      : defaultEnabled;
     
-    const soundType = type === 'whatsapp' 
-      ? settings.whatsapp_sound_type 
-      : settings.lead_sound_type;
+    const soundType = settings
+      ? (type === 'whatsapp' ? settings.whatsapp_sound_type : settings.lead_sound_type)
+      : defaultSoundType;
     
     if (!isEnabled) return;
     
+    console.log(`Playing ${type} sound: ${soundType}`);
     playGeneratedSound(soundType);
   };
 

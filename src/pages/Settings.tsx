@@ -13,6 +13,7 @@ import N8nWebhookSettings from '@/components/settings/N8nWebhookSettings';
 import { N8nProcessor } from '@/components/settings/N8nProcessor';
 import AISettings from '@/components/settings/AISettings';
 import WebhooksManager from '@/components/webhooks/WebhooksManager';
+import NotificationSoundSettings from '@/components/settings/NotificationSoundSettings';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTeamManagement } from '@/hooks/useTeamManagement';
 import ResetWorkspace from '@/components/settings/ResetWorkspace';
@@ -34,7 +35,7 @@ export default function Settings() {
           </div>
 
           <Tabs defaultValue="profile" className="w-full">
-            <TabsList className="grid w-full grid-cols-10 bg-white shadow-sm border">
+            <TabsList className="grid w-full grid-cols-11 bg-white shadow-sm border">
               <TabsTrigger 
                 value="profile"
                 className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-blue-600 data-[state=active]:text-white"
@@ -90,6 +91,12 @@ export default function Settings() {
                 IA
               </TabsTrigger>
               <TabsTrigger 
+                value="notifications"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-blue-600 data-[state=active]:text-white"
+              >
+                Notificações
+              </TabsTrigger>
+              <TabsTrigger 
                 value="webhooks"
                 className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-blue-600 data-[state=active]:text-white"
               >
@@ -133,6 +140,10 @@ export default function Settings() {
 
             <TabsContent value="ai" className="mt-6">
               <AISettings currentUserRole={currentUserRole} />
+            </TabsContent>
+
+            <TabsContent value="notifications" className="mt-6">
+              <NotificationSoundSettings />
             </TabsContent>
 
             <TabsContent value="webhooks" className="mt-6">

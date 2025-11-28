@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/hooks/useWorkspace';
+import { useNotificationSound } from './useNotificationSound';
 
 export function useWhatsAppNotifications() {
   const { currentWorkspace } = useWorkspace();
+  const { playSound } = useNotificationSound();
   const [lastUnreadCount, setLastUnreadCount] = useState(0);
   const [showNotification, setShowNotification] = useState(false);
 
@@ -26,6 +28,40 @@ export function useWhatsAppNotifications() {
     refetchOnWindowFocus: false,
     refetchIntervalInBackground: false
   });
+
+  // Adicionar listener em tempo real para novas mensagens
+  useEffect(() => {
+    if (!currentWorkspace?.id) return;
+
+    console.log('Setting up WhatsApp message realtime listener for workspace:', currentWorkspace.id);
+
+    const channel = supabase
+      .channel(`whatsapp_messages_${currentWorkspace.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'whatsapp_messages',
+        },
+        (payload) => {
+          console.log('New WhatsApp message received:', payload);
+          
+          // Só toca som se a mensagem for recebida (não enviada pelo usuário)
+          if (payload.new && (payload.new as any).direction === 'incoming') {
+            playSound('whatsapp');
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('WhatsApp message realtime subscription status:', status);
+      });
+
+    return () => {
+      console.log('Cleaning up WhatsApp message realtime listener');
+      supabase.removeChannel(channel);
+    };
+  }, [currentWorkspace?.id, playSound]);
 
   useEffect(() => {
     // Se há novas mensagens não lidas, mostrar notificação

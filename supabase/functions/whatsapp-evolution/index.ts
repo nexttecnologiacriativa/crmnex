@@ -447,6 +447,12 @@ serve(async (req) => {
         return await testWebhook(instanceName, workspaceId, supabase, currentApiUrl, currentApiKey);
       case 'get_webhook_status':
         return await getWebhookStatus(instanceName, supabase, currentApiUrl, currentApiKey);
+      case 'diagnose_webhook':
+        return await diagnoseWebhook(instanceName, supabase, currentApiUrl, currentApiKey);
+      case 'fix_webhook':
+        return await fixWebhook(instanceName, supabase, currentApiUrl, currentApiKey);
+      case 'diagnose_all_instances':
+        return await diagnoseAllInstances(workspaceId, supabase, currentApiUrl, currentApiKey);
       case 'reconfigure_all_instances':
         return await reconfigureAllInstances(workspaceId, supabase, currentApiUrl, currentApiKey);
       default:
@@ -2040,6 +2046,7 @@ async function getWebhookStatus(instanceName: string, supabase: any, apiUrl: str
 
     const expectedUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/whatsapp-webhook`;
     const isCorrectUrl = data.url === expectedUrl;
+    const hasMessagesUpsert = data.events?.includes('MESSAGES_UPSERT') || data.events?.includes('messages.upsert');
 
     return new Response(JSON.stringify({
       success: true,
@@ -2050,6 +2057,7 @@ async function getWebhookStatus(instanceName: string, supabase: any, apiUrl: str
       correct_url: isCorrectUrl,
       events: data.events || [],
       webhook_base64: data.webhook_base64 || false,
+      has_messages_upsert: hasMessagesUpsert,
       data
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -2060,6 +2068,254 @@ async function getWebhookStatus(instanceName: string, supabase: any, apiUrl: str
       success: false,
       configured: false,
       active: false,
+      error: (error as Error).message
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500
+    });
+  }
+}
+
+// Diagnosticar configuração do webhook de uma instância
+async function diagnoseWebhook(instanceName: string, supabase: any, apiUrl: string, apiKey: string) {
+  try {
+    console.log(`🔍 Diagnosticando webhook para instância ${instanceName}`);
+
+    // Buscar status do webhook na API Evolution
+    const response = await fetch(`${apiUrl}/webhook/find/${instanceName}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': apiKey
+      }
+    });
+
+    const expectedUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/whatsapp-webhook`;
+    const expectedEvents = ['MESSAGES_UPSERT', 'CONNECTION_UPDATE'];
+
+    if (!response.ok) {
+      return new Response(JSON.stringify({
+        success: true,
+        instanceName,
+        diagnosis: 'not_configured',
+        message: 'Webhook não está configurado',
+        issues: ['Webhook não configurado na Evolution API'],
+        recommendations: ['Execute "Corrigir Automaticamente" para configurar o webhook'],
+        needsFix: true
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const data = await response.json();
+    console.log(`📋 Configuração atual do webhook:`, data);
+
+    // Verificar problemas
+    const issues = [];
+    const recommendations = [];
+    
+    if (data.url !== expectedUrl) {
+      issues.push(`URL incorreta: ${data.url}`);
+      recommendations.push(`Atualizar URL para: ${expectedUrl}`);
+    }
+
+    if (!data.enabled) {
+      issues.push('Webhook está desabilitado');
+      recommendations.push('Habilitar webhook');
+    }
+
+    const hasMessagesUpsert = data.events?.includes('MESSAGES_UPSERT') || data.events?.includes('messages.upsert');
+    if (!hasMessagesUpsert) {
+      issues.push('Evento MESSAGES_UPSERT não configurado - mensagens não serão recebidas');
+      recommendations.push('Adicionar evento MESSAGES_UPSERT');
+    }
+
+    if (!data.webhook_base64) {
+      issues.push('webhook_base64 desabilitado - mídias podem não funcionar corretamente');
+      recommendations.push('Habilitar webhook_base64');
+    }
+
+    const diagnosis = issues.length === 0 ? 'ok' : 'needs_fix';
+
+    return new Response(JSON.stringify({
+      success: true,
+      instanceName,
+      diagnosis,
+      message: diagnosis === 'ok' 
+        ? 'Webhook configurado corretamente' 
+        : `${issues.length} problema(s) encontrado(s)`,
+      current_config: {
+        url: data.url,
+        enabled: data.enabled,
+        events: data.events || [],
+        webhook_base64: data.webhook_base64
+      },
+      expected_config: {
+        url: expectedUrl,
+        enabled: true,
+        events: expectedEvents,
+        webhook_base64: true
+      },
+      issues,
+      recommendations,
+      needsFix: issues.length > 0
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    console.error('❌ Erro ao diagnosticar webhook:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: (error as Error).message
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500
+    });
+  }
+}
+
+// Corrigir automaticamente configuração do webhook
+async function fixWebhook(instanceName: string, supabase: any, apiUrl: string, apiKey: string) {
+  try {
+    console.log(`🔧 Corrigindo webhook para instância ${instanceName}`);
+
+    const webhookUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/whatsapp-webhook`;
+
+    // Configurar webhook com todos os eventos necessários
+    const response = await fetch(`${apiUrl}/webhook/set/${instanceName}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': apiKey
+      },
+      body: JSON.stringify({
+        url: webhookUrl,
+        enabled: true,
+        events: [
+          'APPLICATION_STARTUP',
+          'QRCODE_UPDATED', 
+          'CONNECTION_UPDATE',
+          'MESSAGES_UPSERT',
+          'MESSAGES_UPDATE',
+          'SEND_MESSAGE'
+        ],
+        webhook_by_events: false,
+        webhook_base64: true,
+        webhook_filter: {
+          isGroup: false
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Falha ao configurar webhook: ${response.status} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log(`✅ Webhook corrigido para ${instanceName}:`, result);
+
+    // Verificar se a correção funcionou
+    const verifyResponse = await fetch(`${apiUrl}/webhook/find/${instanceName}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': apiKey
+      }
+    });
+
+    let verifiedConfig = null;
+    if (verifyResponse.ok) {
+      verifiedConfig = await verifyResponse.json();
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
+      message: 'Webhook corrigido com sucesso',
+      instanceName,
+      config: verifiedConfig,
+      fixed_issues: [
+        'URL atualizada',
+        'Webhook habilitado',
+        'Evento MESSAGES_UPSERT adicionado',
+        'webhook_base64 ativado'
+      ]
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    console.error('❌ Erro ao corrigir webhook:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: (error as Error).message
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500
+    });
+  }
+}
+
+// Diagnosticar todas as instâncias de um workspace
+async function diagnoseAllInstances(workspaceId: string, supabase: any, apiUrl: string, apiKey: string) {
+  try {
+    console.log(`🔍 Diagnosticando todas as instâncias do workspace ${workspaceId}`);
+
+    // Buscar todas as instâncias do workspace
+    const { data: instances, error: dbError } = await supabase
+      .from('whatsapp_instances')
+      .select('instance_name, phone_number, status')
+      .eq('workspace_id', workspaceId);
+
+    if (dbError) {
+      throw new Error(`Erro ao buscar instâncias: ${dbError.message}`);
+    }
+
+    if (!instances || instances.length === 0) {
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Nenhuma instância encontrada',
+        instances: []
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Diagnosticar cada instância
+    const diagnostics = [];
+    for (const instance of instances) {
+      try {
+        const diagResponse = await diagnoseWebhook(instance.instance_name, supabase, apiUrl, apiKey);
+        const diagData = await diagResponse.json();
+        diagnostics.push({
+          ...diagData,
+          phone_number: instance.phone_number,
+          connection_status: instance.status
+        });
+      } catch (error) {
+        diagnostics.push({
+          success: false,
+          instanceName: instance.instance_name,
+          phone_number: instance.phone_number,
+          error: (error as Error).message,
+          needsFix: true
+        });
+      }
+    }
+
+    const problemInstances = diagnostics.filter(d => d.needsFix);
+
+    return new Response(JSON.stringify({
+      success: true,
+      total_instances: instances.length,
+      problem_instances: problemInstances.length,
+      diagnostics
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    console.error('❌ Erro ao diagnosticar instâncias:', error);
+    return new Response(JSON.stringify({
+      success: false,
       error: (error as Error).message
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

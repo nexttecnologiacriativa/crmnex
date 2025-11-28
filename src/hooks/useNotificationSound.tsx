@@ -59,6 +59,8 @@ export function useNotificationSound() {
           workspace_id: currentWorkspace.id,
           ...newSettings,
           updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,workspace_id'
         })
         .select()
         .single();

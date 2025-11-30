@@ -111,6 +111,7 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
       
       // Função para normalizar número de telefone (remover sufixos e caracteres especiais)
       // CRITICAL: Detecta e remove sufixos incorporados (ex: 551297401253457 -> 5512974012534)
+      // FIXED: Adiciona o 9 em números de 12 dígitos (celulares brasileiros sem o 9)
       const normalizePhoneNumber = (phone: string): string => {
         if (!phone) return '';
         
@@ -141,6 +142,17 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
             console.log('✂️ Removed 3-digit incorporated suffix:', digitsOnly, '->', withoutLast3);
             return withoutLast3;
           }
+        }
+        
+        // FIX: Se após normalização tiver 12 dígitos (55 + DDD + 8 dígitos)
+        // É um celular sem o 9 - adicionar
+        if (digitsOnly.startsWith('55') && digitsOnly.length === 12) {
+          const ddi = digitsOnly.slice(0, 2);   // 55
+          const ddd = digitsOnly.slice(2, 4);   // DDD
+          const numero = digitsOnly.slice(4);    // 8 dígitos
+          const corrected = `${ddi}${ddd}9${numero}`;
+          console.log('📞 Fixed 12-digit number:', digitsOnly, '->', corrected);
+          return corrected;
         }
         
         return digitsOnly;

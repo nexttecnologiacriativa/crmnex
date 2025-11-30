@@ -9,18 +9,34 @@ const corsHeaders = {
 
 /**
  * Ensures phone number has Brazil country code (55) for sending messages
+ * FIXED: Handles 12-digit Brazilian mobile numbers (missing the "9")
  */
 function ensureCountryCode55(phone: string): string {
   if (!phone) return '';
   
   const digitsOnly = phone.replace(/\D/g, '');
   
-  // If already has 55 prefix and correct length, return as is
-  if (digitsOnly.startsWith('55') && digitsOnly.length >= 13) {
+  // If already has 55 prefix
+  if (digitsOnly.startsWith('55')) {
+    // If has 13+ digits, correct length
+    if (digitsOnly.length >= 13) {
+      return digitsOnly;
+    }
+    
+    // If has 12 digits (mobile without the 9), add 9 after DDD
+    // Format: 55 + DDD(2) + number(8) -> 55 + DDD(2) + 9 + number(8)
+    if (digitsOnly.length === 12) {
+      const ddi = digitsOnly.slice(0, 2);   // 55
+      const ddd = digitsOnly.slice(2, 4);   // DDD (area code)
+      const numero = digitsOnly.slice(4);    // 8 digits
+      return `${ddi}${ddd}9${numero}`;       // 55 + DDD + 9 + number
+    }
+    
+    // Return as is for other cases
     return digitsOnly;
   }
   
-  // Add 55 prefix if missing
+  // If doesn't have 55, add it
   return `55${digitsOnly}`;
 }
 

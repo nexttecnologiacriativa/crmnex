@@ -81,6 +81,58 @@ serve(async (req) => {
     });
 
     switch (action) {
+      case 'recreate_instance': {
+        const { oldInstanceName, newInstanceName, workspaceId: wsId } = bodyData;
+        
+        if (!oldInstanceName || !newInstanceName || !wsId) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Missing required parameters: oldInstanceName, newInstanceName, workspaceId' 
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        console.log('🔄 Recreating instance:', { oldInstanceName, newInstanceName, wsId });
+        
+        try {
+          // 1. Delete old instance from Evolution API
+          console.log('🗑️ Deleting old instance from Evolution API:', oldInstanceName);
+          const deleteResponse = await fetch(`${currentApiUrl}/instance/delete/${oldInstanceName}`, {
+            method: 'DELETE',
+            headers: {
+              'apikey': currentApiKey
+            }
+          });
+          
+          if (!deleteResponse.ok) {
+            const deleteError = await deleteResponse.text();
+            console.error('❌ Failed to delete old instance:', deleteError);
+            // Continue anyway - instance might not exist in API
+          } else {
+            console.log('✅ Old instance deleted from Evolution API');
+          }
+          
+          // 2. Create new instance with correct name
+          console.log('🆕 Creating new instance in Evolution API:', newInstanceName);
+          const createResult = await createInstance(
+            newInstanceName, 
+            wsId, 
+            supabase, 
+            currentApiUrl, 
+            currentApiKey,
+            newInstanceName // originalName
+          );
+          
+          return createResult;
+        } catch (error) {
+          console.error('❌ Error recreating instance:', error);
+          return new Response(
+            JSON.stringify({ error: (error as Error).message }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
       case 'create_instance':
         return await createInstance(instanceName, workspaceId, supabase, currentApiUrl, currentApiKey, originalName);
       case 'get_qr':

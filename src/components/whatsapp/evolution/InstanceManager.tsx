@@ -18,7 +18,7 @@ import {
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { useWhatsAppInstances, useSyncWhatsAppInstances } from '@/hooks/useWhatsAppInstance';
+import { useWhatsAppInstances, useSyncWhatsAppInstances, useRecreateWhatsAppInstance } from '@/hooks/useWhatsAppInstance';
 import QRCodeManager from './QRCodeManager';
 import InstanceCreator from './InstanceCreator';
 
@@ -41,6 +41,7 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
   const { currentWorkspace } = useWorkspace();
   const { data: instances = [], isLoading, refetch } = useWhatsAppInstances();
   const syncInstances = useSyncWhatsAppInstances();
+  const recreateInstance = useRecreateWhatsAppInstance();
   const [showCreator, setShowCreator] = useState(false);
   const [selectedInstance, setSelectedInstance] = useState<WhatsAppInstance | null>(null);
   const [showQRCode, setShowQRCode] = useState(false);
@@ -225,6 +226,50 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
     } catch (error) {
       console.error('Error fixing sync:', error);
       toast.error('Erro ao corrigir sincronização: ' + (error as Error).message);
+    }
+  };
+
+  const handleRecreateInstance = async (instance: WhatsAppInstance) => {
+    if (!currentWorkspace) return;
+
+    const workspacePrefix = `ws_${currentWorkspace.id.substring(0, 8)}_`;
+    const oldInstanceName = instance.instance_name;
+    const newInstanceName = instance.instance_name;
+
+    // Check if instance already has the correct prefix
+    if (!newInstanceName.startsWith(workspacePrefix)) {
+      toast.error('Erro: Nome da instância não está no formato correto');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `⚠️ Recriar instância ${oldInstanceName}?\n\n` +
+      `Esta ação irá:\n` +
+      `• Deletar a instância antiga da Evolution API\n` +
+      `• Criar uma nova instância com o nome correto\n` +
+      `• Gerar um novo QR Code\n\n` +
+      `Você precisará escanear o QR Code novamente para reconectar o WhatsApp.\n\n` +
+      `As conversas existentes serão mantidas no banco de dados.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      toast('Recriando instância...', {
+        description: 'Por favor aguarde, estamos recriando a instância.',
+      });
+
+      await recreateInstance.mutateAsync({
+        oldInstanceName,
+        newInstanceName
+      });
+
+      // Show QR code automatically after recreation
+      setSelectedInstance(instance);
+      setShowQRCode(true);
+      refetch();
+    } catch (error: any) {
+      toast.error('Erro ao recriar instância: ' + error.message);
     }
   };
 
@@ -499,6 +544,19 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
                           >
                             <QrCode className="h-4 w-4 mr-1" />
                             Gerar QR Code
+                          </Button>
+                        )}
+                        
+                        {(!instance.status || instance.status === 'unknown') && isAllowedToEdit && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRecreateInstance(instance)}
+                            className="text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300"
+                            disabled={recreateInstance.isPending}
+                          >
+                            <RefreshCw className={`h-4 w-4 mr-1 ${recreateInstance.isPending ? 'animate-spin' : ''}`} />
+                            Recriar
                           </Button>
                         )}
                         

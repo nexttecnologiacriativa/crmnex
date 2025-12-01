@@ -164,6 +164,36 @@ export function useSendWhatsAppMessage() {
   });
 }
 
+export function useRecreateWhatsAppInstance() {
+  const queryClient = useQueryClient();
+  const { currentWorkspace } = useWorkspace();
+  
+  return useMutation({
+    mutationFn: async ({ oldInstanceName, newInstanceName }: { oldInstanceName: string; newInstanceName: string }) => {
+      if (!currentWorkspace) throw new Error('No workspace selected');
+      
+      const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
+        body: {
+          action: 'recreate_instance',
+          oldInstanceName,
+          newInstanceName,
+          workspaceId: currentWorkspace.id,
+        },
+      });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-instances'] });
+      toast.success('Instância recriada com sucesso! Escaneie o QR Code para reconectar.');
+    },
+    onError: (error) => {
+      toast.error('Erro ao recriar instância: ' + error.message);
+    },
+  });
+}
+
 export function useSyncWhatsAppInstances() {
   const queryClient = useQueryClient();
   const { currentWorkspace } = useWorkspace();

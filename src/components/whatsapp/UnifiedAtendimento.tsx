@@ -888,12 +888,39 @@ export default function UnifiedAtendimento() {
     enabled: !!currentWorkspace?.id && leadIds.length > 0
   });
 
-  // Filters and helpers
-  const filteredConversations = enrichedConversations.filter((conv: any) => {
-    const searchLower = search.toLowerCase();
-    const normalizedConvPhone = normalizeForMatch(conv.phone_number || '');
-    return conv.displayName.toLowerCase().includes(searchLower) || (conv.phone_number || '').includes(search) || normalizedConvPhone.includes(search.replace(/\D/g, ''));
-  });
+  // Filters and helpers - Improved search with accent normalization
+  const normalizeText = (text: string) => 
+    text.toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+  
+  const filteredConversations = useMemo(() => {
+    if (!search.trim()) return enrichedConversations;
+    
+    const searchNormalized = normalizeText(search);
+    const searchDigits = search.replace(/\D/g, '');
+    
+    return enrichedConversations.filter((conv: any) => {
+      // Search in displayName
+      const displayNameNormalized = normalizeText(conv.displayName || '');
+      if (displayNameNormalized.includes(searchNormalized)) return true;
+      
+      // Search in contact_name
+      const contactNameNormalized = normalizeText(conv.contact_name || '');
+      if (contactNameNormalized.includes(searchNormalized)) return true;
+      
+      // Search in lead name (if exists)
+      const leadNameNormalized = normalizeText(conv.lead?.name || '');
+      if (leadNameNormalized.includes(searchNormalized)) return true;
+      
+      // Search in phone number
+      const normalizedConvPhone = normalizeForMatch(conv.phone_number || '');
+      if ((conv.phone_number || '').includes(search)) return true;
+      if (searchDigits && normalizedConvPhone.includes(searchDigits)) return true;
+      
+      return false;
+    });
+  }, [enrichedConversations, search]);
   const formatTime = (iso?: string) => iso ? format(new Date(iso), 'HH:mm', {
     locale: ptBR
   }) : '';

@@ -2,8 +2,12 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Mic, MicOff, Square, Send, Play, Pause, Trash2, Upload } from 'lucide-react';
+import { Mic, Square, Send, Play, Pause, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+
+// Limite de 15MB para áudios
+const MAX_AUDIO_SIZE = 15 * 1024 * 1024;
+
 interface AudioRecordingState {
   isRecording: boolean;
   isPlaying: boolean;
@@ -11,12 +15,14 @@ interface AudioRecordingState {
   audioBlob: Blob | null;
   audioUrl: string | null;
 }
+
 interface ChatAudioSenderProps {
   selectedConv: any;
   selectedInstanceName: string;
   currentWorkspace: any;
   onAudioSent: () => void;
 }
+
 export const ChatAudioSender: React.FC<ChatAudioSenderProps> = ({
   selectedConv,
   selectedInstanceName,
@@ -40,43 +46,38 @@ export const ChatAudioSender: React.FC<ChatAudioSenderProps> = ({
   const startTimeRef = useRef<number>(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
   const startRecording = useCallback(async () => {
     try {
       console.log('🎤 Iniciando gravação de áudio...');
 
-      // Verifica se o navegador suporta getUserMedia
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error('Seu navegador não suporta gravação de áudio');
       }
 
-      // Configurações progressivas - começa com a mais simples
       const audioConfigs = [
-      // Configuração básica
-      {
-        audio: true
-      },
-      // Configuração com parâmetros específicos
-      {
-        audio: {
-          sampleRate: 44100,
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
+        { audio: true },
+        {
+          audio: {
+            sampleRate: 44100,
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        },
+        {
+          audio: {
+            channelCount: 1,
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false
+          }
         }
-      },
-      // Configuração mínima
-      {
-        audio: {
-          channelCount: 1,
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false
-        }
-      }];
+      ];
+
       let stream = null;
 
-      // Tenta diferentes configurações até uma funcionar
       for (let i = 0; i < audioConfigs.length; i++) {
         try {
           console.log(`🎤 Tentando configuração ${i + 1}:`, audioConfigs[i]);
@@ -90,16 +91,15 @@ export const ChatAudioSender: React.FC<ChatAudioSenderProps> = ({
           }
         }
       }
+
       if (!stream) {
         throw new Error('Não foi possível acessar o microfone');
       }
+
       streamRef.current = stream;
       chunksRef.current = [];
 
-      // Força o uso de WAV para compatibilidade, mas com fallback
       let mimeType = 'audio/wav';
-
-      // Verifica formatos suportados pelo navegador
       const supportedTypes = ['audio/wav', 'audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'];
       for (const type of supportedTypes) {
         if (MediaRecorder.isTypeSupported(type)) {
@@ -108,30 +108,30 @@ export const ChatAudioSender: React.FC<ChatAudioSenderProps> = ({
           break;
         }
       }
+
       try {
         const mediaRecorder = new MediaRecorder(stream, {
           mimeType,
-          audioBitsPerSecond: 64000 // Qualidade otimizada para WhatsApp
+          audioBitsPerSecond: 64000
         });
         mediaRecorderRef.current = mediaRecorder;
       } catch (recorderError) {
         console.warn('❌ Erro ao criar MediaRecorder com configurações:', recorderError);
-        // Fallback sem configurações específicas
         const mediaRecorder = new MediaRecorder(stream);
         mediaRecorderRef.current = mediaRecorder;
         console.log('✅ MediaRecorder criado com configurações padrão');
       }
+
       mediaRecorderRef.current.ondataavailable = event => {
         if (event.data.size > 0) {
           chunksRef.current.push(event.data);
         }
       };
+
       mediaRecorderRef.current.onstop = async () => {
         const finalDuration = Math.floor((Date.now() - startTimeRef.current) / 1000);
         if (chunksRef.current.length > 0) {
-          const audioBlob = new Blob(chunksRef.current, {
-            type: mimeType
-          });
+          const audioBlob = new Blob(chunksRef.current, { type: mimeType });
           const audioUrl = URL.createObjectURL(audioBlob);
           setState(prev => ({
             ...prev,
@@ -144,6 +144,7 @@ export const ChatAudioSender: React.FC<ChatAudioSenderProps> = ({
         streamRef.current?.getTracks().forEach(track => track.stop());
         streamRef.current = null;
       };
+
       mediaRecorderRef.current.start(250);
       startTimeRef.current = Date.now();
       setState(prev => ({
@@ -153,13 +154,12 @@ export const ChatAudioSender: React.FC<ChatAudioSenderProps> = ({
         audioBlob: null,
         audioUrl: null
       }));
+
       intervalRef.current = setInterval(() => {
         const currentDuration = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        setState(prev => ({
-          ...prev,
-          duration: currentDuration
-        }));
+        setState(prev => ({ ...prev, duration: currentDuration }));
       }, 100);
+
       toast.success('Gravação iniciada');
     } catch (error: any) {
       console.error('❌ Erro ao iniciar gravação:', error);
@@ -178,6 +178,7 @@ export const ChatAudioSender: React.FC<ChatAudioSenderProps> = ({
       toast.error(errorMessage);
     }
   }, []);
+
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && state.isRecording) {
       mediaRecorderRef.current.stop();
@@ -187,6 +188,7 @@ export const ChatAudioSender: React.FC<ChatAudioSenderProps> = ({
       }
     }
   }, [state.isRecording]);
+
   const playAudio = useCallback(() => {
     if (!state.audioUrl) return;
     if (audioRef.current) {
@@ -195,19 +197,10 @@ export const ChatAudioSender: React.FC<ChatAudioSenderProps> = ({
     }
     const audio = new Audio(state.audioUrl);
     audioRef.current = audio;
-    audio.onplay = () => setState(prev => ({
-      ...prev,
-      isPlaying: true
-    }));
-    audio.onended = () => setState(prev => ({
-      ...prev,
-      isPlaying: false
-    }));
+    audio.onplay = () => setState(prev => ({ ...prev, isPlaying: true }));
+    audio.onended = () => setState(prev => ({ ...prev, isPlaying: false }));
     audio.onerror = () => {
-      setState(prev => ({
-        ...prev,
-        isPlaying: false
-      }));
+      setState(prev => ({ ...prev, isPlaying: false }));
       toast.error('Erro ao reproduzir áudio');
     };
     audio.play().catch(error => {
@@ -215,15 +208,14 @@ export const ChatAudioSender: React.FC<ChatAudioSenderProps> = ({
       toast.error('Erro ao reproduzir áudio');
     });
   }, [state.audioUrl]);
+
   const pauseAudio = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
-      setState(prev => ({
-        ...prev,
-        isPlaying: false
-      }));
+      setState(prev => ({ ...prev, isPlaying: false }));
     }
   }, []);
+
   const discardRecording = useCallback(() => {
     if (state.audioUrl) {
       URL.revokeObjectURL(state.audioUrl);
@@ -240,20 +232,28 @@ export const ChatAudioSender: React.FC<ChatAudioSenderProps> = ({
       audioUrl: null
     });
   }, [state.audioUrl]);
+
   const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
     if (!file.type.startsWith('audio/')) {
       toast.error('Selecione um arquivo de áudio válido');
       return;
     }
 
-    // Verifica se é um formato suportado (MP3, WAV, OGG)
-    const supportedFormats = ['audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/ogg'];
-    if (!supportedFormats.includes(file.type)) {
-      toast.error('Formato não suportado. Use MP3, WAV ou OGG');
+    // Validar tamanho (15MB)
+    if (file.size > MAX_AUDIO_SIZE) {
+      toast.error('Arquivo muito grande. Máximo de 15MB permitido.');
       return;
     }
+
+    const supportedFormats = ['audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm'];
+    if (!supportedFormats.includes(file.type)) {
+      toast.error('Formato não suportado. Use MP3, WAV, OGG ou WebM');
+      return;
+    }
+
     const audioUrl = URL.createObjectURL(file);
     setState(prev => ({
       ...prev,
@@ -264,54 +264,102 @@ export const ChatAudioSender: React.FC<ChatAudioSenderProps> = ({
     toast.success('Arquivo carregado com sucesso');
     event.target.value = '';
   }, []);
+
   const sendAudio = useCallback(async () => {
     if (!state.audioBlob || !selectedConv || !selectedInstanceName) {
       toast.error('Selecione uma conversa e uma instância Evolution');
       return;
     }
+
+    // Validar tamanho (15MB)
+    if (state.audioBlob.size > MAX_AUDIO_SIZE) {
+      toast.error('Áudio muito grande. Máximo de 15MB permitido.');
+      return;
+    }
+
     const phoneToSend = selectedConv.phone_number?.replace(/\D/g, '') || '';
+
     try {
       setIsSending(true);
+      toast.info('Enviando áudio...', { duration: 30000, id: 'audio-upload' });
 
-      // Convert audio to base64
-      const arrayBuffer = await state.audioBlob.arrayBuffer();
-      const base64String = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-      console.log('🎵 Enviando áudio via Supabase Edge Function:', {
-        instanceName: selectedInstanceName,
-        phoneToSend,
-        audioBase64Length: base64String.length,
-        workspaceId: currentWorkspace?.id
+      // Gerar nome único do arquivo
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substr(2, 9);
+      const extension = state.audioBlob.type.includes('wav') ? 'wav' : 
+                        state.audioBlob.type.includes('ogg') ? 'ogg' : 
+                        state.audioBlob.type.includes('webm') ? 'webm' : 'mp3';
+      const filename = `audio_${timestamp}_${randomId}.${extension}`;
+      const path = `${currentWorkspace?.id || 'unknown'}/audio/${filename}`;
+
+      console.log('🎵 Fazendo upload do áudio para Storage:', {
+        path,
+        size: state.audioBlob.size,
+        type: state.audioBlob.type
       });
+
+      // Upload direto para Supabase Storage (sem passar pela Edge Function)
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('whatsapp-media')
+        .upload(path, state.audioBlob, {
+          contentType: state.audioBlob.type,
+          cacheControl: '31536000',
+          upsert: false
+        });
+
+      if (uploadError) {
+        throw new Error(`Erro no upload: ${uploadError.message}`);
+      }
+
+      console.log('✅ Upload concluído:', uploadData);
+
+      // Obter URL pública
+      const { data: publicUrlData } = supabase.storage
+        .from('whatsapp-media')
+        .getPublicUrl(path);
+
+      const audioUrl = publicUrlData.publicUrl;
+      console.log('🔗 URL pública do áudio:', audioUrl);
 
       // Evolution API config (optional)
       const cfgRaw = currentWorkspace?.id ? localStorage.getItem(`evolution_config_${currentWorkspace.id}`) : null;
       const cfg = cfgRaw ? JSON.parse(cfgRaw) : null;
 
-      // Use Supabase edge function (same as images) to ensure message is saved in database
-      await supabase.functions.invoke('whatsapp-evolution', {
+      // Enviar via sendMediaUrl (Edge Function envia apenas a URL, não o arquivo)
+      const { error: sendError } = await supabase.functions.invoke('whatsapp-evolution', {
         body: {
-          action: 'sendAudio',
+          action: 'sendMediaUrl',
           instanceName: selectedInstanceName,
-          phone: phoneToSend,
-          audioBase64: base64String,
+          number: phoneToSend,
+          mediaUrl: audioUrl,
+          mediaType: 'audio',
+          fileName: filename,
           workspaceId: currentWorkspace?.id,
           apiKey: cfg?.global_api_key,
           apiUrl: cfg?.apiUrl || cfg?.api_url
         }
       });
-      console.log('✅ Áudio enviado com sucesso via Supabase');
 
-      // Reset form and notify parent
+      if (sendError) {
+        throw new Error(`Erro ao enviar: ${sendError.message}`);
+      }
+
+      console.log('✅ Áudio enviado com sucesso via sendMediaUrl');
+
+      toast.dismiss('audio-upload');
+      toast.success('Áudio enviado com sucesso!');
+
       discardRecording();
       onAudioSent();
-      toast.success('Áudio enviado com sucesso!');
     } catch (error: any) {
       console.error('❌ Erro ao enviar áudio:', error);
+      toast.dismiss('audio-upload');
       toast.error(`Erro ao enviar áudio: ${error.message}`);
     } finally {
       setIsSending(false);
     }
   }, [state.audioBlob, selectedConv, selectedInstanceName, currentWorkspace, discardRecording, onAudioSent]);
+
   const formatDuration = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -338,7 +386,8 @@ export const ChatAudioSender: React.FC<ChatAudioSenderProps> = ({
 
   // Audio recording section
   if (state.isRecording) {
-    return <Card className="border-red-200 bg-red-50">
+    return (
+      <Card className="border-red-200 bg-red-50">
         <CardContent className="p-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -353,48 +402,77 @@ export const ChatAudioSender: React.FC<ChatAudioSenderProps> = ({
             </Button>
           </div>
         </CardContent>
-      </Card>;
+      </Card>
+    );
   }
 
   // Audio recorded section
   if (state.audioBlob && state.audioUrl) {
-    return <Card className="border-green-200 bg-green-50">
+    return (
+      <Card className="border-green-200 bg-green-50">
         <CardContent className="p-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <Button onClick={state.isPlaying ? pauseAudio : playAudio} size="sm" variant="outline" className="h-8 w-8 p-0">
+              <Button 
+                onClick={state.isPlaying ? pauseAudio : playAudio} 
+                size="sm" 
+                variant="outline" 
+                className="h-8 w-8 p-0"
+              >
                 {state.isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
               </Button>
               <span className="text-sm font-medium text-green-700">
-                Áudio pronto para envio
+                Áudio pronto ({(state.audioBlob.size / 1024 / 1024).toFixed(1)}MB)
               </span>
             </div>
             <div className="flex space-x-1">
-              <Button onClick={discardRecording} size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-100">
+              <Button 
+                onClick={discardRecording} 
+                size="sm" 
+                variant="ghost" 
+                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-100"
+              >
                 <Trash2 className="h-3 w-3" />
               </Button>
               <Button onClick={sendAudio} size="sm" className="h-8" disabled={isSending}>
-                {isSending ? 'Enviando...' : <>
+                {isSending ? 'Enviando...' : (
+                  <>
                     <Send className="h-3 w-3 mr-1" />
                     Enviar
-                  </>}
+                  </>
+                )}
               </Button>
             </div>
           </div>
         </CardContent>
-      </Card>;
+      </Card>
+    );
   }
 
   // Initial state buttons
-  return <div className="flex gap-2">
-      <Button onClick={startRecording} size="sm" variant="outline" className="flex items-center space-x-2" disabled={!selectedConv || !selectedInstanceName}>
+  return (
+    <div className="flex gap-2">
+      <Button 
+        onClick={startRecording} 
+        size="sm" 
+        variant="outline" 
+        className="flex items-center space-x-2" 
+        disabled={!selectedConv || !selectedInstanceName}
+      >
         <Mic className="h-4 w-4" />
         <span>Gravar</span>
       </Button>
       
-      
       {/* Hidden file input */}
-      <input ref={fileInputRef} type="file" accept="audio/*" onChange={handleFileUpload} className="hidden" />
-    </div>;
+      <input 
+        ref={fileInputRef} 
+        type="file" 
+        accept="audio/*" 
+        onChange={handleFileUpload} 
+        className="hidden" 
+      />
+    </div>
+  );
 };
+
 export default ChatAudioSender;

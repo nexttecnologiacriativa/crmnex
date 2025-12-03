@@ -14,30 +14,35 @@ export default function WhatsAppImage({ mediaUrl, alt, className = "", onClick }
   const [isLoading, setIsLoading] = useState(true);
   const [finalUrl, setFinalUrl] = useState<string>('');
   const blobUrlRef = useRef<string | null>(null);
-
-  console.log('🖼️ WhatsAppImage render:', {
-    mediaUrl,
-    isSupabaseUrl: mediaUrl?.includes('supabase.co'),
-    isFacebookUrl: mediaUrl?.includes('lookaside.fbsbx.com'),
-    isWhatsAppUrl: mediaUrl?.includes('mmg.whatsapp.net')
-  });
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Determine final URL based on source
   useEffect(() => {
-    if (!mediaUrl) return;
+    if (!mediaUrl) {
+      setFinalUrl('');
+      setIsLoading(false);
+      return;
+    }
 
-    // IMPORTANTE: Resetar estados quando mediaUrl muda
+    // Resetar estados
     setHasError(false);
     setIsLoading(true);
-    setFinalUrl('');
 
-    // Se a URL já é do Supabase, usar diretamente
+    // Limpar timeout anterior
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+    }
+
+    // Para URLs do Supabase, usar diretamente (sem resetar finalUrl para evitar race condition)
     if (mediaUrl.includes('supabase.co')) {
       setFinalUrl(mediaUrl);
       return;
     }
 
-    // Para URLs do WhatsApp (mmg.whatsapp.net) ou Facebook, usar proxy
+    // Para outras URLs, resetar primeiro
+    setFinalUrl('');
+
+    // Para URLs do WhatsApp ou Facebook, usar proxy
     if (mediaUrl.includes('mmg.whatsapp.net') || 
         mediaUrl.includes('lookaside.fbsbx.com') || 
         mediaUrl.includes('scontent.')) {
@@ -46,8 +51,7 @@ export default function WhatsAppImage({ mediaUrl, alt, className = "", onClick }
         try {
           const { data: { session } } = await supabase.auth.getSession();
           if (!session?.access_token) {
-            console.error('❌ No session token available for media proxy');
-            setFinalUrl(mediaUrl); // Fallback to original URL
+            setFinalUrl(mediaUrl);
             return;
           }
 
@@ -61,7 +65,6 @@ export default function WhatsAppImage({ mediaUrl, alt, className = "", onClick }
           });
 
           if (response.ok) {
-            // Se o proxy retorna JSON, pode ser uma URL permanente para áudio
             const contentType = response.headers.get('content-type');
             if (contentType?.includes('application/json')) {
               const result = await response.json();
@@ -71,67 +74,91 @@ export default function WhatsAppImage({ mediaUrl, alt, className = "", onClick }
               }
             }
 
-            // Para imagens, criar uma URL blob
             const blob = await response.blob();
             const blobUrl = URL.createObjectURL(blob);
             blobUrlRef.current = blobUrl;
             setFinalUrl(blobUrl);
           } else {
-            console.error('❌ Proxy failed, using original URL');
             setFinalUrl(mediaUrl);
           }
         } catch (error) {
-          console.error('❌ Proxy error, using original URL:', error);
           setFinalUrl(mediaUrl);
         }
       };
 
       proxyMedia();
     } else {
-      // Para outras URLs, usar diretamente
       setFinalUrl(mediaUrl);
     }
   }, [mediaUrl]);
 
-  // Cleanup blob URLs em efeito separado
+  // Timeout para detectar imagens que não carregam
+  useEffect(() => {
+    if (finalUrl && isLoading) {
+      loadingTimeoutRef.current = setTimeout(() => {
+        console.warn('⏰ Image loading timeout:', finalUrl);
+        setIsLoading(false);
+        setHasError(true);
+      }, 15000);
+      
+      return () => {
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+        }
+      };
+    }
+  }, [finalUrl, isLoading]);
+
+  // Cleanup blob URLs
   useEffect(() => {
     return () => {
       if (blobUrlRef.current) {
         URL.revokeObjectURL(blobUrlRef.current);
         blobUrlRef.current = null;
       }
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
     };
   }, []);
 
-  console.log('🔄 URL final para imagem:', { original: mediaUrl, final: finalUrl });
+  // Renderização condicional pura
+  if (!finalUrl && !isLoading) {
+    return null;
+  }
+
+  if (isLoading && !finalUrl) {
+    return <div className={cn("animate-pulse bg-muted rounded w-full h-32", className)} />;
+  }
+
+  if (hasError) {
+    return (
+      <div className={cn("bg-muted rounded p-4 text-center", className)}>
+        <span className="text-muted-foreground text-sm">Erro ao carregar imagem</span>
+      </div>
+    );
+  }
 
   return (
     <>
       {isLoading && (
         <div className={cn("animate-pulse bg-muted rounded w-full h-32", className)} />
       )}
-      {hasError ? (
-        <div className={cn("bg-muted rounded p-4 text-center", className)}>
-          <span className="text-muted-foreground text-sm">❌ Erro ao carregar imagem</span>
-        </div>
-      ) : (
-        finalUrl && (
-          <img 
-            src={finalUrl}
-            alt={alt}
-            className={cn(className, isLoading && 'hidden')}
-            onClick={onClick}
-            onError={() => {
-              console.error('❌ Failed to load image:', { original: mediaUrl, final: finalUrl });
-              setHasError(true);
-              setIsLoading(false);
-            }}
-            onLoad={() => {
-              console.log('✅ Image loaded successfully from URL:', { original: mediaUrl, final: finalUrl });
-              setIsLoading(false);
-            }}
-          />
-        )
+      {finalUrl && (
+        <img 
+          key={finalUrl}
+          src={finalUrl}
+          alt={alt}
+          className={cn(className, isLoading && 'opacity-0 absolute')}
+          onClick={onClick}
+          onError={() => {
+            setHasError(true);
+            setIsLoading(false);
+          }}
+          onLoad={() => {
+            setIsLoading(false);
+          }}
+        />
       )}
     </>
   );

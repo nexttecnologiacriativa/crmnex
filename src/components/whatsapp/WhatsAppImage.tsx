@@ -14,6 +14,7 @@ export default function WhatsAppImage({ mediaUrl, alt, className = "", onClick }
   const [finalUrl, setFinalUrl] = useState<string>('');
   const blobUrlRef = useRef<string | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const imageRef = useRef<HTMLImageElement | null>(null);
 
   // Determine final URL based on source
   useEffect(() => {
@@ -87,20 +88,56 @@ export default function WhatsAppImage({ mediaUrl, alt, className = "", onClick }
     }
   }, [mediaUrl]);
 
-  // Timeout de segurança
+  // PRE-LOADING COM JAVASCRIPT - carrega imagem em background
   useEffect(() => {
-    if (!finalUrl || status !== 'loading') return;
-    
+    if (!finalUrl) return;
+
+    // Limpar imagem anterior
+    if (imageRef.current) {
+      imageRef.current.onload = null;
+      imageRef.current.onerror = null;
+      imageRef.current = null;
+    }
+
+    // Limpar timeout anterior
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    // Criar nova imagem para pre-loading
+    const img = new Image();
+    imageRef.current = img;
+
+    // Configurar timeout
     timeoutRef.current = setTimeout(() => {
+      console.warn('⏰ Image loading timeout:', finalUrl);
       setStatus('error');
     }, 15000);
-    
+
+    img.onload = () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      setStatus('loaded');
+    };
+
+    img.onerror = () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      console.warn('❌ Image load error:', finalUrl);
+      setStatus('error');
+    };
+
+    // Iniciar carregamento
+    img.src = finalUrl;
+
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [finalUrl, status]);
+  }, [finalUrl]);
 
   // Cleanup blob URLs
   useEffect(() => {
@@ -112,11 +149,15 @@ export default function WhatsAppImage({ mediaUrl, alt, className = "", onClick }
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
+      if (imageRef.current) {
+        imageRef.current.onload = null;
+        imageRef.current.onerror = null;
+      }
     };
   }, []);
 
-  // RENDERIZAÇÃO CONDICIONAL PURA
-  if (!finalUrl) {
+  // RENDERIZAÇÃO CONDICIONAL PURA - sem CSS hacks
+  if (!finalUrl || status === 'loading') {
     return <div className={cn("animate-pulse bg-muted rounded w-full h-32", className)} />;
   }
 
@@ -128,23 +169,13 @@ export default function WhatsAppImage({ mediaUrl, alt, className = "", onClick }
     );
   }
 
+  // Só renderiza a imagem quando status === 'loaded'
   return (
-    <div className="relative">
-      {status === 'loading' && (
-        <div className={cn("animate-pulse bg-muted rounded w-full h-32", className)} />
-      )}
-      <img 
-        key={finalUrl}
-        src={finalUrl}
-        alt={alt}
-        className={cn(
-          className,
-          status === 'loading' ? 'h-0 w-0 overflow-hidden' : ''
-        )}
-        onClick={onClick}
-        onError={() => setStatus('error')}
-        onLoad={() => setStatus('loaded')}
-      />
-    </div>
+    <img 
+      src={finalUrl}
+      alt={alt}
+      className={className}
+      onClick={onClick}
+    />
   );
 }

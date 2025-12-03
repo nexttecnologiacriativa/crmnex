@@ -252,6 +252,13 @@ export default function UnifiedAtendimento() {
     return instance?.display_name || instanceName.replace(/^ws_\w+_/, '');
   };
 
+  // Helper to get instance_name from conversation's instance_id
+  const getInstanceNameFromConversation = (conversation: any) => {
+    if (!conversation?.instance_id) return null;
+    const instance = instances.find((i: any) => i.id === conversation.instance_id);
+    return instance?.instance_name || null;
+  };
+
   // Auto-select first connected instance when available
   useEffect(() => {
     if (!selectedInstanceName && firstInstance) {
@@ -1081,6 +1088,16 @@ export default function UnifiedAtendimento() {
                 const leadTags = conv.leads?.id ? leadTagsData.filter((r: any) => r.lead_id === conv.leads.id).map((r: any) => r.lead_tags).filter(Boolean) : [];
                 return <ConversationCard key={conv.id} conversation={conv} lead={conv.leads} assignee={conv.assignee} tags={leadTags} isSelected={selectedConvId === conv.id} unread={hasNewMessages || !conv.is_read} onClick={() => {
                   setSelectedConvId(conv.id);
+                  
+                  // Auto-selecionar a instância da conversa se disponível
+                  const convInstanceName = getInstanceNameFromConversation(conv);
+                  if (convInstanceName) {
+                    const isConnected = connectedInstances.some((i: any) => i.instance_name === convInstanceName);
+                    if (isConnected) {
+                      setSelectedInstanceName(convInstanceName);
+                    }
+                  }
+                  
                   setUnreadConversations(prev => {
                     const newSet = new Set(prev);
                     newSet.delete(conv.id);

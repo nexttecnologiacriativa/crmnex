@@ -10,27 +10,22 @@ interface WhatsAppImageProps {
 }
 
 export default function WhatsAppImage({ mediaUrl, alt, className = "", onClick }: WhatsAppImageProps) {
-  const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
   const [finalUrl, setFinalUrl] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(false);
   const blobUrlRef = useRef<string | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const imageRef = useRef<HTMLImageElement | null>(null);
 
   // Determine final URL based on source
   useEffect(() => {
     if (!mediaUrl) {
-      setFinalUrl('');
-      setStatus('error');
+      setError(true);
+      setIsLoading(false);
       return;
     }
 
-    // Resetar status quando URL muda
-    setStatus('loading');
-
-    // Limpar timeout anterior
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
+    // Reset states when URL changes
+    setIsLoading(true);
+    setError(false);
 
     // Para URLs do Supabase, usar diretamente
     if (mediaUrl.includes('supabase.co')) {
@@ -77,7 +72,8 @@ export default function WhatsAppImage({ mediaUrl, alt, className = "", onClick }
           } else {
             setFinalUrl(mediaUrl);
           }
-        } catch (error) {
+        } catch (err) {
+          console.error('Proxy error:', err);
           setFinalUrl(mediaUrl);
         }
       };
@@ -88,57 +84,6 @@ export default function WhatsAppImage({ mediaUrl, alt, className = "", onClick }
     }
   }, [mediaUrl]);
 
-  // PRE-LOADING COM JAVASCRIPT - carrega imagem em background
-  useEffect(() => {
-    if (!finalUrl) return;
-
-    // Limpar imagem anterior
-    if (imageRef.current) {
-      imageRef.current.onload = null;
-      imageRef.current.onerror = null;
-      imageRef.current = null;
-    }
-
-    // Limpar timeout anterior
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-
-    // Criar nova imagem para pre-loading
-    const img = new Image();
-    imageRef.current = img;
-
-    // Configurar timeout
-    timeoutRef.current = setTimeout(() => {
-      console.warn('⏰ Image loading timeout:', finalUrl);
-      setStatus('error');
-    }, 15000);
-
-    img.onload = () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      setStatus('loaded');
-    };
-
-    img.onerror = () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      console.warn('❌ Image load error:', finalUrl);
-      setStatus('error');
-    };
-
-    // Iniciar carregamento
-    img.src = finalUrl;
-
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, [finalUrl]);
-
   // Cleanup blob URLs
   useEffect(() => {
     return () => {
@@ -146,22 +91,10 @@ export default function WhatsAppImage({ mediaUrl, alt, className = "", onClick }
         URL.revokeObjectURL(blobUrlRef.current);
         blobUrlRef.current = null;
       }
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      if (imageRef.current) {
-        imageRef.current.onload = null;
-        imageRef.current.onerror = null;
-      }
     };
   }, []);
 
-  // RENDERIZAÇÃO CONDICIONAL PURA - sem CSS hacks
-  if (!finalUrl || status === 'loading') {
-    return <div className={cn("animate-pulse bg-muted rounded w-full h-32", className)} />;
-  }
-
-  if (status === 'error') {
+  if (error) {
     return (
       <div className={cn("bg-muted rounded p-4 text-center", className)}>
         <span className="text-muted-foreground text-sm">Erro ao carregar imagem</span>
@@ -169,13 +102,25 @@ export default function WhatsAppImage({ mediaUrl, alt, className = "", onClick }
     );
   }
 
-  // Só renderiza a imagem quando status === 'loaded'
   return (
-    <img 
-      src={finalUrl}
-      alt={alt}
-      className={className}
-      onClick={onClick}
-    />
+    <>
+      {isLoading && (
+        <div className={cn("animate-pulse bg-muted rounded w-full h-32", className)} />
+      )}
+      {finalUrl && (
+        <img 
+          src={finalUrl}
+          alt={alt}
+          className={cn(className, isLoading && 'hidden')}
+          onClick={onClick}
+          onLoad={() => setIsLoading(false)}
+          onError={() => {
+            console.error('Image load error:', finalUrl);
+            setError(true);
+            setIsLoading(false);
+          }}
+        />
+      )}
+    </>
   );
 }

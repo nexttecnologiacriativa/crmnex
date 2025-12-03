@@ -277,9 +277,6 @@ export default function AudioPlayer({
             disabled={!isFormatSupported}
             className="flex-1 h-1 bg-primary/20 rounded-full appearance-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer"
           />
-          <span className="text-xs text-muted-foreground whitespace-nowrap font-mono tabular-nums">
-            {formatTime(currentTime)} / {formatTime(audioDuration)}
-          </span>
         </div>
 
         <Volume2 className="h-3.5 w-3.5 text-muted-foreground/70 flex-shrink-0" />

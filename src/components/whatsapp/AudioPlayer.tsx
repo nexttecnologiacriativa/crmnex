@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, Volume2, AlertCircle } from 'lucide-react';
+import { Play, Pause, Volume2, AlertCircle, FileText, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface AudioPlayerProps {
   audioUrl: string;
@@ -8,13 +10,16 @@ interface AudioPlayerProps {
   duration?: number;
   className?: string;
   messageId?: string;
+  existingTranscription?: string | null;
 }
 
 export default function AudioPlayer({ 
   audioUrl, 
   permanentUrl, 
   duration, 
-  className = ''
+  className = '',
+  messageId,
+  existingTranscription
 }: AudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -22,6 +27,8 @@ export default function AudioPlayer({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFormatSupported, setIsFormatSupported] = useState(true);
+  const [transcription, setTranscription] = useState<string | null>(existingTranscription || null);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Detectar formato e verificar suporte do navegador
@@ -64,6 +71,13 @@ export default function AudioPlayer({
 
     setIsLoading(false);
   }, [audioUrl, permanentUrl]);
+
+  // Update transcription if prop changes
+  useEffect(() => {
+    if (existingTranscription) {
+      setTranscription(existingTranscription);
+    }
+  }, [existingTranscription]);
 
   // Gerenciar eventos do elemento de áudio
   useEffect(() => {
@@ -147,6 +161,40 @@ export default function AudioPlayer({
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const handleTranscribe = async () => {
+    if (!messageId) {
+      toast.error('ID da mensagem não disponível');
+      return;
+    }
+
+    setIsTranscribing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('whatsapp-audio-transcribe', {
+        body: { messageId }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      setTranscription(data.text);
+      if (data.cached) {
+        toast.success('Transcrição carregada do cache');
+      } else {
+        toast.success('Áudio transcrito com sucesso!');
+      }
+    } catch (err: any) {
+      console.error('Transcription error:', err);
+      toast.error(err.message || 'Erro ao transcrever áudio');
+    } finally {
+      setIsTranscribing(false);
+    }
   };
 
   // Estado de carregamento
@@ -236,6 +284,37 @@ export default function AudioPlayer({
 
         <Volume2 className="h-3.5 w-3.5 text-muted-foreground/70 flex-shrink-0" />
       </div>
+
+      {/* Transcribe button */}
+      {messageId && !transcription && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleTranscribe}
+          disabled={isTranscribing}
+          className="h-7 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
+        >
+          {isTranscribing ? (
+            <>
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Transcrevendo...
+            </>
+          ) : (
+            <>
+              <FileText className="h-3 w-3" />
+              Transcrever
+            </>
+          )}
+        </Button>
+      )}
+
+      {/* Transcription display */}
+      {transcription && (
+        <div className="mt-1 p-2 bg-background/80 rounded-md border border-border/50">
+          <p className="text-xs font-medium text-muted-foreground mb-1">Transcrição:</p>
+          <p className="text-sm leading-relaxed">{transcription}</p>
+        </div>
+      )}
     </div>
   );
 }

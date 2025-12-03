@@ -2475,6 +2475,7 @@ export type Database = {
       whatsapp_messages: {
         Row: {
           attachment_name: string | null
+          audio_transcription: string | null
           conversation_id: string | null
           created_at: string
           encrypted_media_url: string | null
@@ -2493,6 +2494,7 @@ export type Database = {
         }
         Insert: {
           attachment_name?: string | null
+          audio_transcription?: string | null
           conversation_id?: string | null
           created_at?: string
           encrypted_media_url?: string | null
@@ -2511,6 +2513,7 @@ export type Database = {
         }
         Update: {
           attachment_name?: string | null
+          audio_transcription?: string | null
           conversation_id?: string | null
           created_at?: string
           encrypted_media_url?: string | null

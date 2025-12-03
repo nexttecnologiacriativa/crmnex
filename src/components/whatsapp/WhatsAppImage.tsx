@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { Loader2, ImageOff, RefreshCw } from 'lucide-react';
 
 interface WhatsAppImageProps {
   mediaUrl: string;
@@ -13,78 +14,101 @@ export default function WhatsAppImage({ mediaUrl, alt, className = "", onClick }
   const [finalUrl, setFinalUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const blobUrlRef = useRef<string | null>(null);
+  const maxRetries = 2;
 
-  // Determine final URL based on source
-  useEffect(() => {
-    if (!mediaUrl) {
+  const loadImage = useCallback(async (url: string, isRetry = false) => {
+    if (!url) {
       setError(true);
       setIsLoading(false);
       return;
     }
 
-    // Reset states when URL changes
+    // Reset states
     setIsLoading(true);
     setError(false);
 
-    // Para URLs do Supabase, usar diretamente
-    if (mediaUrl.includes('supabase.co')) {
-      setFinalUrl(mediaUrl);
+    // Cleanup previous blob URL
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
+
+    // Para URLs do Supabase Storage, usar diretamente
+    if (url.includes('supabase.co/storage')) {
+      console.log('📷 Loading Supabase image directly:', url);
+      setFinalUrl(url);
       return;
     }
 
-    // Para URLs do WhatsApp ou Facebook, usar proxy
-    if (mediaUrl.includes('mmg.whatsapp.net') || 
-        mediaUrl.includes('lookaside.fbsbx.com') || 
-        mediaUrl.includes('scontent.')) {
+    // Para URLs do WhatsApp/Facebook, usar proxy
+    if (url.includes('mmg.whatsapp.net') || 
+        url.includes('lookaside.fbsbx.com') || 
+        url.includes('scontent.') ||
+        url.includes('.enc')) {
       
-      const proxyMedia = async () => {
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session?.access_token) {
-            setFinalUrl(mediaUrl);
-            return;
+      console.log('📷 Loading via proxy:', url);
+      
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          console.warn('No auth session, trying direct URL');
+          setFinalUrl(url);
+          return;
+        }
+
+        const response = await fetch('https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/whatsapp-media-proxy', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ url }),
+        });
+
+        if (response.ok) {
+          const contentType = response.headers.get('content-type');
+          
+          // Se retornou JSON com URL permanente
+          if (contentType?.includes('application/json')) {
+            const result = await response.json();
+            if (result.permanentUrl) {
+              console.log('📷 Got permanent URL from proxy:', result.permanentUrl);
+              setFinalUrl(result.permanentUrl);
+              return;
+            }
           }
 
-          const response = await fetch('https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/whatsapp-media-proxy', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({ url: mediaUrl }),
-          });
-
-          if (response.ok) {
-            const contentType = response.headers.get('content-type');
-            if (contentType?.includes('application/json')) {
-              const result = await response.json();
-              if (result.permanentUrl) {
-                setFinalUrl(result.permanentUrl);
-                return;
-              }
-            }
-
-            const blob = await response.blob();
+          // Se retornou blob
+          const blob = await response.blob();
+          if (blob.size > 1000) {
             const blobUrl = URL.createObjectURL(blob);
             blobUrlRef.current = blobUrl;
+            console.log('📷 Created blob URL:', blobUrl);
             setFinalUrl(blobUrl);
-          } else {
-            setFinalUrl(mediaUrl);
+            return;
           }
-        } catch (err) {
-          console.error('Proxy error:', err);
-          setFinalUrl(mediaUrl);
         }
-      };
-
-      proxyMedia();
+        
+        // Fallback para URL original
+        console.warn('📷 Proxy failed, using original URL');
+        setFinalUrl(url);
+      } catch (err) {
+        console.error('📷 Proxy error:', err);
+        setFinalUrl(url);
+      }
     } else {
-      setFinalUrl(mediaUrl);
+      // URL normal, usar diretamente
+      setFinalUrl(url);
     }
-  }, [mediaUrl]);
+  }, []);
 
-  // Cleanup blob URLs
+  useEffect(() => {
+    loadImage(mediaUrl);
+  }, [mediaUrl, loadImage]);
+
+  // Cleanup blob URLs on unmount
   useEffect(() => {
     return () => {
       if (blobUrlRef.current) {
@@ -94,33 +118,77 @@ export default function WhatsAppImage({ mediaUrl, alt, className = "", onClick }
     };
   }, []);
 
+  const handleRetry = useCallback(() => {
+    if (retryCount < maxRetries) {
+      setRetryCount(prev => prev + 1);
+      loadImage(mediaUrl, true);
+    }
+  }, [retryCount, mediaUrl, loadImage]);
+
+  const handleImageError = useCallback(() => {
+    console.error('📷 Image load error:', finalUrl);
+    
+    // Tentar retry automático
+    if (retryCount < maxRetries) {
+      console.log(`📷 Auto-retry ${retryCount + 1}/${maxRetries}...`);
+      setTimeout(() => {
+        setRetryCount(prev => prev + 1);
+        loadImage(mediaUrl, true);
+      }, 1000);
+    } else {
+      setError(true);
+      setIsLoading(false);
+    }
+  }, [finalUrl, retryCount, mediaUrl, loadImage]);
+
   if (error) {
     return (
-      <div className={cn("bg-muted rounded p-4 text-center", className)}>
-        <span className="text-muted-foreground text-sm">Erro ao carregar imagem</span>
+      <div className={cn(
+        "bg-muted rounded-lg p-4 flex flex-col items-center justify-center gap-2 min-h-[100px]",
+        className
+      )}>
+        <ImageOff className="h-8 w-8 text-muted-foreground" />
+        <span className="text-muted-foreground text-xs text-center">Erro ao carregar imagem</span>
+        {retryCount < maxRetries && (
+          <button 
+            onClick={handleRetry}
+            className="flex items-center gap-1 text-xs text-primary hover:underline"
+          >
+            <RefreshCw className="h-3 w-3" />
+            Tentar novamente
+          </button>
+        )}
       </div>
     );
   }
 
   return (
-    <>
+    <div className={cn("relative", className)}>
       {isLoading && (
-        <div className={cn("animate-pulse bg-muted rounded w-full h-32", className)} />
+        <div className={cn(
+          "absolute inset-0 flex items-center justify-center bg-muted rounded-lg",
+          className
+        )}>
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
       )}
       {finalUrl && (
         <img 
           src={finalUrl}
           alt={alt}
-          className={cn(className, isLoading && 'hidden')}
+          className={cn(
+            "rounded-lg max-w-full cursor-pointer transition-opacity",
+            isLoading ? 'opacity-0' : 'opacity-100',
+            className
+          )}
           onClick={onClick}
-          onLoad={() => setIsLoading(false)}
-          onError={() => {
-            console.error('Image load error:', finalUrl);
-            setError(true);
+          onLoad={() => {
+            console.log('📷 Image loaded successfully');
             setIsLoading(false);
           }}
+          onError={handleImageError}
         />
       )}
-    </>
+    </div>
   );
 }

@@ -59,8 +59,19 @@ export default function ConversationCard({
       onClick={onClick}
     >
       <div className="flex items-start gap-3">
-        {/* Avatar */}
-        <Avatar className="h-10 w-10 flex-shrink-0">
+        {/* Avatar with Profile Picture */}
+        {conversation.profile_picture_url ? (
+          <img 
+            src={conversation.profile_picture_url} 
+            alt={displayName}
+            className="h-10 w-10 rounded-full object-cover flex-shrink-0"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+              (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+            }}
+          />
+        ) : null}
+        <Avatar className={`h-10 w-10 flex-shrink-0 ${conversation.profile_picture_url ? 'hidden' : ''}`}>
           <AvatarFallback className={lead ? 'bg-primary/20 text-primary' : 'bg-muted'}>
             {lead ? getInitials(displayName) : <User className="h-5 w-5" />}
           </AvatarFallback>

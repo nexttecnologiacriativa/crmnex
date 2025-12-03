@@ -2335,6 +2335,7 @@ export type Database = {
           lead_id: string | null
           message_count: number | null
           phone_number: string
+          profile_picture_url: string | null
           updated_at: string
           workspace_id: string
         }
@@ -2348,6 +2349,7 @@ export type Database = {
           lead_id?: string | null
           message_count?: number | null
           phone_number: string
+          profile_picture_url?: string | null
           updated_at?: string
           workspace_id: string
         }
@@ -2361,6 +2363,7 @@ export type Database = {
           lead_id?: string | null
           message_count?: number | null
           phone_number?: string
+          profile_picture_url?: string | null
           updated_at?: string
           workspace_id?: string
         }

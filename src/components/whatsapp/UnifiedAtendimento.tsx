@@ -456,6 +456,48 @@ export default function UnifiedAtendimento() {
     }
   }, [messages, selectedConvId]);
 
+  // Fetch profile picture when conversation is selected
+  useEffect(() => {
+    const fetchProfilePicture = async () => {
+      if (!selectedConv || !currentWorkspace?.id) return;
+      
+      // Skip if already has profile picture
+      if ((selectedConv as any).profile_picture_url) return;
+      
+      // Get instance for this conversation
+      const instanceId = (selectedConv as any).instance_id;
+      if (!instanceId) return;
+      
+      const instance = instances.find((i: any) => i.id === instanceId);
+      if (!instance || instance.status !== 'open') return;
+      
+      console.log('📸 Fetching profile picture for:', selectedConv.phone_number);
+      
+      try {
+        const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
+          body: {
+            action: 'fetch_profile_picture',
+            instanceName: instance.instance_name,
+            phoneNumber: selectedConv.phone_number,
+            workspaceId: currentWorkspace.id
+          }
+        });
+        
+        if (error) {
+          console.error('❌ Error fetching profile picture:', error);
+        } else if (data?.profilePictureUrl) {
+          console.log('✅ Profile picture fetched successfully');
+          // Invalidate conversations query to refresh with new picture
+          queryClient.invalidateQueries({ queryKey: ['whatsapp-conversations'] });
+        }
+      } catch (err) {
+        console.error('❌ Failed to fetch profile picture:', err);
+      }
+    };
+    
+    fetchProfilePicture();
+  }, [selectedConvId, selectedConv, instances, currentWorkspace?.id, queryClient]);
+
   // Auto-scroll para última mensagem
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({
@@ -1118,6 +1160,21 @@ export default function UnifiedAtendimento() {
                 <div className="border-b p-4 bg-card">
                   <div className="flex items-center justify-between gap-4">
                     <div className="min-w-0 flex-1 flex items-center gap-3">
+                      {/* Profile Picture */}
+                      {(selectedConv as any).profile_picture_url ? (
+                        <img 
+                          src={(selectedConv as any).profile_picture_url} 
+                          alt={selectedConv.contact_name || 'Contato'}
+                          className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                          <User className="w-6 h-6 text-muted-foreground" />
+                        </div>
+                      )}
                       <div className="flex-1">
                         <h3 className="font-medium truncate">
                           {(() => {

@@ -10,37 +10,32 @@ interface WhatsAppImageProps {
 }
 
 export default function WhatsAppImage({ mediaUrl, alt, className = "", onClick }: WhatsAppImageProps) {
-  const [hasError, setHasError] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
   const [finalUrl, setFinalUrl] = useState<string>('');
   const blobUrlRef = useRef<string | null>(null);
-  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Determine final URL based on source
   useEffect(() => {
     if (!mediaUrl) {
       setFinalUrl('');
-      setIsLoading(false);
+      setStatus('error');
       return;
     }
 
-    // Resetar estados
-    setHasError(false);
-    setIsLoading(true);
+    // Resetar status quando URL muda
+    setStatus('loading');
 
     // Limpar timeout anterior
-    if (loadingTimeoutRef.current) {
-      clearTimeout(loadingTimeoutRef.current);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
     }
 
-    // Para URLs do Supabase, usar diretamente (sem resetar finalUrl para evitar race condition)
+    // Para URLs do Supabase, usar diretamente
     if (mediaUrl.includes('supabase.co')) {
       setFinalUrl(mediaUrl);
       return;
     }
-
-    // Para outras URLs, resetar primeiro
-    setFinalUrl('');
 
     // Para URLs do WhatsApp ou Facebook, usar proxy
     if (mediaUrl.includes('mmg.whatsapp.net') || 
@@ -92,22 +87,20 @@ export default function WhatsAppImage({ mediaUrl, alt, className = "", onClick }
     }
   }, [mediaUrl]);
 
-  // Timeout para detectar imagens que não carregam
+  // Timeout de segurança
   useEffect(() => {
-    if (finalUrl && isLoading) {
-      loadingTimeoutRef.current = setTimeout(() => {
-        console.warn('⏰ Image loading timeout:', finalUrl);
-        setIsLoading(false);
-        setHasError(true);
-      }, 15000);
-      
-      return () => {
-        if (loadingTimeoutRef.current) {
-          clearTimeout(loadingTimeoutRef.current);
-        }
-      };
-    }
-  }, [finalUrl, isLoading]);
+    if (!finalUrl || status !== 'loading') return;
+    
+    timeoutRef.current = setTimeout(() => {
+      setStatus('error');
+    }, 15000);
+    
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [finalUrl, status]);
 
   // Cleanup blob URLs
   useEffect(() => {
@@ -116,22 +109,18 @@ export default function WhatsAppImage({ mediaUrl, alt, className = "", onClick }
         URL.revokeObjectURL(blobUrlRef.current);
         blobUrlRef.current = null;
       }
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
     };
   }, []);
 
-  // Renderização condicional pura
-  if (!finalUrl && !isLoading) {
-    return null;
-  }
-
-  if (isLoading && !finalUrl) {
+  // RENDERIZAÇÃO CONDICIONAL PURA
+  if (!finalUrl) {
     return <div className={cn("animate-pulse bg-muted rounded w-full h-32", className)} />;
   }
 
-  if (hasError) {
+  if (status === 'error') {
     return (
       <div className={cn("bg-muted rounded p-4 text-center", className)}>
         <span className="text-muted-foreground text-sm">Erro ao carregar imagem</span>
@@ -140,26 +129,22 @@ export default function WhatsAppImage({ mediaUrl, alt, className = "", onClick }
   }
 
   return (
-    <>
-      {isLoading && (
+    <div className="relative">
+      {status === 'loading' && (
         <div className={cn("animate-pulse bg-muted rounded w-full h-32", className)} />
       )}
-      {finalUrl && (
-        <img 
-          key={finalUrl}
-          src={finalUrl}
-          alt={alt}
-          className={cn(className, isLoading && 'opacity-0 absolute')}
-          onClick={onClick}
-          onError={() => {
-            setHasError(true);
-            setIsLoading(false);
-          }}
-          onLoad={() => {
-            setIsLoading(false);
-          }}
-        />
-      )}
-    </>
+      <img 
+        key={finalUrl}
+        src={finalUrl}
+        alt={alt}
+        className={cn(
+          className,
+          status === 'loading' ? 'h-0 w-0 overflow-hidden' : ''
+        )}
+        onClick={onClick}
+        onError={() => setStatus('error')}
+        onLoad={() => setStatus('loaded')}
+      />
+    </div>
   );
 }

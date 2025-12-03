@@ -26,6 +26,11 @@ export default function WhatsAppImage({ mediaUrl, alt, className = "", onClick }
   useEffect(() => {
     if (!mediaUrl) return;
 
+    // IMPORTANTE: Resetar estados quando mediaUrl muda
+    setHasError(false);
+    setIsLoading(true);
+    setFinalUrl('');
+
     // Se a URL já é do Supabase, usar diretamente
     if (mediaUrl.includes('supabase.co')) {
       setFinalUrl(mediaUrl);
@@ -100,34 +105,34 @@ export default function WhatsAppImage({ mediaUrl, alt, className = "", onClick }
 
   console.log('🔄 URL final para imagem:', { original: mediaUrl, final: finalUrl });
 
-  if (hasError) {
-    return (
-      <div className={`bg-gray-100 rounded p-4 text-center ${className}`}>
-        <span className="text-gray-500 text-sm">❌ Erro ao carregar imagem</span>
-      </div>
-    );
-  }
-
   return (
     <>
       {isLoading && (
         <div className={cn("animate-pulse bg-muted rounded w-full h-32", className)} />
       )}
-      <img 
-        src={finalUrl}
-        alt={alt}
-        className={cn(className, isLoading && 'hidden')}
-        onClick={onClick}
-        onError={(e) => {
-          console.error('❌ Failed to load image:', { original: mediaUrl, final: finalUrl });
-          setHasError(true);
-          setIsLoading(false);
-        }}
-        onLoad={() => {
-          console.log('✅ Image loaded successfully from URL:', { original: mediaUrl, final: finalUrl });
-          setIsLoading(false);
-        }}
-      />
+      {hasError ? (
+        <div className={cn("bg-muted rounded p-4 text-center", className)}>
+          <span className="text-muted-foreground text-sm">❌ Erro ao carregar imagem</span>
+        </div>
+      ) : (
+        finalUrl && (
+          <img 
+            src={finalUrl}
+            alt={alt}
+            className={cn(className, isLoading && 'hidden')}
+            onClick={onClick}
+            onError={() => {
+              console.error('❌ Failed to load image:', { original: mediaUrl, final: finalUrl });
+              setHasError(true);
+              setIsLoading(false);
+            }}
+            onLoad={() => {
+              console.log('✅ Image loaded successfully from URL:', { original: mediaUrl, final: finalUrl });
+              setIsLoading(false);
+            }}
+          />
+        )
+      )}
     </>
   );
 }

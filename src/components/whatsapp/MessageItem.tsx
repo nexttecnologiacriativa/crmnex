@@ -32,6 +32,7 @@ interface WhatsAppMessage {
   attachment_name: string | null;
   permanent_audio_url: string | null;
   whatsapp_media_id: string | null;
+  audio_transcription?: string | null;
 }
 
 interface MessageItemProps {
@@ -115,6 +116,7 @@ export function MessageItem({ message, isFromCurrentUser }: MessageItemProps) {
                 audioUrl={message.media_url || ''}
                 permanentUrl={message.permanent_audio_url || undefined}
                 messageId={message.id}
+                existingTranscription={message.audio_transcription}
                 className="max-w-xs"
               />
             ) : (

@@ -238,10 +238,19 @@ export default function UnifiedAtendimento() {
     enabled: !!currentWorkspace?.id && !!leads?.length
   });
 
-  // Instance selection - DEVE VIR ANTES DOS useEffect QUE USAM ESTAS VARIÁVEIS
+// Instance selection - DEVE VIR ANTES DOS useEffect QUE USAM ESTAS VARIÁVEIS
   const connectedInstances = (instances || []).filter(i => i.status === 'open');
   const firstInstance = connectedInstances[0]?.instance_name || '';
   const [selectedInstanceName, setSelectedInstanceName] = useState<string>(firstInstance);
+  
+  // Instance filter for conversations
+  const [instanceFilter, setInstanceFilter] = useState<string>('all');
+  
+  // Helper to get instance display name
+  const getInstanceDisplayName = (instanceName: string) => {
+    const instance = instances.find(i => i.instance_name === instanceName);
+    return instance?.display_name || instanceName.replace(/^ws_\w+_/, '');
+  };
 
   // Auto-select first connected instance when available
   useEffect(() => {
@@ -895,32 +904,42 @@ export default function UnifiedAtendimento() {
         .replace(/[\u0300-\u036f]/g, '');
   
   const filteredConversations = useMemo(() => {
-    if (!search.trim()) return enrichedConversations;
+    let result = enrichedConversations;
     
-    const searchNormalized = normalizeText(search);
-    const searchDigits = search.replace(/\D/g, '');
+    // Filter by instance first
+    if (instanceFilter !== 'all') {
+      result = result.filter((conv: any) => conv.instance_id === instanceFilter);
+    }
     
-    return enrichedConversations.filter((conv: any) => {
-      // Search in displayName
-      const displayNameNormalized = normalizeText(conv.displayName || '');
-      if (displayNameNormalized.includes(searchNormalized)) return true;
+    // Then apply search filter
+    if (search.trim()) {
+      const searchNormalized = normalizeText(search);
+      const searchDigits = search.replace(/\D/g, '');
       
-      // Search in contact_name
-      const contactNameNormalized = normalizeText(conv.contact_name || '');
-      if (contactNameNormalized.includes(searchNormalized)) return true;
-      
-      // Search in lead name (if exists)
-      const leadNameNormalized = normalizeText(conv.lead?.name || '');
-      if (leadNameNormalized.includes(searchNormalized)) return true;
-      
-      // Search in phone number
-      const normalizedConvPhone = normalizeForMatch(conv.phone_number || '');
-      if ((conv.phone_number || '').includes(search)) return true;
-      if (searchDigits && normalizedConvPhone.includes(searchDigits)) return true;
-      
-      return false;
-    });
-  }, [enrichedConversations, search]);
+      result = result.filter((conv: any) => {
+        // Search in displayName
+        const displayNameNormalized = normalizeText(conv.displayName || '');
+        if (displayNameNormalized.includes(searchNormalized)) return true;
+        
+        // Search in contact_name
+        const contactNameNormalized = normalizeText(conv.contact_name || '');
+        if (contactNameNormalized.includes(searchNormalized)) return true;
+        
+        // Search in lead name (if exists)
+        const leadNameNormalized = normalizeText(conv.lead?.name || '');
+        if (leadNameNormalized.includes(searchNormalized)) return true;
+        
+        // Search in phone number
+        const normalizedConvPhone = normalizeForMatch(conv.phone_number || '');
+        if ((conv.phone_number || '').includes(search)) return true;
+        if (searchDigits && normalizedConvPhone.includes(searchDigits)) return true;
+        
+        return false;
+      });
+    }
+    
+    return result;
+  }, [enrichedConversations, search, instanceFilter]);
   const formatTime = (iso?: string) => iso ? format(new Date(iso), 'HH:mm', {
     locale: ptBR
   }) : '';
@@ -1036,6 +1055,23 @@ export default function UnifiedAtendimento() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Pesquisar conversas..." className="pl-10" />
               </div>
+              
+              {/* Instance filter */}
+              {instances.length > 1 && (
+                <Select value={instanceFilter} onValueChange={setInstanceFilter}>
+                  <SelectTrigger className="w-full mt-2 h-8 text-xs">
+                    <SelectValue placeholder="Filtrar por instância" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as instâncias</SelectItem>
+                    {instances.map((inst: any) => (
+                      <SelectItem key={inst.id} value={inst.id}>
+                        {inst.display_name || inst.instance_name.replace(/^ws_\w+_/, '')}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <ScrollArea className="flex-1">
@@ -1094,7 +1130,7 @@ export default function UnifiedAtendimento() {
                           </SelectTrigger>
                           <SelectContent>
                             {connectedInstances.map((i: any) => <SelectItem key={i.instance_name} value={i.instance_name}>
-                                {i.instance_name}
+                                {i.display_name || i.instance_name.replace(/^ws_\w+_/, '')}
                               </SelectItem>)}
                           </SelectContent>
                         </Select>

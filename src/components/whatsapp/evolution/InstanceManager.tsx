@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { 
   MessageSquare, 
   Plus,
@@ -13,12 +17,21 @@ import {
   RefreshCw,
   Users,
   Zap,
-  Trash2
+  Trash2,
+  Pencil
 } from 'lucide-react';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { useWhatsAppInstances, useSyncWhatsAppInstances, useRecreateWhatsAppInstance } from '@/hooks/useWhatsAppInstance';
+import { 
+  useWhatsAppInstances, 
+  useSyncWhatsAppInstances, 
+  useRecreateWhatsAppInstance,
+  useUpdateInstanceDisplayName,
+  useInstanceUsers,
+  useManageInstanceUsers,
+  useWorkspaceMembers
+} from '@/hooks/useWhatsAppInstance';
 import QRCodeManager from './QRCodeManager';
 import InstanceCreator from './InstanceCreator';
 
@@ -31,6 +44,7 @@ interface WhatsAppInstance {
   created_at: string;
   last_seen?: string;
   qr_code?: string;
+  display_name?: string | null;
 }
 
 interface InstanceManagerProps {
@@ -42,22 +56,32 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
   const { data: instances = [], isLoading, refetch } = useWhatsAppInstances();
   const syncInstances = useSyncWhatsAppInstances();
   const recreateInstance = useRecreateWhatsAppInstance();
+  const updateDisplayName = useUpdateInstanceDisplayName();
+  const { data: members = [] } = useWorkspaceMembers();
+  const manageInstanceUsers = useManageInstanceUsers();
+  
   const [showCreator, setShowCreator] = useState(false);
   const [selectedInstance, setSelectedInstance] = useState<WhatsAppInstance | null>(null);
   const [showQRCode, setShowQRCode] = useState(false);
+  
+  // Edit name dialog state
+  const [editingInstance, setEditingInstance] = useState<WhatsAppInstance | null>(null);
+  const [editDisplayName, setEditDisplayName] = useState('');
+  
+  // User management dialog state
+  const [managingUsersInstance, setManagingUsersInstance] = useState<WhatsAppInstance | null>(null);
+  const { data: instanceUserIds = [], refetch: refetchInstanceUsers } = useInstanceUsers(managingUsersInstance?.id || null);
 
   const isAllowedToEdit = currentUserRole === 'admin' || currentUserRole === 'manager';
-  const maxInstances = 2; // Limite de 2 instâncias por conta
+  const maxInstances = 2;
 
   useEffect(() => {
     if (currentWorkspace) {
-      // Sincronizar imediatamente quando carregar
       handleSyncInstances();
       
-      // Sincronizar com a API periodicamente
       const interval = setInterval(() => {
         handleSyncInstances();
-      }, 30000); // Sincroniza a cada 30 segundos
+      }, 30000);
       
       return () => clearInterval(interval);
     }
@@ -67,11 +91,8 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
     try {
       console.log('🔄 Starting sync with Evolution API...');
       await syncInstances.mutateAsync();
-      
-      // Após sincronização, verificar instâncias órfãs
       await recoverOrphanInstances();
     } catch (error) {
-      // Error handling is done in the mutation
       console.error('Auto sync error:', error);
     }
   };
@@ -82,10 +103,8 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
 
       console.log('🔍 Checking for orphan instances...');
       
-      // Generate workspace prefix for security
       const workspacePrefix = `ws_${currentWorkspace.id.substring(0, 8)}_`;
       
-      // Buscar instâncias diretamente da Evolution API via edge function
       const { data: apiData, error: apiError } = await supabase.functions.invoke('whatsapp-evolution', {
         body: {
           action: 'list_instances',
@@ -97,7 +116,6 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
 
       if (apiData?.instances) {
         const allEvolutionInstances = apiData.instances;
-        // SECURITY: Filter only instances belonging to this workspace
         const evolutionInstances = allEvolutionInstances.filter((apiInstance: any) => {
           const instanceName = apiInstance.instance?.instanceName || apiInstance.instanceName;
           return instanceName && instanceName.startsWith(workspacePrefix);
@@ -105,7 +123,6 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
         
         console.log(`📋 Evolution API instances for workspace: ${evolutionInstances.length} of ${allEvolutionInstances.length} total`);
         
-        // Buscar instâncias no banco local
         const { data: localInstances } = await supabase
           .from('whatsapp_instances')
           .select('instance_name')
@@ -113,7 +130,6 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
 
         const localInstanceNames = (localInstances || []).map(i => i.instance_name);
         
-        // Encontrar instâncias que existem na API mas não no banco
         const orphanInstances = evolutionInstances.filter((apiInstance: any) => {
           const instanceName = apiInstance.instance?.instanceName || apiInstance.instanceName;
           return instanceName && !localInstanceNames.includes(instanceName);
@@ -157,22 +173,10 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
     setShowCreator(false);
   };
 
-  const updateInstanceStatus = async (instanceName: string) => {
-    try {
-      await handleSyncInstances();
-      toast.success('Status sincronizado com a API!');
-    } catch (error) {
-      console.error('Error updating status:', error);
-      toast.error('Erro ao sincronizar status: ' + (error as any)?.message);
-    }
-  };
-
   const forceSyncWithAPI = async () => {
     try {
       toast.info('Sincronizando com a API Evolution...');
       await syncInstances.mutateAsync();
-      
-      // Também executar recuperação de instâncias órfãs
       await recoverOrphanInstances();
     } catch (error) {
       console.error('Error syncing:', error);
@@ -193,39 +197,13 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
         .eq('id', instanceId)
         .eq('workspace_id', currentWorkspace.id);
 
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
-      }
+      if (error) throw error;
       
       toast.success('Instância excluída com sucesso!');
       refetch();
     } catch (error) {
       console.error('Error deleting instance:', error);
       toast.error('Erro ao excluir instância: ' + (error as any)?.message);
-    }
-  };
-
-  const handleFixSync = async (instanceName: string) => {
-    try {
-      if (!currentWorkspace) return;
-      
-      toast.info('Corrigindo sincronização...');
-      
-      const { data, error } = await supabase.functions.invoke('fix-whatsapp-sync', {
-        body: {
-          workspaceId: currentWorkspace.id,
-          instanceName: instanceName
-        }
-      });
-
-      if (error) throw error;
-
-      await refetch();
-      toast.success(`Instância ${instanceName} sincronizada com sucesso!`);
-    } catch (error) {
-      console.error('Error fixing sync:', error);
-      toast.error('Erro ao corrigir sincronização: ' + (error as Error).message);
     }
   };
 
@@ -236,7 +214,6 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
     const oldInstanceName = instance.instance_name;
     const newInstanceName = instance.instance_name;
 
-    // Check if instance already has the correct prefix
     if (!newInstanceName.startsWith(workspacePrefix)) {
       toast.error('Erro: Nome da instância não está no formato correto');
       return;
@@ -264,12 +241,41 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
         newInstanceName
       });
 
-      // Show QR code automatically after recreation
       setSelectedInstance(instance);
       setShowQRCode(true);
       refetch();
     } catch (error: any) {
       toast.error('Erro ao recriar instância: ' + error.message);
+    }
+  };
+
+  const handleSaveDisplayName = async () => {
+    if (!editingInstance) return;
+    
+    try {
+      await updateDisplayName.mutateAsync({
+        instanceId: editingInstance.id,
+        displayName: editDisplayName.trim() || null
+      });
+      setEditingInstance(null);
+      setEditDisplayName('');
+    } catch (error) {
+      // Error handling in hook
+    }
+  };
+
+  const handleToggleUserAccess = async (userId: string, hasAccess: boolean) => {
+    if (!managingUsersInstance) return;
+    
+    try {
+      await manageInstanceUsers.mutateAsync({
+        instanceId: managingUsersInstance.id,
+        userId,
+        action: hasAccess ? 'add' : 'remove'
+      });
+      refetchInstanceUsers();
+    } catch (error) {
+      // Error handling in hook
     }
   };
 
@@ -374,7 +380,6 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
                            description: data.message,
                          });
                          
-                         // Força reload da página para garantir que tudo foi atualizado
                          window.location.reload();
                        } catch (error: any) {
                          toast('Erro ao Limpar Conversas', {
@@ -432,7 +437,6 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
             </div>
           </div>
 
-          {/* Header de segurança para instâncias antigas */}
           {instances.length === 0 && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
               <div className="flex items-center gap-2 mb-2">
@@ -467,6 +471,86 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
           onStatusUpdate={refetch}
         />
       )}
+
+      {/* Edit Display Name Dialog */}
+      <Dialog open={!!editingInstance} onOpenChange={() => setEditingInstance(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Nome da Instância</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nome de exibição</Label>
+              <Input
+                value={editDisplayName}
+                onChange={(e) => setEditDisplayName(e.target.value)}
+                placeholder="Ex: Comercial, Suporte, etc."
+              />
+              <p className="text-xs text-muted-foreground">
+                Nome interno na Evolution API: {editingInstance?.instance_name}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingInstance(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveDisplayName} disabled={updateDisplayName.isPending}>
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* User Management Dialog */}
+      <Dialog open={!!managingUsersInstance} onOpenChange={() => setManagingUsersInstance(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Gerenciar Usuários com Acesso</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Selecione quais usuários podem ver esta instância. Admins e Managers sempre têm acesso a todas as instâncias.
+            </p>
+            <div className="space-y-3 max-h-[300px] overflow-y-auto">
+              {members
+                .filter((m: any) => m.role !== 'admin' && m.role !== 'manager')
+                .map((member: any) => {
+                  const profile = member.profiles;
+                  const isChecked = instanceUserIds.includes(member.user_id);
+                  
+                  return (
+                    <div key={member.user_id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted">
+                      <Checkbox
+                        id={`user-${member.user_id}`}
+                        checked={isChecked}
+                        onCheckedChange={(checked) => handleToggleUserAccess(member.user_id, !!checked)}
+                        disabled={manageInstanceUsers.isPending}
+                      />
+                      <label htmlFor={`user-${member.user_id}`} className="flex-1 cursor-pointer">
+                        <p className="font-medium">{profile?.full_name || 'Sem nome'}</p>
+                        <p className="text-xs text-muted-foreground">{profile?.email}</p>
+                      </label>
+                      <Badge variant="outline" className="text-xs">
+                        {member.role}
+                      </Badge>
+                    </div>
+                  );
+                })}
+              {members.filter((m: any) => m.role !== 'admin' && m.role !== 'manager').length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nenhum usuário regular encontrado. Apenas admins e managers estão no workspace.
+                </p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setManagingUsersInstance(null)}>
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Lista de Instâncias */}
       <Card>
@@ -504,7 +588,9 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
                     <div className="flex items-center justify-between">
                       <div className="space-y-2 flex-1">
                         <div className="flex items-center gap-3">
-                          <h4 className="font-semibold text-gray-900">{instance.instance_name}</h4>
+                          <h4 className="font-semibold text-gray-900">
+                            {instance.display_name || instance.instance_name.replace(/^ws_\w+_/, '')}
+                          </h4>
                           <Badge variant="outline" className={getStatusColor(instance.status)}>
                             {getStatusIcon(instance.status)}
                             <span className="ml-1 capitalize">{instance.status}</span>
@@ -515,6 +601,10 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
                             </Badge>
                           )}
                         </div>
+                        
+                        <p className="text-xs text-muted-foreground">
+                          {instance.instance_name}
+                        </p>
                         
                         {instance.phone_number && (
                           <p className="text-sm text-gray-600 flex items-center gap-2">
@@ -532,6 +622,30 @@ export default function InstanceManager({ currentUserRole }: InstanceManagerProp
                       </div>
 
                       <div className="flex items-center gap-2">
+                        {isAllowedToEdit && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditingInstance(instance);
+                                setEditDisplayName(instance.display_name || '');
+                              }}
+                              title="Editar nome"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setManagingUsersInstance(instance)}
+                              title="Gerenciar usuários"
+                            >
+                              <Users className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                        
                         {instance.status !== 'open' && (
                           <Button
                             variant="outline"

@@ -2234,6 +2234,35 @@ export type Database = {
           },
         ]
       }
+      user_whatsapp_instances: {
+        Row: {
+          created_at: string | null
+          id: string
+          instance_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          instance_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          instance_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_whatsapp_instances_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       webhooks: {
         Row: {
           created_at: string | null
@@ -2390,6 +2419,7 @@ export type Database = {
       whatsapp_instances: {
         Row: {
           created_at: string
+          display_name: string | null
           id: string
           instance_key: string
           instance_name: string
@@ -2403,6 +2433,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          display_name?: string | null
           id?: string
           instance_key: string
           instance_name: string
@@ -2416,6 +2447,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          display_name?: string | null
           id?: string
           instance_key?: string
           instance_name?: string

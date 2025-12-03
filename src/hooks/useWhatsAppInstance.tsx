@@ -49,12 +49,12 @@ export function useWorkspaceMembership() {
   });
 }
 
+// Hook for Atendimento - ALL users see only their associated instances
 export function useWhatsAppInstances() {
   const { currentWorkspace } = useWorkspace();
-  const { data: membership } = useWorkspaceMembership();
   
   return useQuery({
-    queryKey: ['whatsapp-instances', currentWorkspace?.id, membership?.role],
+    queryKey: ['whatsapp-instances-user', currentWorkspace?.id],
     queryFn: async () => {
       if (!currentWorkspace) return [];
       
@@ -64,49 +64,33 @@ export function useWhatsAppInstances() {
       // Generate workspace prefix for security filtering
       const workspacePrefix = `ws_${currentWorkspace.id.substring(0, 8)}_`;
       
-      const isAdminOrManager = membership?.role === 'admin' || membership?.role === 'manager';
+      // ALL users (including admins) only see instances they're associated with
+      const { data: associations, error: assocError } = await supabase
+        .from('user_whatsapp_instances')
+        .select('instance_id')
+        .eq('user_id', user.id);
       
-      let instances: WhatsAppInstance[] = [];
-      
-      if (isAdminOrManager) {
-        // Admins/managers see all workspace instances
-        const { data, error } = await supabase
-          .from('whatsapp_instances')
-          .select('*')
-          .eq('workspace_id', currentWorkspace.id)
-          .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        instances = (data as WhatsAppInstance[]) || [];
-      } else {
-        // Regular users: filter by user_whatsapp_instances associations
-        const { data: associations, error: assocError } = await supabase
-          .from('user_whatsapp_instances')
-          .select('instance_id')
-          .eq('user_id', user.id);
-        
-        if (assocError) {
-          console.error('Error fetching user instance associations:', assocError);
-          return [];
-        }
-        
-        const instanceIds = associations?.map(a => a.instance_id) || [];
-        
-        if (instanceIds.length === 0) {
-          console.log('🔒 User has no instance associations, returning empty list');
-          return [];
-        }
-        
-        const { data, error } = await supabase
-          .from('whatsapp_instances')
-          .select('*')
-          .in('id', instanceIds)
-          .eq('workspace_id', currentWorkspace.id)
-          .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        instances = (data as WhatsAppInstance[]) || [];
+      if (assocError) {
+        console.error('Error fetching user instance associations:', assocError);
+        return [];
       }
+      
+      const instanceIds = associations?.map(a => a.instance_id) || [];
+      
+      if (instanceIds.length === 0) {
+        console.log('🔒 User has no instance associations, returning empty list');
+        return [];
+      }
+      
+      const { data, error } = await supabase
+        .from('whatsapp_instances')
+        .select('*')
+        .in('id', instanceIds)
+        .eq('workspace_id', currentWorkspace.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      const instances = (data as WhatsAppInstance[]) || [];
       
       // SECURITY: Filter out instances that don't belong to this workspace
       const secureInstances = instances.filter(instance => {
@@ -119,11 +103,51 @@ export function useWhatsAppInstances() {
         return belongsToWorkspace;
       });
       
-      console.log(`🔒 Workspace security: ${instances.length} total instances, ${secureInstances.length} belong to workspace ${currentWorkspace.id}`);
+      console.log(`🔒 User instances: ${secureInstances.length} associated instances`);
       
       return secureInstances;
     },
-    enabled: !!currentWorkspace && membership !== undefined,
+    enabled: !!currentWorkspace,
+  });
+}
+
+// Hook for Settings/InstanceManager - Admins see ALL workspace instances
+export function useAllWorkspaceInstances() {
+  const { currentWorkspace } = useWorkspace();
+  
+  return useQuery({
+    queryKey: ['whatsapp-instances-all', currentWorkspace?.id],
+    queryFn: async () => {
+      if (!currentWorkspace) return [];
+      
+      // Generate workspace prefix for security filtering
+      const workspacePrefix = `ws_${currentWorkspace.id.substring(0, 8)}_`;
+      
+      const { data, error } = await supabase
+        .from('whatsapp_instances')
+        .select('*')
+        .eq('workspace_id', currentWorkspace.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      const instances = (data as WhatsAppInstance[]) || [];
+      
+      // SECURITY: Filter out instances that don't belong to this workspace
+      const secureInstances = instances.filter(instance => {
+        const belongsToWorkspace = instance.instance_name.startsWith(workspacePrefix);
+        
+        if (!belongsToWorkspace) {
+          console.warn(`🔒 Filtering out instance ${instance.instance_name} - doesn't belong to workspace ${currentWorkspace.id}`);
+        }
+        
+        return belongsToWorkspace;
+      });
+      
+      console.log(`🔒 All workspace instances: ${secureInstances.length} instances`);
+      
+      return secureInstances;
+    },
+    enabled: !!currentWorkspace,
   });
 }
 
@@ -147,7 +171,8 @@ export function useCreateWhatsAppInstance() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['whatsapp-instances'] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-instances-user'] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-instances-all'] });
       toast.success('Instância do WhatsApp criada com sucesso!');
     },
     onError: (error) => {
@@ -255,7 +280,8 @@ export function useRecreateWhatsAppInstance() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['whatsapp-instances'] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-instances-user'] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-instances-all'] });
       toast.success('Instância recriada com sucesso! Escaneie o QR Code para reconectar.');
     },
     onError: (error) => {
@@ -283,7 +309,8 @@ export function useSyncWhatsAppInstances() {
       return data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['whatsapp-instances'] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-instances-user'] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-instances-all'] });
       
       const { syncResults, instances } = data;
       if (syncResults) {
@@ -337,7 +364,8 @@ export function useUpdateInstanceDisplayName() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['whatsapp-instances'] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-instances-user'] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-instances-all'] });
       toast.success('Nome da instância atualizado!');
     },
     onError: (error) => {
@@ -393,7 +421,8 @@ export function useManageInstanceUsers() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['instance-users', variables.instanceId] });
-      queryClient.invalidateQueries({ queryKey: ['whatsapp-instances'] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-instances-user'] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-instances-all'] });
     },
     onError: (error) => {
       toast.error('Erro ao atualizar acesso: ' + error.message);

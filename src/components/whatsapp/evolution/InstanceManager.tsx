@@ -24,7 +24,7 @@ import { useWorkspace } from '@/hooks/useWorkspace';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { 
-  useWhatsAppInstances, 
+  useAllWorkspaceInstances, 
   useSyncWhatsAppInstances, 
   useRecreateWhatsAppInstance,
   useUpdateInstanceDisplayName,
@@ -53,7 +53,7 @@ interface InstanceManagerProps {
 
 export default function InstanceManager({ currentUserRole }: InstanceManagerProps) {
   const { currentWorkspace } = useWorkspace();
-  const { data: instances = [], isLoading, refetch } = useWhatsAppInstances();
+  const { data: instances = [], isLoading, refetch } = useAllWorkspaceInstances();
   const syncInstances = useSyncWhatsAppInstances();
   const recreateInstance = useRecreateWhatsAppInstance();
   const updateDisplayName = useUpdateInstanceDisplayName();

@@ -571,6 +571,78 @@ serve(async (req) => {
         return await diagnoseAllInstances(workspaceId, supabase, currentApiUrl, currentApiKey);
       case 'reconfigure_all_instances':
         return await reconfigureAllInstances(workspaceId, supabase, currentApiUrl, currentApiKey);
+      
+      case 'fetch_profile_picture': {
+        const { phoneNumber, workspaceId: wsId } = bodyData;
+        
+        if (!instanceName || !phoneNumber || !wsId) {
+          return new Response(
+            JSON.stringify({ error: 'Missing required parameters: instanceName, phoneNumber, workspaceId' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        console.log('📸 Fetching profile picture:', { instanceName, phoneNumber, wsId });
+        
+        try {
+          const cleanNumber = phoneNumber.replace(/\D/g, '');
+          
+          const response = await fetch(`${currentApiUrl}/chat/fetchProfilePictureUrl/${instanceName}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': currentApiKey,
+            },
+            body: JSON.stringify({ number: cleanNumber })
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Evolution API error fetching profile picture:', errorText);
+            return new Response(
+              JSON.stringify({ error: 'Failed to fetch profile picture', details: errorText }),
+              { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          const result = await response.json();
+          console.log('📸 Profile picture result:', result);
+          
+          // Save to database if we got a picture URL
+          if (result.profilePictureUrl || result.pictureUrl) {
+            const pictureUrl = result.profilePictureUrl || result.pictureUrl;
+            
+            const { error: updateError } = await supabase
+              .from('whatsapp_conversations')
+              .update({ profile_picture_url: pictureUrl })
+              .eq('phone_number', phoneNumber)
+              .eq('workspace_id', wsId);
+              
+            if (updateError) {
+              console.error('❌ Error updating profile picture in database:', updateError);
+            } else {
+              console.log('✅ Profile picture saved to database');
+            }
+            
+            return new Response(
+              JSON.stringify({ success: true, profilePictureUrl: pictureUrl }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          return new Response(
+            JSON.stringify({ success: false, message: 'No profile picture available' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error) {
+          console.error('❌ Error fetching profile picture:', error);
+          return new Response(
+            JSON.stringify({ error: (error as Error).message }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+      
       default:
         console.log('❌ Invalid action received:', action, 'Available actions:', ['create_instance', 'get_qr', 'get_status', 'send_message', 'send_image', 'sendMedia', 'sendAudio', 'verify_instance', 'list_instances', 'configure_webhook', 'test_webhook', 'get_webhook_status', 'reconfigure_all_instances']);
         throw new Error(`Invalid action: ${action}`);

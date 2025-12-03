@@ -1,19 +1,18 @@
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import UnifiedAtendimento from '@/components/whatsapp/UnifiedAtendimento';
-import { useWorkspace } from '@/hooks/useWorkspace';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useWhatsAppInstances } from '@/hooks/useWhatsAppInstance';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 
 export default function Atendimento() {
-  const { currentWorkspace } = useWorkspace();
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Usa o hook que filtra instâncias por usuário
+  const { data: whatsappInstances = [], isLoading } = useWhatsAppInstances();
 
   // Processar dados do sessionStorage quando vindo do Outbound em nova aba
   useEffect(() => {
@@ -33,22 +32,6 @@ export default function Atendimento() {
       }
     }
   }, [location]);
-
-  const { data: whatsappInstances, isLoading } = useQuery({
-    queryKey: ['whatsapp-instances', currentWorkspace?.id],
-    queryFn: async () => {
-      if (!currentWorkspace?.id) return [];
-      
-      const { data, error } = await supabase
-        .from('whatsapp_instances')
-        .select('*')
-        .eq('workspace_id', currentWorkspace.id);
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!currentWorkspace?.id
-  });
 
   if (isLoading) {
     return (

@@ -346,6 +346,54 @@ serve(async (req) => {
               },
               body: JSON.stringify(body)
             });
+          } else if (mediaUrlType === 'audio') {
+            // AUDIO: Use sendWhatsAppAudio endpoint for proper audio handling
+            console.log('🎵 Sending audio via sendWhatsAppAudio endpoint');
+            console.log('📥 Downloading audio from Supabase Storage:', mediaUrl);
+            
+            const audioResponse = await fetch(mediaUrl);
+            
+            if (!audioResponse.ok) {
+              throw new Error(`Failed to download audio from storage: ${audioResponse.status}`);
+            }
+            
+            const audioBuffer = await audioResponse.arrayBuffer();
+            const uint8Array = new Uint8Array(audioBuffer);
+            let binaryString = '';
+            
+            // Convert to base64 in chunks to avoid stack overflow for large files
+            const chunkSize = 8192;
+            for (let i = 0; i < uint8Array.length; i += chunkSize) {
+              const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+              for (let j = 0; j < chunk.length; j++) {
+                binaryString += String.fromCharCode(chunk[j]);
+              }
+            }
+            
+            const base64Audio = btoa(binaryString);
+            console.log(`✅ Audio downloaded and converted to base64 (${audioBuffer.byteLength} bytes)`);
+            
+            // Use the dedicated sendWhatsAppAudio endpoint
+            const audioBody = {
+              number: ensureCountryCode55(mediaUrlNumber),
+              audio: base64Audio,
+              delay: 1200
+            };
+            
+            console.log('📤 Sending to sendWhatsAppAudio endpoint:', {
+              endpoint: `${currentApiUrl}/message/sendWhatsAppAudio/${mediaUrlInstanceName}`,
+              number: audioBody.number,
+              audioLength: base64Audio.length
+            });
+            
+            response = await fetch(`${currentApiUrl}/message/sendWhatsAppAudio/${mediaUrlInstanceName}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': currentApiKey,
+              },
+              body: JSON.stringify(audioBody)
+            });
           } else {
             // Images: download and convert to base64 (existing behavior)
             console.log('📥 Downloading image from Supabase Storage:', mediaUrl);

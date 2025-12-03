@@ -1128,6 +1128,20 @@ export default function UnifiedAtendimento() {
                         <p className="text-xs text-muted-foreground">
                           {selectedConv.phone_number}
                         </p>
+                        {(selectedConv as any).instance_id && (() => {
+                          const conversationInstance = instances.find((i: any) => i.id === (selectedConv as any).instance_id);
+                          if (conversationInstance) {
+                            return (
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                <span className="text-xs text-emerald-600 font-medium">
+                                  Atendido por: {conversationInstance.display_name || conversationInstance.instance_name.replace(/^ws_\w+_/, '')}
+                                </span>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                       {!findLeadByPhone(selectedConv.phone_number || '') && <Button variant="outline" size="sm" className="gap-2 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700" onClick={() => {
                     setSelectedConvForLead(selectedConv);

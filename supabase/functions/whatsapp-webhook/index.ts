@@ -281,48 +281,29 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
             }
           };
           
-          // 🔧 Função RIGOROSA para validar dados de imagem
-          const validateImageData = (data: Uint8Array, source: string): boolean => {
-            // Threshold mínimo aumentado - imagens válidas têm pelo menos 1KB
-            if (!data || data.byteLength < 1000) {
-              console.error(`❌ Image data too small from ${source}:`, { 
-                hasData: !!data, 
-                size: data?.byteLength,
-                minRequired: 1000
-              });
-              return false;
-            }
-            
-            // Verificar magic bytes (headers de arquivo) - DEVE ser formato válido
-            const header = Array.from(data.slice(0, 12));
-            const isJPEG = header[0] === 0xFF && header[1] === 0xD8 && header[2] === 0xFF;
-            const isPNG = header[0] === 0x89 && header[1] === 0x50 && header[2] === 0x4E && header[3] === 0x47;
-            const isGIF = header[0] === 0x47 && header[1] === 0x49 && header[2] === 0x46;
-            const isWEBP = header[0] === 0x52 && header[1] === 0x49 && header[2] === 0x46 && header[3] === 0x46 && 
-                           header[8] === 0x57 && header[9] === 0x45 && header[10] === 0x42 && header[11] === 0x50;
-            
-            const isValidFormat = isJPEG || isPNG || isGIF || isWEBP;
-            
-            console.log(`🔍 Image validation from ${source}:`, { 
-              size: data.byteLength,
-              headerBytes: header.map(b => '0x' + b.toString(16).padStart(2, '0')).join(' '),
-              isJPEG, isPNG, isGIF, isWEBP,
-              isValidFormat
-            });
-            
-            // 🚨 CORREÇÃO CRÍTICA: REJEITAR se não for formato válido
-            if (!isValidFormat) {
-              console.error(`❌ INVALID image format from ${source} - REJECTING (not JPEG/PNG/GIF/WEBP)`);
-              return false;
-            }
-            
-            return true;
-          };
+          // 🔧 PROCESSAMENTO DE IMAGEM SIMPLIFICADO (igual aos vídeos - que funcionam)
+          // Removida validação rigorosa de magic bytes que estava rejeitando imagens válidas
           
-          // 🔥 MUDANÇA CRÍTICA: Para URLs .enc, SEMPRE usar Evolution API PRIMEIRO
-          // O base64 do webhook para imagens criptografadas geralmente está corrompido
-          if (isEncryptedUrl) {
-            console.log('🔐 Image URL is encrypted (.enc) - PRIORITIZING Evolution API download...');
+          // Priorizar Base64 do webhook se disponível (igual a vídeos)
+          if (mediaBase64 && mediaBase64.length > 500) {
+            console.log('📷 Processing image from webhook base64...', { base64Length: mediaBase64.length });
+            try {
+              // Remover prefixo data:image/... se existir
+              let cleanBase64 = mediaBase64;
+              if (mediaBase64.includes(',')) {
+                cleanBase64 = mediaBase64.split(',')[1];
+              }
+              imageData = Uint8Array.from(atob(cleanBase64), c => c.charCodeAt(0));
+              console.log('✅ Decoded image from webhook base64:', imageData.byteLength, 'bytes');
+            } catch (decodeErr) {
+              console.warn('⚠️ Failed to decode webhook base64:', decodeErr);
+              imageData = null;
+            }
+          }
+          
+          // Se não tem base64 válido OU for URL .enc, usar Evolution API
+          if ((!imageData || imageData.byteLength < 100) && (isEncryptedUrl || !mediaBase64)) {
+            console.log('🔐 Trying Evolution API for image download...', { isEncryptedUrl, hasBase64: !!mediaBase64 });
             const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
             const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY');
             
@@ -351,16 +332,13 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
                   const result = await response.json();
                   console.log('📦 Evolution API response:', { 
                     hasBase64: !!result.base64, 
-                    base64Length: result.base64?.length,
-                    first50Chars: result.base64?.substring(0, 50)
+                    base64Length: result.base64?.length
                   });
                   
                   if (result.base64 && result.base64.length > 500) {
-                    const decoded = decodeBase64Safely(result.base64);
-                    if (validateImageData(decoded, 'Evolution API')) {
-                      imageData = decoded;
-                      console.log('✅ Valid image from Evolution API:', imageData.byteLength, 'bytes');
-                    }
+                    // IGUAL AOS VÍDEOS - sem validação de magic bytes
+                    imageData = Uint8Array.from(atob(result.base64), c => c.charCodeAt(0));
+                    console.log('✅ Image from Evolution API:', imageData.byteLength, 'bytes');
                   }
                 } else {
                   console.error('❌ Evolution API error:', response.status, await response.text());
@@ -371,54 +349,25 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
             }
           }
           
-          // 🔥 FALLBACK 1: Se Evolution API falhou, tentar base64 do webhook
-          if (!imageData && mediaBase64 && mediaBase64.length > 500) {
-            console.log('🔄 Trying webhook base64 as fallback...', { base64Length: mediaBase64.length });
-            
-            // Log detalhado do base64 do webhook para diagnóstico
-            console.log('🔍 Webhook base64 analysis:', {
-              length: mediaBase64.length,
-              startsWithData: mediaBase64.startsWith('data:'),
-              first30: mediaBase64.substring(0, 30),
-              last30: mediaBase64.substring(mediaBase64.length - 30)
-            });
-            
-            try {
-              const decoded = decodeBase64Safely(mediaBase64);
-              if (validateImageData(decoded, 'webhook base64')) {
-                imageData = decoded;
-                console.log('✅ Valid image from webhook base64:', imageData.byteLength, 'bytes');
-              } else {
-                console.warn('⚠️ Webhook base64 REJECTED - invalid format');
-              }
-            } catch (decodeErr) {
-              console.error('❌ Failed to decode webhook base64:', decodeErr);
-            }
-          }
-          
-          // Se não for .enc, tentar download direto
-          if (!imageData && mediaUrl && !isEncryptedUrl) {
+          // Se ainda não tem dados e URL não é .enc, tentar download direto
+          if ((!imageData || imageData.byteLength < 100) && mediaUrl && !isEncryptedUrl) {
             console.log('📥 Downloading image from direct URL...');
-            const imageResponse = await fetch(mediaUrl, {
-              headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
-            });
-            
-            if (!imageResponse.ok) {
-              throw new Error(`Failed to fetch image: ${imageResponse.status}`);
-            }
-            
-            const arrayBuffer = await imageResponse.arrayBuffer();
-            imageData = new Uint8Array(arrayBuffer);
-            
-            if (!validateImageData(imageData, 'direct URL')) {
-              console.error('❌ Direct URL returned invalid image data');
-              imageData = null;
-            } else {
-              console.log('✅ Downloaded from URL:', imageData.byteLength, 'bytes');
+            try {
+              const imageResponse = await fetch(mediaUrl, {
+                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+              });
+              
+              if (imageResponse.ok) {
+                const arrayBuffer = await imageResponse.arrayBuffer();
+                imageData = new Uint8Array(arrayBuffer);
+                console.log('✅ Downloaded from URL:', imageData.byteLength, 'bytes');
+              }
+            } catch (fetchErr) {
+              console.error('❌ Failed to fetch from URL:', fetchErr);
             }
           }
           
-          // Upload somente se temos dados válidos
+          // Upload se temos dados (validação simples de tamanho apenas)
           if (imageData && imageData.byteLength > 100) {
             console.log('📤 Uploading image:', { 
               fileName, 
@@ -426,12 +375,11 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
               size: imageData.byteLength
             });
             
-            // 🔥 FASE 1 & 3: Usar upsert: true + contentType correto
             const { error: uploadError } = await supabase.storage
               .from('whatsapp-media')
               .upload(filePath, imageData, {
-                contentType: originalMimetype, // SEMPRE usar mimetype do webhook
-                upsert: true, // Evitar erro 409
+                contentType: originalMimetype,
+                upsert: true,
                 cacheControl: '3600'
               });
 
@@ -446,7 +394,7 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
               console.error('❌ Storage upload error:', uploadError);
             }
           } else {
-            console.error('❌ No valid image data to upload - keeping original URL');
+            console.error('❌ No valid image data to upload - keeping original URL:', mediaUrl);
           }
         } catch (error) {
           console.error('❌ Image processing error:', error);

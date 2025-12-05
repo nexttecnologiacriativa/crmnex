@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Camera, Loader2, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -12,9 +13,17 @@ interface AvatarUploadProps {
 
 export default function AvatarUpload({ size = 'lg', className }: AvatarUploadProps) {
   const { user, profile } = useAuth();
+  const queryClient = useQueryClient();
   const [isUploading, setIsUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(profile?.avatar_url || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sincronizar estado local com profile quando ele mudar
+  useEffect(() => {
+    if (profile?.avatar_url !== undefined) {
+      setAvatarUrl(profile.avatar_url);
+    }
+  }, [profile?.avatar_url]);
 
   const sizeClasses = {
     sm: 'h-12 w-12',
@@ -79,6 +88,10 @@ export default function AvatarUpload({ size = 'lg', className }: AvatarUploadPro
       if (updateError) throw updateError;
 
       setAvatarUrl(urlWithTimestamp);
+      
+      // Invalidar cache do profile para sincronizar com outros componentes
+      await queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+      
       toast.success('Foto atualizada com sucesso!');
     } catch (error) {
       console.error('Erro ao fazer upload:', error);
@@ -103,6 +116,10 @@ export default function AvatarUpload({ size = 'lg', className }: AvatarUploadPro
       if (updateError) throw updateError;
 
       setAvatarUrl(null);
+      
+      // Invalidar cache do profile para sincronizar com outros componentes
+      await queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+      
       toast.success('Foto removida com sucesso!');
     } catch (error) {
       console.error('Erro ao remover foto:', error);

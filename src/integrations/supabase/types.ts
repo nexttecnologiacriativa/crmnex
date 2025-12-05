@@ -2934,6 +2934,10 @@ export type Database = {
       get_workspace_stats: { Args: { p_workspace_id: string }; Returns: Json }
       get_workspace_usage: { Args: { p_workspace_id: string }; Returns: Json }
       is_super_admin: { Args: { user_id: string }; Returns: boolean }
+      is_workspace_admin_or_owner: {
+        Args: { workspace_uuid: string }
+        Returns: boolean
+      }
       normalize_phone_number: { Args: { phone: string }; Returns: string }
       reset_workspace: { Args: { p_workspace_id: string }; Returns: undefined }
       setup_default_workspace_data: {

@@ -1,5 +1,5 @@
 
-import { Home, Users, BarChart3, CheckSquare, Workflow, Settings, LogOut, Kanban, MessageCircle, Megaphone, Search, Headphones, Tv, Bot, ChevronLeft } from 'lucide-react';
+import { Home, Users, BarChart3, CheckSquare, Workflow, Settings, LogOut, Kanban, Megaphone, Search, Headphones, Tv, Bot, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -30,12 +30,17 @@ const navigationGroups = [
       { name: 'Atendimento', href: '/atendimento', icon: Headphones },
       { name: 'Tarefas', href: '/tasks', icon: CheckSquare },
       { name: 'Jobs', href: '/jobs', icon: Kanban },
-      { name: 'Automação', href: '/automation', icon: Bot },
-      { name: 'Marketing', href: '/marketing', icon: Megaphone },
-      { name: 'Outbound', href: '/outbound', icon: Search },
       { name: 'Relatórios', href: '/reports', icon: BarChart3 },
-      { name: 'Dashboard TV', href: '/tv-dashboard', icon: Tv },
       { name: 'Configurações', href: '/settings', icon: Settings },
+    ],
+  },
+  {
+    label: 'Performance',
+    items: [
+      { name: 'Marketing', href: '/marketing', icon: Megaphone },
+      { name: 'Automação', href: '/automation', icon: Bot },
+      { name: 'Outbound', href: '/outbound', icon: Search },
+      { name: 'Dashboard TV', href: '/tv-dashboard', icon: Tv },
     ],
   },
 ];
@@ -60,7 +65,7 @@ export default function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { signOut, profile } = useAuth();
-  const { isMobile, setOpenMobile, state } = useSidebar();
+  const { isMobile, setOpenMobile, state, toggleSidebar } = useSidebar();
   const isCollapsed = state === 'collapsed';
 
   const handleSignOut = async () => {
@@ -99,40 +104,53 @@ export default function AppSidebar() {
 
   return (
     <Sidebar 
-      className="bg-white border-r border-gray-200"
+      className="bg-gradient-to-b from-[#003366] to-[#004d80] border-r-0"
       collapsible="icon"
     >
       {/* Header com Avatar e Saudação */}
-      <SidebarHeader className="border-b border-gray-100 bg-white p-4">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-10 w-10 shrink-0 ring-2 ring-blue-100">
-            <AvatarImage src={profile?.avatar_url || ''} alt={userName} />
-            <AvatarFallback className="bg-blue-500 text-white font-medium text-sm">
-              {userInitials}
-            </AvatarFallback>
-          </Avatar>
-          
-          {!isCollapsed && (
+      <SidebarHeader className="border-b border-white/10 bg-transparent p-4">
+        {isCollapsed ? (
+          <div className="flex flex-col items-center gap-3">
+            <Avatar className="h-10 w-10 shrink-0 ring-2 ring-emerald-400/50">
+              <AvatarImage src={profile?.avatar_url || ''} alt={userName} />
+              <AvatarFallback className="bg-emerald-500 text-white font-medium text-sm">
+                {userInitials}
+              </AvatarFallback>
+            </Avatar>
+            <button
+              onClick={toggleSidebar}
+              className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"
+            >
+              <ChevronRight className="h-4 w-4 text-white/80" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10 shrink-0 ring-2 ring-emerald-400/50">
+              <AvatarImage src={profile?.avatar_url || ''} alt={userName} />
+              <AvatarFallback className="bg-emerald-500 text-white font-medium text-sm">
+                {userInitials}
+              </AvatarFallback>
+            </Avatar>
+            
             <div className="flex flex-col min-w-0 flex-1">
-              <span className="text-xs text-gray-500 font-medium">{greeting},</span>
-              <span className="text-sm font-semibold text-gray-900 truncate">{userName}</span>
+              <span className="text-xs text-white/60 font-medium">{greeting},</span>
+              <span className="text-sm font-semibold text-white truncate">{userName}</span>
             </div>
-          )}
-          
-          {!isCollapsed && (
-            <SidebarTrigger className="ml-auto h-8 w-8 rounded-lg hover:bg-gray-100 transition-colors">
-              <ChevronLeft className="h-4 w-4 text-gray-500" />
+            
+            <SidebarTrigger className="ml-auto h-8 w-8 rounded-lg hover:bg-white/10 transition-colors text-white/80 hover:text-white">
+              <ChevronLeft className="h-4 w-4" />
             </SidebarTrigger>
-          )}
-        </div>
+          </div>
+        )}
       </SidebarHeader>
 
       {/* Conteúdo do Menu */}
-      <SidebarContent className="px-3 py-4 sidebar-scroll flex-1 overflow-y-auto">
+      <SidebarContent className="px-3 py-4 sidebar-scroll-dark flex-1 overflow-y-auto">
         {navigationGroups.map((group) => (
           <SidebarGroup key={group.label}>
             {!isCollapsed && (
-              <SidebarGroupLabel className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">
+              <SidebarGroupLabel className="text-xs font-semibold text-white/50 uppercase tracking-wider px-3 mb-2">
                 {group.label}
               </SidebarGroupLabel>
             )}
@@ -147,23 +165,26 @@ export default function AppSidebar() {
                         isActive={isActive}
                         className={cn(
                           'group relative h-10 px-3 rounded-full transition-all duration-200 ease-out',
-                          'hover:bg-gray-100',
-                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2',
-                          isActive && 'bg-blue-500 hover:bg-blue-600 shadow-md shadow-blue-500/20'
+                          'hover:bg-white/10',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
+                          isActive && 'bg-blue-500 hover:bg-blue-600 shadow-lg shadow-blue-500/30',
+                          isCollapsed && 'justify-center px-0'
                         )}
                         tooltip={item.name}
                       >
                         <item.icon className={cn(
                           "h-5 w-5 transition-all duration-200 flex-shrink-0",
                           "group-hover:scale-105",
-                          isActive ? "text-white" : "text-gray-500 group-hover:text-blue-500"
+                          isActive ? "text-white" : "text-emerald-400"
                         )} />
-                        <span className={cn(
-                          "font-medium transition-all duration-200 text-sm ml-3",
-                          isActive ? "text-white" : "text-gray-700 group-hover:text-gray-900"
-                        )}>
-                          {item.name}
-                        </span>
+                        {!isCollapsed && (
+                          <span className={cn(
+                            "font-medium transition-all duration-200 text-sm ml-3",
+                            isActive ? "text-white" : "text-white/90"
+                          )}>
+                            {item.name}
+                          </span>
+                        )}
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );
@@ -176,19 +197,20 @@ export default function AppSidebar() {
 
       {/* Footer com Logout */}
       <SidebarFooter className="px-3 pb-4">
-        <SidebarSeparator className="bg-gray-100 mb-3" />
+        <SidebarSeparator className="bg-white/10 mb-3" />
         <SidebarMenuButton
           onClick={handleSignOut}
           className={cn(
-            "w-full justify-start h-10 px-3 rounded-full",
-            "text-gray-500 hover:text-red-600 hover:bg-red-50",
+            "w-full h-10 px-3 rounded-full",
+            "text-white/70 hover:text-red-400 hover:bg-white/10",
             "transition-all duration-200 group",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2",
+            isCollapsed ? "justify-center px-0" : "justify-start"
           )}
           tooltip="Sair"
         >
           <LogOut className="h-5 w-5 flex-shrink-0 transition-all duration-200 group-hover:scale-105" />
-          <span className="font-medium text-sm ml-3">Sair</span>
+          {!isCollapsed && <span className="font-medium text-sm ml-3">Sair</span>}
         </SidebarMenuButton>
       </SidebarFooter>
     </Sidebar>

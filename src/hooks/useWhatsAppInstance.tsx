@@ -49,7 +49,7 @@ export function useWorkspaceMembership() {
   });
 }
 
-// Hook for Atendimento - ALL users see only their associated instances
+// Hook for Atendimento - Admins/Owners see all instances, regular users see only associated ones
 export function useWhatsAppInstances() {
   const { currentWorkspace } = useWorkspace();
   
@@ -64,7 +64,45 @@ export function useWhatsAppInstances() {
       // Generate workspace prefix for security filtering
       const workspacePrefix = `ws_${currentWorkspace.id.substring(0, 8)}_`;
       
-      // ALL users (including admins) only see instances they're associated with
+      // Check if user is admin of the workspace
+      const { data: membership } = await supabase
+        .from('workspace_members')
+        .select('role')
+        .eq('workspace_id', currentWorkspace.id)
+        .eq('user_id', user.id)
+        .single();
+      
+      const isAdmin = membership?.role === 'admin';
+      
+      // Check if user is owner of the workspace
+      const { data: workspace } = await supabase
+        .from('workspaces')
+        .select('owner_id')
+        .eq('id', currentWorkspace.id)
+        .single();
+      
+      const isOwner = workspace?.owner_id === user.id;
+      
+      // If admin or owner, return ALL workspace instances
+      if (isAdmin || isOwner) {
+        const { data, error } = await supabase
+          .from('whatsapp_instances')
+          .select('*')
+          .eq('workspace_id', currentWorkspace.id)
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        const instances = (data as WhatsAppInstance[]) || [];
+        const secureInstances = instances.filter(instance => 
+          instance.instance_name.startsWith(workspacePrefix)
+        );
+        
+        console.log(`🔒 Admin/Owner: ${secureInstances.length} total instances`);
+        return secureInstances;
+      }
+      
+      // For regular users, only show associated instances
       const { data: associations, error: assocError } = await supabase
         .from('user_whatsapp_instances')
         .select('instance_id')

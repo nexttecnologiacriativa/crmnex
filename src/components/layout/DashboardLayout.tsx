@@ -16,7 +16,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   useWhatsAppNotifications();
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={false}>
       <div className="min-h-screen bg-gradient-to-br from-nexcrm-blue/5 via-white to-nexcrm-green/5 flex w-full">
         <AppSidebar />
         <SidebarInset className="flex-1 overflow-auto w-full">

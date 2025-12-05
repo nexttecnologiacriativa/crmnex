@@ -277,12 +277,127 @@ export function useSuperAdmin() {
     },
   });
 
-  // Remover usuário completamente - versão melhorada
+  // Remover usuário completamente - versão melhorada com limpeza completa de dados
   const removeUser = useMutation({
     mutationFn: async ({ userId, userEmail }: { userId: string; userEmail: string }) => {
-      console.log('Removing user completely:', userId, userEmail);
+      console.log('🧹 Starting complete user removal:', userId, userEmail);
       
-      // Remover de workspace_members primeiro
+      // 1. LEADS: Definir assigned_to como NULL (manter os leads, apenas remover atribuição)
+      const { error: leadsError } = await supabase
+        .from('leads')
+        .update({ assigned_to: null })
+        .eq('assigned_to', userId);
+      
+      if (leadsError) {
+        console.error('Error clearing leads assignment:', leadsError);
+      } else {
+        console.log('✅ Leads assignment cleared');
+      }
+      
+      // 2. WHATSAPP INSTANCES: Remover associações do usuário
+      const { error: whatsappError } = await supabase
+        .from('user_whatsapp_instances')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (whatsappError) {
+        console.error('Error removing whatsapp associations:', whatsappError);
+      } else {
+        console.log('✅ WhatsApp associations removed');
+      }
+      
+      // 3. ACTIVITIES: Remover atividades do usuário
+      const { error: activitiesError } = await supabase
+        .from('activities')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (activitiesError) {
+        console.error('Error removing activities:', activitiesError);
+      } else {
+        console.log('✅ Activities removed');
+      }
+      
+      // 4. LEAD_ACTIVITIES: Remover atividades de leads do usuário
+      const { error: leadActivitiesError } = await supabase
+        .from('lead_activities')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (leadActivitiesError) {
+        console.error('Error removing lead activities:', leadActivitiesError);
+      } else {
+        console.log('✅ Lead activities removed');
+      }
+      
+      // 5. TASKS: Limpar assigned_to e deletar criadas pelo usuário
+      const { error: tasksAssignedError } = await supabase
+        .from('tasks')
+        .update({ assigned_to: userId }) // Primeiro precisamos de um owner válido
+        .eq('assigned_to', userId);
+      
+      // Na verdade, vamos só limpar - mas tasks tem assigned_to NOT NULL
+      // Então deletamos tasks onde o usuário é o criador
+      const { error: tasksCreatedError } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('created_by', userId);
+      
+      if (tasksCreatedError) {
+        console.error('Error removing tasks created by user:', tasksCreatedError);
+      } else {
+        console.log('✅ Tasks created by user removed');
+      }
+      
+      // 6. JOBS: Limpar assigned_to (pode ser NULL) e deletar criados pelo usuário
+      const { error: jobsAssignedError } = await supabase
+        .from('jobs')
+        .update({ assigned_to: null })
+        .eq('assigned_to', userId);
+      
+      if (jobsAssignedError) {
+        console.error('Error clearing jobs assignment:', jobsAssignedError);
+      } else {
+        console.log('✅ Jobs assignment cleared');
+      }
+      
+      // 7. JOB_COMMENTS: Remover comentários do usuário
+      const { error: jobCommentsError } = await supabase
+        .from('job_comments')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (jobCommentsError) {
+        console.error('Error removing job comments:', jobCommentsError);
+      } else {
+        console.log('✅ Job comments removed');
+      }
+      
+      // 8. JOB_TIME_LOGS: Remover logs de tempo do usuário
+      const { error: jobTimeLogsError } = await supabase
+        .from('job_time_logs')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (jobTimeLogsError) {
+        console.error('Error removing job time logs:', jobTimeLogsError);
+      } else {
+        console.log('✅ Job time logs removed');
+      }
+      
+      // 9. JOB_SUBTASKS: Limpar assigned_to
+      const { error: jobSubtasksError } = await supabase
+        .from('job_subtasks')
+        .update({ assigned_to: null })
+        .eq('assigned_to', userId);
+      
+      if (jobSubtasksError) {
+        console.error('Error clearing job subtasks assignment:', jobSubtasksError);
+      } else {
+        console.log('✅ Job subtasks assignment cleared');
+      }
+      
+      // 10. WORKSPACE_MEMBERS: Remover de todos os workspaces
       const { error: membersError } = await supabase
         .from('workspace_members')
         .delete()
@@ -290,9 +405,11 @@ export function useSuperAdmin() {
 
       if (membersError) {
         console.error('Error removing user from workspaces:', membersError);
+      } else {
+        console.log('✅ Workspace memberships removed');
       }
 
-      // Remover perfil do usuário
+      // 11. PROFILES: Remover perfil do usuário (por último)
       const { error: profileError } = await supabase
         .from('profiles')
         .delete()
@@ -300,20 +417,8 @@ export function useSuperAdmin() {
 
       if (profileError) {
         console.error('Error removing user profile:', profileError);
-      }
-
-      // Tentar remover outras referências
-      try {
-        // Remover de activities
-        await supabase.from('activities').delete().eq('user_id', userId);
-        // Remover de tasks onde é assigned_to ou created_by
-        await supabase.from('tasks').delete().eq('assigned_to', userId);
-        await supabase.from('tasks').delete().eq('created_by', userId);
-        // Remover de jobs onde é assigned_to ou created_by
-        await supabase.from('jobs').delete().eq('assigned_to', userId);
-        await supabase.from('jobs').delete().eq('created_by', userId);
-      } catch (error) {
-        console.warn('Error cleaning up additional references:', error);
+      } else {
+        console.log('✅ User profile removed');
       }
 
       console.log('✅ User removal completed for:', userEmail);

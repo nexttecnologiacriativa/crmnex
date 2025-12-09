@@ -48,15 +48,24 @@ export function useWorkspace() {
   const { user } = useAuth();
   
   // Priorizar workspaces compartilhados (onde o usuário não é owner)
+  // Excluir workspace "superadmin" da seleção automática
   const workspace = React.useMemo(() => {
     if (!workspaces || workspaces.length === 0) return undefined;
     
+    // Filtrar workspaces especiais (superadmin)
+    const regularWorkspaces = workspaces.filter(
+      w => w.name !== 'superadmin' && w.id !== 'a0000000-0000-0000-0000-000000000001'
+    );
+    
+    // Se não houver workspaces regulares, usar o primeiro disponível
+    if (regularWorkspaces.length === 0) return workspaces[0];
+    
     // Primeiro: workspace compartilhado (não é owner)
-    const sharedWorkspace = workspaces.find(w => w.owner_id !== user?.id);
+    const sharedWorkspace = regularWorkspaces.find(w => w.owner_id !== user?.id);
     if (sharedWorkspace) return sharedWorkspace;
     
-    // Segundo: qualquer workspace
-    return workspaces[0];
+    // Segundo: qualquer workspace regular
+    return regularWorkspaces[0];
   }, [workspaces, user?.id]);
 
   return {

@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Shield, Users, AlertTriangle, CheckCircle, XCircle, Calendar, Search, Settings, Key, BarChart3, UserCheck, UserX, RotateCcw } from 'lucide-react';
+import { Shield, Users, AlertTriangle, CheckCircle, XCircle, Calendar, Search, Settings, Key, BarChart3, UserCheck, UserX, RotateCcw, Building2, ChevronDown, Smartphone, TrendingUp, Crown, Zap } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +34,7 @@ import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 import WorkspaceLimitsDialog from './WorkspaceLimitsDialog';
 import ChangePasswordDialog from './ChangePasswordDialog';
 import RemoveUserDialog from './RemoveUserDialog';
+import { AvatarInitials } from '@/components/ui/avatar-initials';
 
 export default function SuperAdminPanel() {
   const { 
@@ -61,38 +62,16 @@ export default function SuperAdminPanel() {
   const [selectedUser, setSelectedUser] = useState<{ id: string; email: string } | null>(null);
   const [expandedWorkspaces, setExpandedWorkspaces] = useState<Set<string>>(new Set());
 
-  // Debug effect para monitorar mudanças nos workspaces
-  useEffect(() => {
-    console.log('SuperAdminPanel - workspaces updated:', workspaces.length);
-    console.log('Workspaces:', workspaces);
-    
-    // Verificar se ainda existe algum usuário com email icandaybr@gmail.com
-    const problematicUsers = workspaces.flatMap(workspace => 
-      workspace.workspace_members.filter(member => 
-        member.profiles?.email === 'icandaybr@gmail.com'
-      )
-    );
-    
-    if (problematicUsers.length > 0) {
-      console.error('⚠️ STILL FOUND PROBLEMATIC USERS:', problematicUsers);
-    } else {
-      console.log('✅ No problematic users found in current workspace data');
-    }
-  }, [workspaces]);
-
-  console.log('SuperAdminPanel - isSuperAdmin:', isSuperAdmin);
-  console.log('SuperAdminPanel - workspaces:', workspaces);
-  console.log('SuperAdminPanel - loadingWorkspaces:', loadingWorkspaces);
-  console.log('SuperAdminPanel - error:', error);
-
   if (!isSuperAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Card className="w-96">
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="w-96 border-destructive/50 shadow-xl">
           <CardHeader className="text-center">
-            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <CardTitle className="text-red-600">Acesso Negado</CardTitle>
-            <CardDescription>
+            <div className="mx-auto w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+              <AlertTriangle className="h-8 w-8 text-destructive" />
+            </div>
+            <CardTitle className="text-destructive">Acesso Negado</CardTitle>
+            <CardDescription className="text-muted-foreground">
               Você não tem permissão para acessar este painel.
             </CardDescription>
           </CardHeader>
@@ -165,8 +144,6 @@ export default function SuperAdminPanel() {
   const handleRemoveUser = async () => {
     if (!selectedUser) return;
     
-    console.log('Removing user from panel:', selectedUser);
-    
     await removeUser.mutateAsync({
       userId: selectedUser.id,
       userEmail: selectedUser.email,
@@ -175,347 +152,420 @@ export default function SuperAdminPanel() {
     setRemoveUserDialogOpen(false);
     setSelectedUser(null);
     
-    // Forçar refresh adicional após 1 segundo
     setTimeout(() => {
-      console.log('Force refreshing workspace data...');
       queryClient.invalidateQueries({ queryKey: ['all-workspaces-with-details'] });
     }, 1000);
   };
 
-  if (error) {
-    console.error('Error in SuperAdminPanel:', error);
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <Shield className="h-8 w-8 text-purple-600" />
-            <h1 className="text-3xl font-bold text-gray-900">
-              Painel Super Administrador
-            </h1>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
+      <div className="max-w-7xl mx-auto p-6 space-y-8">
+        {/* Premium Header */}
+        <div className="relative overflow-hidden rounded-2xl gradient-purple p-8 shadow-2xl">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMtOS45NDEgMC0xOCA4LjA1OS0xOCAxOHM4LjA1OSAxOCAxOCAxOCAxOC04LjA1OSAxOC0xOC04LjA1OS0xOC0xOC0xOHptMCAzMmMtNy43MzIgMC0xNC02LjI2OC0xNC0xNHM2LjI2OC0xNCAxNC0xNCAxNCA2LjI2OCAxNCAxNC02LjI2OCAxNC0xNCAxNHoiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L2c+PC9zdmc+')] opacity-30"></div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-4 mb-3">
+              <div className="p-3 rounded-xl bg-white/20 backdrop-blur-sm shadow-lg">
+                <Shield className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-white tracking-tight">
+                  Super Admin Panel
+                </h1>
+                <p className="text-white/80 text-sm mt-1">
+                  Gerencie contas, usuários e limites do sistema
+                </p>
+              </div>
+            </div>
           </div>
-          <p className="text-gray-600">
-            Gerencie contas, usuários e limites do sistema
-          </p>
-          {/* Debug info */}
-          <div className="mt-2 text-xs text-gray-500">
-            Debug: {workspaces.length} workspaces carregados | Loading: {loadingWorkspaces ? 'Sim' : 'Não'}
-            {error && <span className="text-red-500"> | Erro: {error.message}</span>}
-          </div>
+          <div className="absolute -right-10 -bottom-10 w-40 h-40 rounded-full bg-white/10 blur-2xl"></div>
+          <div className="absolute right-20 top-0 w-20 h-20 rounded-full bg-white/10 blur-xl"></div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Contas</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{workspaces.length}</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          {/* Total Accounts */}
+          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
+            <div className="absolute inset-0 gradient-purple opacity-90"></div>
+            <CardContent className="relative z-10 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white/80 text-sm font-medium">Total de Contas</p>
+                  <p className="text-4xl font-bold text-white mt-2">{workspaces.length}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform">
+                  <Building2 className="h-7 w-7 text-white" />
+                </div>
+              </div>
+              <div className="mt-4 flex items-center gap-2 text-white/70 text-xs">
+                <TrendingUp className="h-3 w-3" />
+                <span>Workspaces registrados</span>
+              </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Contas Ativas</CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{activeWorkspaces}</div>
+          {/* Active Accounts */}
+          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
+            <div className="absolute inset-0 gradient-green opacity-90"></div>
+            <CardContent className="relative z-10 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white/80 text-sm font-medium">Contas Ativas</p>
+                  <p className="text-4xl font-bold text-white mt-2">{activeWorkspaces}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform">
+                  <CheckCircle className="h-7 w-7 text-white" />
+                </div>
+              </div>
+              <div className="mt-4 flex items-center gap-2 text-white/70 text-xs">
+                <Zap className="h-3 w-3" />
+                <span>Operando normalmente</span>
+              </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Contas Suspensas</CardTitle>
-              <XCircle className="h-4 w-4 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{suspendedWorkspaces}</div>
+          {/* Suspended Accounts */}
+          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
+            <div className="absolute inset-0 gradient-orange opacity-90"></div>
+            <CardContent className="relative z-10 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white/80 text-sm font-medium">Contas Suspensas</p>
+                  <p className="text-4xl font-bold text-white mt-2">{suspendedWorkspaces}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform">
+                  <XCircle className="h-7 w-7 text-white" />
+                </div>
+              </div>
+              <div className="mt-4 flex items-center gap-2 text-white/70 text-xs">
+                <AlertTriangle className="h-3 w-3" />
+                <span>Aguardando ação</span>
+              </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Usuários</CardTitle>
-              <UserCheck className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{totalUsers}</div>
+          {/* Total Users */}
+          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
+            <div className="absolute inset-0 gradient-blue opacity-90"></div>
+            <CardContent className="relative z-10 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white/80 text-sm font-medium">Total de Usuários</p>
+                  <p className="text-4xl font-bold text-white mt-2">{totalUsers}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform">
+                  <Users className="h-7 w-7 text-white" />
+                </div>
+              </div>
+              <div className="mt-4 flex items-center gap-2 text-white/70 text-xs">
+                <UserCheck className="h-3 w-3" />
+                <span>Usuários cadastrados</span>
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Search and Table */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
+        {/* Search and Workspaces List */}
+        <Card className="border-0 shadow-xl bg-card/80 backdrop-blur-sm">
+          <CardHeader className="pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <CardTitle>Gestão de Contas e Usuários</CardTitle>
-                <CardDescription>
-                  Lista completa de workspaces e usuários ({workspaces.length} workspaces encontrados)
+                <CardTitle className="text-xl font-semibold flex items-center gap-2">
+                  <Crown className="h-5 w-5 text-primary" />
+                  Gestão de Contas
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  {workspaces.length} workspaces encontrados
                 </CardDescription>
               </div>
-              <div className="flex items-center gap-2">
-                <Search className="h-4 w-4 text-gray-500" />
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar por nome, ID ou email..."
+                  placeholder="Buscar workspace, usuário ou email..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-64"
+                  className="pl-10 w-full sm:w-80 bg-background/50 border-border/50 focus:border-primary"
                 />
               </div>
             </div>
           </CardHeader>
           <CardContent>
             {loadingWorkspaces ? (
-              <div className="flex items-center justify-center p-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-nexcrm-blue"></div>
-                <span className="ml-2">Carregando dados...</span>
+              <div className="flex flex-col items-center justify-center p-12">
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin"></div>
+                  <Shield className="absolute inset-0 m-auto h-6 w-6 text-primary" />
+                </div>
+                <span className="mt-4 text-muted-foreground">Carregando dados...</span>
               </div>
             ) : error ? (
-              <div className="flex items-center justify-center p-8 text-red-600">
-                <AlertTriangle className="h-6 w-6 mr-2" />
-                Erro ao carregar dados: {error.message}
+              <div className="flex flex-col items-center justify-center p-12 text-destructive">
+                <div className="p-4 rounded-full bg-destructive/10 mb-4">
+                  <AlertTriangle className="h-8 w-8" />
+                </div>
+                <p className="font-medium">Erro ao carregar dados</p>
+                <p className="text-sm text-muted-foreground mt-1">{error.message}</p>
               </div>
             ) : workspaces.length === 0 ? (
-              <div className="flex items-center justify-center p-8 text-gray-500">
-                <Users className="h-6 w-6 mr-2" />
-                Nenhum workspace encontrado no sistema
+              <div className="flex flex-col items-center justify-center p-12 text-muted-foreground">
+                <div className="p-4 rounded-full bg-muted mb-4">
+                  <Building2 className="h-8 w-8" />
+                </div>
+                <p className="font-medium">Nenhum workspace encontrado</p>
+                <p className="text-sm mt-1">O sistema não possui workspaces cadastrados</p>
               </div>
             ) : (
               <div className="space-y-4">
-                {filteredWorkspaces.map((workspace) => (
+                {filteredWorkspaces.map((workspace, index) => (
                   <Collapsible
                     key={workspace.id}
                     open={expandedWorkspaces.has(workspace.id)}
                     onOpenChange={() => toggleWorkspaceExpanded(workspace.id)}
                   >
-                    <div className="border rounded-lg p-4">
+                    <div 
+                      className="border border-border/50 rounded-xl overflow-hidden bg-gradient-to-r from-background to-muted/20 hover:shadow-lg transition-all duration-300 animate-fade-in"
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
                       <CollapsibleTrigger className="w-full">
-                        <div className="flex items-center justify-between">
+                        <div className="p-5 flex items-center justify-between gap-4">
                           <div className="flex items-center gap-4">
-                            <div className="text-left">
-                              <div className="font-semibold text-lg">{workspace.name}</div>
-                              <div className="text-sm text-gray-500">
-                                ID: {workspace.id.slice(0, 8)}... • {workspace.workspace_members?.length || 0} usuário(s)
-                              </div>
-                              {workspace.workspace_members && workspace.workspace_members.length > 0 && (
-                                <div className="text-sm text-gray-600 mt-1">
-                                  <div className="space-y-1">
-                                    {workspace.workspace_members.map((member, index) => (
-                                      <div key={member.id} className="flex items-center gap-2">
-                                        <span className="font-medium">
-                                          {member.profiles?.full_name || 'Nome não informado'}
-                                        </span>
-                                        <span className="text-gray-500">
-                                          ({member.profiles?.email || 'Email não encontrado'})
-                                        </span>
-                                        {index < workspace.workspace_members.length - 1 && <span className="text-gray-400">•</span>}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
+                            <div className={`p-3 rounded-xl ${workspace.is_active ? 'bg-primary/10' : 'bg-destructive/10'}`}>
+                              <Building2 className={`h-6 w-6 ${workspace.is_active ? 'text-primary' : 'text-destructive'}`} />
                             </div>
-                            <Badge 
-                              variant={workspace.is_active ? "default" : "destructive"}
-                              className={workspace.is_active ? "bg-green-100 text-green-800" : ""}
-                            >
-                              {workspace.is_active ? 'Ativa' : 'Suspensa'}
-                            </Badge>
+                            <div className="text-left">
+                              <div className="flex items-center gap-3">
+                                <h3 className="font-semibold text-lg">{workspace.name}</h3>
+                                <Badge 
+                                  variant={workspace.is_active ? "default" : "destructive"}
+                                  className={`${workspace.is_active 
+                                    ? 'bg-green-500/10 text-green-600 border-green-500/30 hover:bg-green-500/20' 
+                                    : 'bg-destructive/10 text-destructive border-destructive/30'
+                                  } transition-colors`}
+                                >
+                                  {workspace.is_active ? '● Ativa' : '○ Suspensa'}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {workspace.workspace_members?.length || 0} usuário(s) • ID: {workspace.id.slice(0, 8)}...
+                              </p>
+                            </div>
                           </div>
                           
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-4">
+                            {/* Stats badges */}
                             {workspace.usage && (
-                              <div className="text-right text-sm mr-4 space-y-1">
-                                <div className="flex items-center gap-3 justify-end">
-                                  <span className="font-medium text-blue-600">{workspace.usage.leads_count?.toLocaleString() || 0} leads</span>
-                                  <span className="text-gray-400">|</span>
-                                  <span className={`font-medium ${workspace.usage.whatsapp_connected_count > 0 ? 'text-green-600' : 'text-gray-500'}`}>
-                                    📱 {workspace.usage.whatsapp_connected_count}/{workspace.usage.whatsapp_instances_count} instâncias
-                                  </span>
+                              <div className="hidden lg:flex items-center gap-3">
+                                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                                  <TrendingUp className="h-4 w-4 text-blue-500" />
+                                  <span className="font-semibold text-blue-600">{workspace.usage.leads_count?.toLocaleString() || 0}</span>
+                                  <span className="text-xs text-blue-500/80">leads</span>
                                 </div>
-                                <div className="text-xs text-gray-500">
-                                  T: {workspace.usage.tasks_count} | J: {workspace.usage.jobs_count} | Limite: {workspace.workspace_limits?.max_leads || '∞'}
+                                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+                                  workspace.usage.whatsapp_connected_count > 0 
+                                    ? 'bg-green-500/10 border border-green-500/20' 
+                                    : 'bg-muted border border-border/50'
+                                }`}>
+                                  <Smartphone className={`h-4 w-4 ${workspace.usage.whatsapp_connected_count > 0 ? 'text-green-500' : 'text-muted-foreground'}`} />
+                                  <span className={`font-semibold ${workspace.usage.whatsapp_connected_count > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                                    {workspace.usage.whatsapp_connected_count}/{workspace.usage.whatsapp_instances_count}
+                                  </span>
+                                  <span className={`text-xs ${workspace.usage.whatsapp_connected_count > 0 ? 'text-green-500/80' : 'text-muted-foreground'}`}>WhatsApp</span>
                                 </div>
                               </div>
                             )}
                             
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedWorkspace(workspace.id);
-                                setLimitsDialogOpen(true);
-                              }}
-                            >
-                              <BarChart3 className="h-4 w-4" />
-                            </Button>
-
-                            {workspace.is_active ? (
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button 
-                                    variant="destructive" 
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedWorkspace(workspace.id);
-                                    }}
-                                  >
-                                    Suspender
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent onClick={(e) => e.stopPropagation()}>
-                                  <DialogHeader>
-                                    <DialogTitle>Suspender Conta</DialogTitle>
-                                    <DialogDescription>
-                                      Tem certeza que deseja suspender a conta "{workspace.name}"?
-                                    </DialogDescription>
-                                  </DialogHeader>
-                                  <div className="space-y-4">
-                                    <div>
-                                      <Label htmlFor="reason">Motivo da Suspensão (opcional)</Label>
-                                      <Textarea
-                                        id="reason"
-                                        placeholder="Digite o motivo da suspensão..."
-                                        value={suspendReason}
-                                        onChange={(e) => setSuspendReason(e.target.value)}
-                                      />
-                                    </div>
-                                  </div>
-                                  <DialogFooter>
-                                    <Button
-                                      variant="destructive"
-                                      onClick={() => handleSuspend(workspace.id)}
-                                      disabled={isLoading}
-                                    >
-                                      {isLoading ? 'Suspendendo...' : 'Confirmar Suspensão'}
-                                    </Button>
-                                  </DialogFooter>
-                                </DialogContent>
-                              </Dialog>
-                            ) : (
-                              <Button 
-                                variant="default" 
+                            {/* Action buttons */}
+                            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                variant="outline"
                                 size="sm"
+                                className="h-9 w-9 p-0 border-border/50 hover:border-primary hover:bg-primary/5"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleActivate(workspace.id);
+                                  setSelectedWorkspace(workspace.id);
+                                  setLimitsDialogOpen(true);
                                 }}
-                                disabled={isLoading}
-                                className="bg-green-600 hover:bg-green-700"
+                                title="Gerenciar limites"
                               >
-                                {isLoading ? 'Ativando...' : 'Ativar'}
+                                <BarChart3 className="h-4 w-4" />
                               </Button>
-                            )}
+
+                              {workspace.is_active ? (
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button 
+                                      variant="destructive" 
+                                      size="sm"
+                                      className="h-9 px-4"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedWorkspace(workspace.id);
+                                      }}
+                                    >
+                                      Suspender
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent onClick={(e) => e.stopPropagation()}>
+                                    <DialogHeader>
+                                      <DialogTitle>Suspender Conta</DialogTitle>
+                                      <DialogDescription>
+                                        Tem certeza que deseja suspender a conta "{workspace.name}"?
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4">
+                                      <div>
+                                        <Label htmlFor="reason">Motivo da Suspensão (opcional)</Label>
+                                        <Textarea
+                                          id="reason"
+                                          placeholder="Digite o motivo da suspensão..."
+                                          value={suspendReason}
+                                          onChange={(e) => setSuspendReason(e.target.value)}
+                                        />
+                                      </div>
+                                    </div>
+                                    <DialogFooter>
+                                      <Button
+                                        variant="destructive"
+                                        onClick={() => handleSuspend(workspace.id)}
+                                        disabled={isLoading}
+                                      >
+                                        {isLoading ? 'Suspendendo...' : 'Confirmar Suspensão'}
+                                      </Button>
+                                    </DialogFooter>
+                                  </DialogContent>
+                                </Dialog>
+                              ) : (
+                                <Button 
+                                  size="sm"
+                                  className="h-9 px-4 bg-green-600 hover:bg-green-700"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleActivate(workspace.id);
+                                  }}
+                                  disabled={isLoading}
+                                >
+                                  {isLoading ? 'Ativando...' : 'Ativar'}
+                                </Button>
+                              )}
+                              
+                              <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-300 ${expandedWorkspaces.has(workspace.id) ? 'rotate-180' : ''}`} />
+                            </div>
                           </div>
                         </div>
                       </CollapsibleTrigger>
                       
                       <CollapsibleContent>
-                        <div className="mt-4 pt-4 border-t">
-                          <h4 className="font-medium mb-3">
-                            Detalhes dos Usuários ({workspace.workspace_members?.length || 0}):
+                        <div className="border-t border-border/50 bg-muted/30 p-5">
+                          <h4 className="font-medium mb-4 flex items-center gap-2 text-foreground">
+                            <Users className="h-4 w-4 text-primary" />
+                            Usuários do Workspace ({workspace.workspace_members?.length || 0})
                           </h4>
                           {!workspace.workspace_members || workspace.workspace_members.length === 0 ? (
-                            <p className="text-gray-500 text-sm">Nenhum usuário encontrado neste workspace</p>
+                            <p className="text-muted-foreground text-sm italic">Nenhum usuário encontrado</p>
                           ) : (
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Nome da Pessoa</TableHead>
-                                  <TableHead>Email</TableHead>
-                                  <TableHead>Nome do Workspace</TableHead>
-                                  <TableHead>Cargo</TableHead>
-                                  <TableHead>Data de Entrada</TableHead>
-                                  <TableHead>Ações</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {workspace.workspace_members.map((member) => (
-                                  <TableRow key={member.id}>
-                                    <TableCell className="font-medium">
-                                      {member.profiles?.full_name || 'Nome não informado'}
-                                    </TableCell>
-                                    <TableCell>
-                                      {member.profiles?.email || 'Email não encontrado'}
-                                    </TableCell>
-                                    <TableCell className="font-medium text-blue-600">
-                                      {workspace.name}
-                                    </TableCell>
-                                    <TableCell>
-                                      <Badge variant="outline">
-                                        {member.role}
-                                      </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                      <div className="flex items-center gap-1">
-                                        <Calendar className="h-4 w-4 text-gray-500" />
-                                        {new Date(member.joined_at).toLocaleDateString('pt-BR')}
-                                      </div>
-                                    </TableCell>
-                                    <TableCell>
-                                      <div className="flex items-center gap-2">
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => {
-                                            setSelectedUser({
-                                              id: member.user_id,
-                                              email: member.profiles?.email || 'Email não encontrado'
-                                            });
-                                            setPasswordDialogOpen(true);
-                                          }}
-                                          title="Alterar senha"
-                                        >
-                                          <Key className="h-4 w-4" />
-                                        </Button>
-                                        
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => {
-                                            handleForcePasswordReset(member.profiles?.email || '');
-                                          }}
-                                          title="Forçar reset de senha no próximo login"
-                                          className="text-orange-600 border-orange-300 hover:bg-orange-50"
-                                        >
-                                          <RotateCcw className="h-4 w-4" />
-                                        </Button>
-                                        
-                                        <Button
-                                          variant="destructive"
-                                          size="sm"
-                                          onClick={() => {
-                                            console.log('Clicando para remover usuário:', member.user_id, member.profiles?.email);
-                                            setSelectedUser({
-                                              id: member.user_id,
-                                              email: member.profiles?.email || 'Email não encontrado'
-                                            });
-                                            setRemoveUserDialogOpen(true);
-                                          }}
-                                          title="Remover usuário"
-                                        >
-                                          <UserX className="h-4 w-4" />
-                                        </Button>
-                                      </div>
-                                    </TableCell>
+                            <div className="rounded-lg border border-border/50 overflow-hidden bg-background">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                    <TableHead className="font-semibold">Usuário</TableHead>
+                                    <TableHead className="font-semibold">Email</TableHead>
+                                    <TableHead className="font-semibold">Cargo</TableHead>
+                                    <TableHead className="font-semibold">Entrada</TableHead>
+                                    <TableHead className="font-semibold text-right">Ações</TableHead>
                                   </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
+                                </TableHeader>
+                                <TableBody>
+                                  {workspace.workspace_members.map((member, idx) => (
+                                    <TableRow 
+                                      key={member.id}
+                                      className={`${idx % 2 === 0 ? 'bg-background' : 'bg-muted/20'} hover:bg-accent/50 transition-colors`}
+                                    >
+                                      <TableCell>
+                                        <div className="flex items-center gap-3">
+                                          <AvatarInitials 
+                                            name={member.profiles?.full_name || member.profiles?.email || 'U'} 
+                                            className="h-9 w-9 text-sm"
+                                          />
+                                          <span className="font-medium">
+                                            {member.profiles?.full_name || 'Nome não informado'}
+                                          </span>
+                                        </div>
+                                      </TableCell>
+                                      <TableCell className="text-muted-foreground">
+                                        {member.profiles?.email || 'Email não encontrado'}
+                                      </TableCell>
+                                      <TableCell>
+                                        <Badge variant="outline" className="font-normal capitalize">
+                                          {member.role}
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell className="text-muted-foreground">
+                                        <div className="flex items-center gap-2">
+                                          <Calendar className="h-4 w-4" />
+                                          {new Date(member.joined_at).toLocaleDateString('pt-BR')}
+                                        </div>
+                                      </TableCell>
+                                      <TableCell>
+                                        <div className="flex items-center justify-end gap-2">
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 w-8 p-0 border-border/50 hover:border-primary hover:bg-primary/5"
+                                            onClick={() => {
+                                              setSelectedUser({
+                                                id: member.user_id,
+                                                email: member.profiles?.email || 'Email não encontrado'
+                                              });
+                                              setPasswordDialogOpen(true);
+                                            }}
+                                            title="Alterar senha"
+                                          >
+                                            <Key className="h-4 w-4" />
+                                          </Button>
+                                          
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 w-8 p-0 border-orange-300 text-orange-600 hover:bg-orange-50 hover:border-orange-400"
+                                            onClick={() => {
+                                              handleForcePasswordReset(member.profiles?.email || '');
+                                            }}
+                                            title="Forçar reset de senha"
+                                          >
+                                            <RotateCcw className="h-4 w-4" />
+                                          </Button>
+                                          
+                                          <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            className="h-8 w-8 p-0"
+                                            onClick={() => {
+                                              setSelectedUser({
+                                                id: member.user_id,
+                                                email: member.profiles?.email || 'Email não encontrado'
+                                              });
+                                              setRemoveUserDialogOpen(true);
+                                            }}
+                                            title="Remover usuário"
+                                          >
+                                            <UserX className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
                           )}
                           
                           {workspace.account_status?.suspension_reason && (
-                            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded">
-                              <strong>Motivo da suspensão:</strong> {workspace.account_status.suspension_reason}
+                            <div className="mt-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                              <div className="flex items-center gap-2 text-destructive font-medium mb-1">
+                                <AlertTriangle className="h-4 w-4" />
+                                Motivo da suspensão
+                              </div>
+                              <p className="text-sm text-destructive/80">{workspace.account_status.suspension_reason}</p>
                             </div>
                           )}
                         </div>

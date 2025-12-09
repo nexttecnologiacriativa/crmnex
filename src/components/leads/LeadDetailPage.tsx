@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState } from 'react';
-import { useLeads, useUpdateLead } from '@/hooks/useLeads';
+import { useLeadById, useUpdateLead } from '@/hooks/useLeads';
 import { useWorkspaces } from '@/hooks/useWorkspace';
 import { useLeadActivities, useCreateLeadActivity } from '@/hooks/useLeadActivities';
 import CreateTaskFromLeadDialog from '../tasks/CreateTaskFromLeadDialog';
@@ -60,8 +60,7 @@ export default function LeadDetailPage() {
 
   const { data: workspaces } = useWorkspaces();
   const currentWorkspace = workspaces?.[0];
-  const { data: leads = [] } = useLeads();
-  const lead = leads.find(l => l.id === id);
+  const { data: lead, isLoading: isLoadingLead } = useLeadById(id);
 
   const { data: activities = [] } = useLeadActivities(id || '');
   
@@ -69,12 +68,22 @@ export default function LeadDetailPage() {
   const updateLead = useUpdateLead();
   const deleteLead = useDeleteLead();
 
+  if (isLoadingLead) {
+    return (
+      <DashboardLayout>
+        <div className="min-h-screen p-6 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   if (!lead) {
     return (
       <DashboardLayout>
         <div className="min-h-screen p-6">
           <div className="text-center py-12">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Lead não encontrado</h1>
+            <h1 className="text-2xl font-bold text-foreground mb-4">Lead não encontrado</h1>
             <Button onClick={() => navigate('/pipeline')} className="gradient-premium text-white">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Voltar para Pipeline

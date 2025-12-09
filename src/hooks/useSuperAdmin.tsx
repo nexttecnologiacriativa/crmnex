@@ -161,11 +161,11 @@ export function useSuperAdmin() {
       // Buscar uso atual de cada workspace incluindo WhatsApp
       const usagePromises = allWorkspaces.map(async (workspace) => {
         const [usageResult, instancesResult] = await Promise.all([
-          supabase.rpc('get_workspace_usage' as any, { workspace_uuid: workspace.id }),
+          supabase.rpc('get_workspace_usage' as any, { p_workspace_id: workspace.id }),
           supabase.from('whatsapp_instances').select('id, status').eq('workspace_id', workspace.id)
         ]);
         
-        const usage = usageResult.error ? null : usageResult.data?.[0];
+        const usage = usageResult.error ? null : usageResult.data;
         const instances = instancesResult.data || [];
         
         return { 
@@ -174,7 +174,7 @@ export function useSuperAdmin() {
           tasks_count: usage?.total_tasks || 0,
           jobs_count: usage?.total_jobs || 0,
           whatsapp_instances_count: instances.length,
-          whatsapp_connected_count: instances.filter(i => i.status === 'connected').length
+          whatsapp_connected_count: instances.filter(i => i.status === 'open' || i.status === 'connected').length
         };
       });
 

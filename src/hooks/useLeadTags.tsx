@@ -2,7 +2,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useAuth } from './useAuth';
 import { useWorkspace } from './useWorkspace';
 
 interface LeadTag {
@@ -25,67 +24,39 @@ interface UpdateTagData {
 }
 
 export function useLeadTags() {
-  const { user } = useAuth();
+  const { currentWorkspace } = useWorkspace();
   
   return useQuery({
-    queryKey: ['lead-tags', user?.id],
+    queryKey: ['lead-tags', currentWorkspace?.id],
     queryFn: async () => {
-      if (!user?.id) return [];
-
-      // Buscar workspace do usuário
-      const { data: workspaceData, error: workspaceError } = await supabase
-        .from('workspace_members')
-        .select('workspace_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle();
-
-      if (workspaceError) {
-        console.error('Workspace error:', workspaceError);
-        throw workspaceError;
-      }
-      if (!workspaceData) return [];
+      if (!currentWorkspace?.id) return [];
 
       const { data, error } = await supabase
         .from('lead_tags')
         .select('*')
-        .eq('workspace_id', workspaceData.workspace_id)
+        .eq('workspace_id', currentWorkspace.id)
         .order('name');
       
       if (error) throw error;
       return data as LeadTag[];
     },
-    enabled: !!user?.id,
+    enabled: !!currentWorkspace?.id,
   });
 }
 
 export function useCreateLeadTag() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { currentWorkspace } = useWorkspace();
   
   return useMutation({
     mutationFn: async (tagData: CreateTagData) => {
-      if (!user?.id) throw new Error('Usuário não autenticado');
-
-      // Buscar workspace do usuário
-      const { data: workspaceData, error: workspaceError } = await supabase
-        .from('workspace_members')
-        .select('workspace_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle();
-
-      if (workspaceError) {
-        console.error('Workspace error:', workspaceError);
-        throw workspaceError;
-      }
-      if (!workspaceData) throw new Error('Usuário não pertence a nenhum workspace');
+      if (!currentWorkspace?.id) throw new Error('Workspace não selecionado');
 
       const { data, error } = await supabase
         .from('lead_tags')
         .insert({
           ...tagData,
-          workspace_id: workspaceData.workspace_id
+          workspace_id: currentWorkspace.id
         })
         .select()
         .single();

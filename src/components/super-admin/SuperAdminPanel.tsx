@@ -332,10 +332,16 @@ export default function SuperAdminPanel() {
                           
                           <div className="flex items-center gap-2">
                             {workspace.usage && (
-                              <div className="text-right text-sm text-gray-600 mr-4">
-                                <div>L: {workspace.usage.leads_count} | T: {workspace.usage.tasks_count} | J: {workspace.usage.jobs_count}</div>
-                                <div className="text-xs">
-                                  Limite: {workspace.workspace_limits?.max_leads || '∞'} | {workspace.workspace_limits?.max_tasks || '∞'} | {workspace.workspace_limits?.max_jobs || '∞'}
+                              <div className="text-right text-sm mr-4 space-y-1">
+                                <div className="flex items-center gap-3 justify-end">
+                                  <span className="font-medium text-blue-600">{workspace.usage.leads_count?.toLocaleString() || 0} leads</span>
+                                  <span className="text-gray-400">|</span>
+                                  <span className={`font-medium ${workspace.usage.whatsapp_connected_count > 0 ? 'text-green-600' : 'text-gray-500'}`}>
+                                    📱 {workspace.usage.whatsapp_connected_count}/{workspace.usage.whatsapp_instances_count} instâncias
+                                  </span>
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  T: {workspace.usage.tasks_count} | J: {workspace.usage.jobs_count} | Limite: {workspace.workspace_limits?.max_leads || '∞'}
                                 </div>
                               </div>
                             )}

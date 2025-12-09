@@ -4,7 +4,7 @@ import { Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLeads } from '@/hooks/useLeads';
-import { useWorkspaces } from '@/hooks/useWorkspace';
+import { useWorkspace } from '@/hooks/useWorkspace';
 import CreateLeadDialog from './CreateLeadDialog';
 import LeadsListView from './LeadsListView';
 import TagManager from './TagManager';
@@ -22,10 +22,7 @@ export default function LeadsList() {
   
   console.log('LeadsList - Rendering component');
   
-  const { data: workspaces, isLoading: workspacesLoading, error: workspacesError } = useWorkspaces();
-  console.log('LeadsList - Workspaces:', { workspaces, workspacesLoading, workspacesError });
-  
-  const currentWorkspace = workspaces?.[0];
+  const { currentWorkspace, isLoading: workspacesLoading, error: workspacesError } = useWorkspace();
   console.log('LeadsList - Current workspace:', currentWorkspace);
   
   const { data: leads = [], isLoading: leadsLoading, error: leadsError } = useLeads();

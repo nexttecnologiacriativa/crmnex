@@ -29,7 +29,8 @@ export function useWorkspaces() {
       // em vez de apenas os que ele possui.
       const { data: memberWorkspaces, error: memberError } = await supabase
         .from('workspaces')
-        .select('*');
+        .select('*')
+        .order('name', { ascending: true });
       
       if (memberError) {
         console.error('Error fetching member workspaces:', memberError);
@@ -50,6 +51,8 @@ export function useWorkspace() {
   // Priorizar workspaces compartilhados (onde o usuário não é owner)
   // Excluir workspace "superadmin" da seleção automática
   const workspace = React.useMemo(() => {
+    console.log('useWorkspace - All workspaces:', workspaces);
+    
     if (!workspaces || workspaces.length === 0) return undefined;
     
     // Filtrar workspaces especiais (superadmin)
@@ -57,14 +60,20 @@ export function useWorkspace() {
       w => w.name !== 'superadmin' && w.id !== 'a0000000-0000-0000-0000-000000000001'
     );
     
+    console.log('useWorkspace - Regular workspaces (filtered):', regularWorkspaces);
+    
     // Se não houver workspaces regulares, usar o primeiro disponível
     if (regularWorkspaces.length === 0) return workspaces[0];
     
     // Primeiro: workspace compartilhado (não é owner)
     const sharedWorkspace = regularWorkspaces.find(w => w.owner_id !== user?.id);
-    if (sharedWorkspace) return sharedWorkspace;
+    if (sharedWorkspace) {
+      console.log('useWorkspace - Selected shared workspace:', sharedWorkspace);
+      return sharedWorkspace;
+    }
     
     // Segundo: qualquer workspace regular
+    console.log('useWorkspace - Selected first regular workspace:', regularWorkspaces[0]);
     return regularWorkspaces[0];
   }, [workspaces, user?.id]);
 

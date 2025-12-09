@@ -11,6 +11,7 @@ interface Profile {
   role: 'admin' | 'manager' | 'user';
   created_at: string;
   updated_at: string;
+  password_reset_required?: boolean;
 }
 
 interface AuthContextType {

@@ -1,6 +1,6 @@
 
 import { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import WorkspaceGuard from '@/components/WorkspaceGuard';
 
@@ -9,7 +9,8 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -26,6 +27,12 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // Verificar se o usuário precisa redefinir a senha
+  // Só redireciona se NÃO estiver já na página de reset
+  if (profile?.password_reset_required && location.pathname !== '/force-password-reset') {
+    return <Navigate to="/force-password-reset" replace />;
   }
 
   return (

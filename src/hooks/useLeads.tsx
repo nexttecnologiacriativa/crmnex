@@ -142,6 +142,47 @@ export function useLeads() {
   });
 }
 
+export function useLeadById(leadId: string | undefined) {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ['lead', leadId],
+    queryFn: async () => {
+      if (!leadId) return null;
+
+      const { data, error } = await supabase
+        .from('leads')
+        .select(`
+          *,
+          profiles!leads_assigned_to_fkey (
+            full_name,
+            email
+          ),
+          pipeline_stages (
+            name,
+            color
+          ),
+          lead_tag_relations (
+            id,
+            tag_id,
+            lead_tags (
+              id,
+              name,
+              color
+            )
+          )
+        `)
+        .eq('id', leadId)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!leadId && !!user,
+    staleTime: 30 * 1000,
+  });
+}
+
 export function useLeadsCount() {
   const { currentWorkspace } = useWorkspace();
   const { user } = useAuth();

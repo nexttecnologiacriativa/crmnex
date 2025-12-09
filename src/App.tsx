@@ -14,6 +14,8 @@ import DebriefingCreate from "./pages/DebriefingCreate"
 import DebriefingView from "./pages/DebriefingView"
 import Outbound from "./pages/Outbound"
 import SuperAdmin from "./pages/SuperAdmin"
+import ForcePasswordReset from "./pages/ForcePasswordReset"
+
 const queryClient = new QueryClient()
 
 const App = () => {
@@ -42,6 +44,7 @@ const App = () => {
             <Route path="/debriefing/:id/edit" element={<ProtectedRoute><DebriefingEdit /></ProtectedRoute>} />
             <Route path="/outbound" element={<ProtectedRoute><Outbound /></ProtectedRoute>} />
             <Route path="/super-adm-sys" element={<ProtectedRoute><SuperAdmin /></ProtectedRoute>} />
+            <Route path="/force-password-reset" element={<ProtectedRoute><ForcePasswordReset /></ProtectedRoute>} />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>

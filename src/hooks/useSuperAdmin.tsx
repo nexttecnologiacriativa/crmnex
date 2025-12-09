@@ -446,22 +446,47 @@ export function useSuperAdmin() {
 
   // Alterar senha de usuário
   const changeUserPassword = useMutation({
-    mutationFn: async ({ userId, newPassword }: { userId: string; newPassword: string }) => {
-      // Nota: Esta funcionalidade requer permissões especiais do Supabase
-      // Por enquanto vamos simular o sucesso
-      console.log('Changing password for user:', userId);
+    mutationFn: async ({ userId, email, newPassword }: { userId: string; email: string; newPassword: string }) => {
+      console.log('Changing password for user:', userId, email);
       
-      // TODO: Implementar chamada para edge function que altere a senha
-      // usando as credenciais de service role
+      const { data, error } = await supabase.functions.invoke('admin-change-password', {
+        body: { email, newPassword }
+      });
       
-      return { success: true };
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      
+      return data;
     },
     onSuccess: () => {
       toast.success('Senha alterada com sucesso!');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Error changing password:', error);
-      toast.error('Erro ao alterar senha');
+      toast.error('Erro ao alterar senha: ' + (error.message || 'Erro desconhecido'));
+    },
+  });
+
+  // Forçar reset de senha no próximo login
+  const forcePasswordReset = useMutation({
+    mutationFn: async ({ email }: { email: string }) => {
+      console.log('Forcing password reset for:', email);
+      
+      const { data, error } = await supabase.functions.invoke('admin-force-password-reset', {
+        body: { email }
+      });
+      
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      
+      return data;
+    },
+    onSuccess: () => {
+      toast.success('Usuário será forçado a redefinir senha no próximo login!');
+    },
+    onError: (error: any) => {
+      console.error('Error forcing password reset:', error);
+      toast.error('Erro ao forçar reset de senha: ' + (error.message || 'Erro desconhecido'));
     },
   });
 
@@ -518,7 +543,8 @@ export function useSuperAdmin() {
     activateAccount,
     removeUser,
     changeUserPassword,
+    forcePasswordReset,
     updateWorkspaceLimits,
-    isLoading: suspendAccount.isPending || activateAccount.isPending || removeUser.isPending || changeUserPassword.isPending || updateWorkspaceLimits.isPending,
+    isLoading: suspendAccount.isPending || activateAccount.isPending || removeUser.isPending || changeUserPassword.isPending || forcePasswordReset.isPending || updateWorkspaceLimits.isPending,
   };
 }

@@ -1994,6 +1994,7 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          password_reset_required: boolean | null
           role: Database["public"]["Enums"]["user_role"] | null
           super_admin_role:
             | Database["public"]["Enums"]["super_admin_role"]
@@ -2006,6 +2007,7 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          password_reset_required?: boolean | null
           role?: Database["public"]["Enums"]["user_role"] | null
           super_admin_role?:
             | Database["public"]["Enums"]["super_admin_role"]
@@ -2018,6 +2020,7 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          password_reset_required?: boolean | null
           role?: Database["public"]["Enums"]["user_role"] | null
           super_admin_role?:
             | Database["public"]["Enums"]["super_admin_role"]

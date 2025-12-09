@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Shield, Users, AlertTriangle, CheckCircle, XCircle, Calendar, Search, Settings, Key, BarChart3, UserCheck, UserX } from 'lucide-react';
+import { Shield, Users, AlertTriangle, CheckCircle, XCircle, Calendar, Search, Settings, Key, BarChart3, UserCheck, UserX, RotateCcw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,6 +45,7 @@ export default function SuperAdminPanel() {
     activateAccount,
     removeUser,
     changeUserPassword,
+    forcePasswordReset,
     updateWorkspaceLimits,
     isLoading 
   } = useSuperAdmin();
@@ -152,8 +153,13 @@ export default function SuperAdminPanel() {
     
     await changeUserPassword.mutateAsync({
       userId: selectedUser.id,
+      email: selectedUser.email,
       newPassword,
     });
+  };
+
+  const handleForcePasswordReset = async (email: string) => {
+    await forcePasswordReset.mutateAsync({ email });
   };
 
   const handleRemoveUser = async () => {
@@ -464,6 +470,18 @@ export default function SuperAdminPanel() {
                                           title="Alterar senha"
                                         >
                                           <Key className="h-4 w-4" />
+                                        </Button>
+                                        
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            handleForcePasswordReset(member.profiles?.email || '');
+                                          }}
+                                          title="Forçar reset de senha no próximo login"
+                                          className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                                        >
+                                          <RotateCcw className="h-4 w-4" />
                                         </Button>
                                         
                                         <Button

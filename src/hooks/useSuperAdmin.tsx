@@ -28,6 +28,8 @@ interface WorkspaceUsage {
   leads_count: number;
   tasks_count: number;
   jobs_count: number;
+  whatsapp_instances_count: number;
+  whatsapp_connected_count: number;
 }
 
 interface WorkspaceMember {
@@ -156,18 +158,24 @@ export function useSuperAdmin() {
         console.error('Error fetching workspace limits:', limitsError);
       }
 
-      // Buscar uso atual de cada workspace
+      // Buscar uso atual de cada workspace incluindo WhatsApp
       const usagePromises = allWorkspaces.map(async (workspace) => {
-        const { data, error } = await supabase.rpc('get_workspace_usage' as any, {
-          workspace_uuid: workspace.id
-        });
+        const [usageResult, instancesResult] = await Promise.all([
+          supabase.rpc('get_workspace_usage' as any, { workspace_uuid: workspace.id }),
+          supabase.from('whatsapp_instances').select('id, status').eq('workspace_id', workspace.id)
+        ]);
         
-        if (error) {
-          console.error('Error fetching usage for workspace:', workspace.id, error);
-          return { workspace_id: workspace.id, leads_count: 0, tasks_count: 0, jobs_count: 0 };
-        }
+        const usage = usageResult.error ? null : usageResult.data?.[0];
+        const instances = instancesResult.data || [];
         
-        return { workspace_id: workspace.id, ...data[0] };
+        return { 
+          workspace_id: workspace.id, 
+          leads_count: usage?.total_leads || 0,
+          tasks_count: usage?.total_tasks || 0,
+          jobs_count: usage?.total_jobs || 0,
+          whatsapp_instances_count: instances.length,
+          whatsapp_connected_count: instances.filter(i => i.status === 'connected').length
+        };
       });
 
       const usageResults = await Promise.all(usagePromises);

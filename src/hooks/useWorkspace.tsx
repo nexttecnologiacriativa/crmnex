@@ -89,7 +89,24 @@ export function useEnsureDefaultWorkspace() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { data: workspaces = [], isLoading, error } = useWorkspaces();
-  const workspace = workspaces[0];
+  
+  // Aplicar mesma lógica de useWorkspace() para selecionar workspace correto
+  const workspace = React.useMemo(() => {
+    if (!workspaces || workspaces.length === 0) return undefined;
+    
+    // Filtrar workspaces especiais (superadmin)
+    const regularWorkspaces = workspaces.filter(
+      w => w.name !== 'superadmin' && w.id !== 'a0000000-0000-0000-0000-000000000001'
+    );
+    
+    if (regularWorkspaces.length === 0) return workspaces[0];
+    
+    // Priorizar workspace PRÓPRIO (onde é owner)
+    const ownWorkspace = regularWorkspaces.find(w => w.owner_id === user?.id);
+    if (ownWorkspace) return ownWorkspace;
+    
+    return regularWorkspaces[0];
+  }, [workspaces, user?.id]);
 
   const createWorkspaceMutation = useMutation({
     mutationFn: async () => {

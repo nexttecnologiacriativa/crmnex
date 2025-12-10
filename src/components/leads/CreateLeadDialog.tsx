@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,6 +16,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import CustomFieldsForm from './CustomFieldsForm';
 import PhoneInput from './PhoneInput';
+import TagSelectorForCreate from './TagSelectorForCreate';
+import { useAddTagToLead } from '@/hooks/useLeadTags';
 
 const createLeadSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
@@ -43,6 +44,8 @@ export default function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialo
   const { currentWorkspace } = useWorkspace();
   const { data: pipelines = [] } = usePipelines(currentWorkspace?.id);
   const createLead = useCreateLead();
+  const addTagToLead = useAddTagToLead();
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
   // Buscar o usuário administrador do workspace
   const { data: adminUser } = useQuery({
@@ -136,8 +139,21 @@ export default function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialo
       custom_fields: data.custom_fields || {},
     };
 
-    await createLead.mutateAsync(leadData);
+    const createdLead = await createLead.mutateAsync(leadData);
+    
+    // Adicionar tags ao lead criado
+    if (selectedTagIds.length > 0 && createdLead?.id) {
+      for (const tagId of selectedTagIds) {
+        try {
+          await addTagToLead.mutateAsync({ leadId: createdLead.id, tagId });
+        } catch (error) {
+          console.error('Erro ao adicionar tag:', error);
+        }
+      }
+    }
+    
     form.reset();
+    setSelectedTagIds([]);
     onOpenChange(false);
   };
 
@@ -309,6 +325,10 @@ export default function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialo
 
             <CustomFieldsForm form={form} workspaceId={currentWorkspace?.id} />
 
+            <TagSelectorForCreate 
+              selectedTagIds={selectedTagIds} 
+              onTagsChange={setSelectedTagIds} 
+            />
             <div className="flex justify-end space-x-2 pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar

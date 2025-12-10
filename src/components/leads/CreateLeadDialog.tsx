@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useCreateLead } from '@/hooks/useLeads';
-import { useWorkspaces } from '@/hooks/useWorkspace';
+import { useWorkspace } from '@/hooks/useWorkspace';
 import { usePipelines } from '@/hooks/usePipeline';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
@@ -40,8 +40,7 @@ interface CreateLeadDialogProps {
 
 export default function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) {
   const { user } = useAuth();
-  const { data: workspaces } = useWorkspaces();
-  const currentWorkspace = workspaces?.[0];
+  const { currentWorkspace } = useWorkspace();
   const { data: pipelines = [] } = usePipelines(currentWorkspace?.id);
   const createLead = useCreateLead();
 

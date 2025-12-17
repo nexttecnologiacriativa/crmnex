@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Job, useDeleteJob } from '@/hooks/useJobs';
+import { Job, useDeleteJob, useJobSubtasks } from '@/hooks/useJobs';
 import EditJobDialog from './EditJobDialog';
 import JobSubtasksDialog from './JobSubtasksDialog';
 import TimeTracker from './TimeTracker';
@@ -49,6 +49,10 @@ export default function JobCard({ job }: JobCardProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSubtasksDialogOpen, setIsSubtasksDialogOpen] = useState(false);
   const deleteJob = useDeleteJob();
+  const { data: subtasks = [] } = useJobSubtasks(job.id);
+  
+  const completedSubtasks = subtasks.filter(s => s.completed).length;
+  const totalSubtasks = subtasks.length;
 
   const handleDelete = async () => {
     await deleteJob.mutateAsync(job.id);
@@ -167,6 +171,13 @@ export default function JobCard({ job }: JobCardProps) {
               }`}>
                 <Calendar className="h-3 w-3" />
                 <span>{formatDate(job.due_date)}</span>
+              </div>
+            )}
+
+            {totalSubtasks > 0 && (
+              <div className="flex items-center gap-1 text-xs text-gray-600">
+                <CheckSquare className="h-3 w-3" />
+                <span>{completedSubtasks}/{totalSubtasks} subtarefas</span>
               </div>
             )}
 

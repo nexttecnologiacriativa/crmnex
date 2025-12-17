@@ -8,7 +8,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useWorkspaceMembers } from '@/hooks/useJobs';
+import { getTagColorClasses } from '@/lib/tagColors';
 
 interface JobsFiltersProps {
   open: boolean;
@@ -17,18 +20,28 @@ interface JobsFiltersProps {
     assignee: string;
     priority: string;
     search: string;
+    tags: string[];
   };
   onFiltersChange: (filters: any) => void;
+  availableTags: string[];
 }
 
-export default function JobsFilters({ open, onOpenChange, filters, onFiltersChange }: JobsFiltersProps) {
+export default function JobsFilters({ open, onOpenChange, filters, onFiltersChange, availableTags }: JobsFiltersProps) {
   const { data: workspaceMembers = [] } = useWorkspaceMembers();
 
-  const updateFilter = (key: string, value: string) => {
+  const updateFilter = (key: string, value: string | string[]) => {
     onFiltersChange({
       ...filters,
       [key]: value,
     });
+  };
+
+  const toggleTag = (tag: string) => {
+    const currentTags = filters.tags || [];
+    const newTags = currentTags.includes(tag)
+      ? currentTags.filter(t => t !== tag)
+      : [...currentTags, tag];
+    updateFilter('tags', newTags);
   };
 
   const clearFilters = () => {
@@ -36,6 +49,7 @@ export default function JobsFilters({ open, onOpenChange, filters, onFiltersChan
       assignee: '',
       priority: '',
       search: '',
+      tags: [],
     });
   };
 
@@ -89,6 +103,41 @@ export default function JobsFilters({ open, onOpenChange, filters, onFiltersChan
               <option value="urgent">Urgente</option>
             </select>
           </div>
+
+          {availableTags.length > 0 && (
+            <div>
+              <Label>Tags</Label>
+              <div className="mt-2 flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 border border-gray-200 rounded-md">
+                {availableTags.map((tag) => {
+                  const colors = getTagColorClasses(tag);
+                  const isSelected = (filters.tags || []).includes(tag);
+                  return (
+                    <div
+                      key={tag}
+                      onClick={() => toggleTag(tag)}
+                      className={`cursor-pointer flex items-center gap-1.5 px-2 py-1 rounded-md border transition-all ${
+                        isSelected 
+                          ? `${colors.bg} ${colors.text} ${colors.border} ring-2 ring-offset-1 ring-purple-400` 
+                          : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                      }`}
+                    >
+                      <Checkbox 
+                        checked={isSelected}
+                        className="h-3 w-3"
+                        onCheckedChange={() => toggleTag(tag)}
+                      />
+                      <span className="text-xs font-medium">{tag}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              {(filters.tags || []).length > 0 && (
+                <p className="text-xs text-gray-500 mt-1">
+                  {filters.tags.length} tag(s) selecionada(s)
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="flex justify-between pt-4">
             <Button variant="outline" onClick={clearFilters}>

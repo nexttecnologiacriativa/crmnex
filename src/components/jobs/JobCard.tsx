@@ -24,6 +24,7 @@ import { Job, useDeleteJob } from '@/hooks/useJobs';
 import EditJobDialog from './EditJobDialog';
 import JobSubtasksDialog from './JobSubtasksDialog';
 import TimeTracker from './TimeTracker';
+import { getTagColorClasses } from '@/lib/tagColors';
 
 interface JobCardProps {
   job: Job;
@@ -137,11 +138,18 @@ export default function JobCard({ job }: JobCardProps) {
 
           {job.tags && job.tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              {job.tags.map((tag) => (
-                <Badge key={tag} variant="outline" className="text-xs">
-                  {tag}
-                </Badge>
-              ))}
+              {job.tags.map((tag) => {
+                const colors = getTagColorClasses(tag);
+                return (
+                  <Badge 
+                    key={tag} 
+                    variant="outline" 
+                    className={`text-xs ${colors.bg} ${colors.text} ${colors.border}`}
+                  >
+                    {tag}
+                  </Badge>
+                );
+              })}
             </div>
           )}
 

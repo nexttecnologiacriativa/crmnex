@@ -18,6 +18,7 @@ interface JobsKanbanProps {
     assignee: string;
     priority: string;
     search: string;
+    tags: string[];
   };
   boardId?: string | null;
 }
@@ -86,7 +87,10 @@ export default function JobsKanban({ filters, boardId }: JobsKanbanProps) {
         const matchesPriority = !filters.priority || 
           job.priority === filters.priority;
 
-        return matchesSearch && matchesAssignee && matchesPriority;
+        const matchesTags = !filters.tags?.length || 
+          filters.tags.some(tag => job.tags?.includes(tag));
+
+        return matchesSearch && matchesAssignee && matchesPriority && matchesTags;
       });
     });
     
@@ -105,7 +109,10 @@ export default function JobsKanban({ filters, boardId }: JobsKanbanProps) {
         const matchesPriority = !filters.priority || 
           job.priority === filters.priority;
 
-        return matchesSearch && matchesAssignee && matchesPriority;
+        const matchesTags = !filters.tags?.length || 
+          filters.tags.some(tag => job.tags?.includes(tag));
+
+        return matchesSearch && matchesAssignee && matchesPriority && matchesTags;
       });
       
       result[customStatus.status_id] = customJobs;

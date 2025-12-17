@@ -38,6 +38,7 @@ interface JobsListViewProps {
     assignee: string;
     priority: string;
     search: string;
+    tags: string[];
   };
   boardId?: string | null;
 }
@@ -85,7 +86,10 @@ export default function JobsListView({ filters, boardId }: JobsListViewProps) {
     const matchesPriority = !filters.priority || 
       job.priority === filters.priority;
 
-    return matchesSearch && matchesAssignee && matchesPriority;
+    const matchesTags = !filters.tags?.length || 
+      filters.tags.some(tag => job.tags?.includes(tag));
+
+    return matchesSearch && matchesAssignee && matchesPriority && matchesTags;
   });
 
   if (isLoading) {

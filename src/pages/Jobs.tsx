@@ -20,11 +20,15 @@ export default function Jobs() {
     assignee: '',
     priority: '',
     search: '',
+    tags: [] as string[],
   });
 
   const { workspace, ensureWorkspace, isLoading: workspaceLoading } = useEnsureDefaultWorkspace();
   const { data: boards = [], isLoading: boardsLoading } = useJobBoards();
   const { data: jobs = [], isLoading: jobsLoading, error: jobsError } = useJobs(selectedBoardId);
+
+  // Coletar todas as tags únicas dos jobs
+  const availableTags = [...new Set(jobs.flatMap(job => job.tags || []))].sort();
 
   // Workspace é garantido automaticamente pelo useEnsureDefaultWorkspace
   // Removido a chamada duplicada de ensureWorkspace() que estava causando duplicação de boards
@@ -137,6 +141,7 @@ export default function Jobs() {
           onOpenChange={setIsFiltersOpen}
           filters={filters}
           onFiltersChange={setFilters}
+          availableTags={availableTags}
         />
       </div>
     </DashboardLayout>

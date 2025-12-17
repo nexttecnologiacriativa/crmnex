@@ -20,10 +20,15 @@ interface JobSubtasksDialogProps {
 
 export default function JobSubtasksDialog({ job, open, onOpenChange }: JobSubtasksDialogProps) {
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
-  const { data: subtasks = [] } = useJobSubtasks(job.id);
+  const { data: subtasksData = [] } = useJobSubtasks(job.id);
   const createSubtask = useCreateJobSubtask();
   const updateSubtask = useUpdateJobSubtask();
   const deleteSubtask = useDeleteJobSubtask();
+
+  // Ordenar subtarefas por data de criação (mais recentes primeiro)
+  const subtasks = [...subtasksData].sort((a, b) => 
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
 
   const handleCreateSubtask = async () => {
     if (!newSubtaskTitle.trim()) return;

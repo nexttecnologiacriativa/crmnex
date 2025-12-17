@@ -30,8 +30,13 @@ interface JobSubtasksSectionProps {
 }
 
 export default function JobSubtasksSection({ job }: JobSubtasksSectionProps) {
-  const { data: subtasks = [] } = useJobSubtasks(job.id);
+  const { data: subtasksData = [] } = useJobSubtasks(job.id);
   const { data: workspaceMembers = [] } = useWorkspaceMembers();
+
+  // Ordenar subtarefas por data de criação (mais recentes primeiro)
+  const subtasks = [...subtasksData].sort((a, b) => 
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
   const createSubtask = useCreateJobSubtask();
   const updateSubtask = useUpdateJobSubtask();
   const deleteSubtask = useDeleteJobSubtask();

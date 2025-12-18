@@ -251,9 +251,10 @@ export function useCreateLead() {
       return result;
     },
     onSuccess: (data) => {
-      // Invalida todas as queries de leads
+      // Invalida todas as queries de leads (incluindo pipeline-leads usado no Kanban)
       queryClient.invalidateQueries({ queryKey: ['leads'] });
-      queryClient.refetchQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['pipeline-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['leads-count'] });
       toast.success('Lead criado com sucesso!');
     },
     onError: (error) => {
@@ -279,9 +280,10 @@ export function useUpdateLead() {
       return result;
     },
     onSuccess: () => {
-      // Invalida todas as queries de leads
+      // Invalida todas as queries de leads (incluindo pipeline-leads usado no Kanban)
       queryClient.invalidateQueries({ queryKey: ['leads'] });
-      queryClient.refetchQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['pipeline-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['leads-count'] });
       toast.success('Lead atualizado com sucesso!');
     },
     onError: (error) => {
@@ -303,9 +305,10 @@ export function useDeleteLead() {
       if (error) throw error;
     },
     onSuccess: () => {
-      // Invalida todas as queries de leads
+      // Invalida todas as queries de leads (incluindo pipeline-leads usado no Kanban)
       queryClient.invalidateQueries({ queryKey: ['leads'] });
-      queryClient.refetchQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['pipeline-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['leads-count'] });
       toast.success('Lead excluído com sucesso!');
     },
     onError: (error) => {

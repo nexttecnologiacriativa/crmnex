@@ -15,6 +15,7 @@ import { useEnsureDefaultWorkspace } from '@/hooks/useWorkspace';
 import { useDeletePipelineStage, useReorderPipelineStages } from '@/hooks/usePipeline';
 import { useStagePagination } from '@/hooks/useStagePagination';
 import { useWhatsAppValidation } from '@/hooks/useWhatsAppValidation';
+import { useLeadsRealtime } from '@/hooks/useLeadsRealtime';
 import { isBrazilianMobile } from '@/lib/phone';
 
 interface PipelineKanbanProps {
@@ -69,6 +70,9 @@ export default function PipelineKanban({
   const deleteStage = useDeletePipelineStage();
   const reorderStages = useReorderPipelineStages();
   const { validateWhatsAppBatch, isValidating } = useWhatsAppValidation();
+  
+  // Habilita atualização em tempo real dos leads
+  useLeadsRealtime();
   
   const {
     data: stages,

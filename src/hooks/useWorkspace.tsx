@@ -25,20 +25,38 @@ export function useWorkspaces() {
       
       console.log('Fetching workspaces for user:', user.id);
       
-      // Corrigido: Busca todos os workspaces aos quais o usuário pertence (via RLS),
-      // em vez de apenas os que ele possui.
+      // IMPORTANTE: Busca APENAS workspaces onde o usuário é membro explicitamente
+      // Isso evita que super admins vejam todos os workspaces nas páginas normais
+      // O painel de Super Admin tem sua própria lógica para listar todos
       const { data: memberWorkspaces, error: memberError } = await supabase
-        .from('workspaces')
-        .select('*')
-        .order('name', { ascending: true });
+        .from('workspace_members')
+        .select(`
+          workspace_id,
+          role,
+          workspaces:workspace_id (
+            id,
+            name,
+            description,
+            owner_id,
+            created_at,
+            updated_at
+          )
+        `)
+        .eq('user_id', user.id);
       
       if (memberError) {
         console.error('Error fetching member workspaces:', memberError);
         throw memberError;
       }
 
-      console.log('Found member workspaces:', memberWorkspaces);
-      return memberWorkspaces || [];
+      // Extrair e formatar os workspaces
+      const workspaces = memberWorkspaces
+        ?.map(m => m.workspaces)
+        .filter(Boolean)
+        .sort((a, b) => (a?.name || '').localeCompare(b?.name || '')) || [];
+
+      console.log('Found member workspaces:', workspaces);
+      return workspaces as Workspace[];
     },
     enabled: !!user,
   });

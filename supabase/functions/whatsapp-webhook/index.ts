@@ -96,12 +96,51 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
       const remoteJid = message.key?.remoteJid || '';
       const remoteJidAlt = message.key?.remoteJidAlt || '';
       
-      // CRITICAL FIX: Ignorar LIDs (@lid) - usar remoteJid nesse caso
-      // LIDs são identificadores internos do WhatsApp e não podem ser usados como número
-      const isLID = remoteJidAlt?.includes('@lid');
-      const phoneSource = isLID ? remoteJid : (remoteJidAlt || remoteJid);
+      // ============================================================
+      // CRITICAL FIX: Detectar LIDs em QUALQUER campo
+      // LIDs são identificadores internos do WhatsApp (ex: 227719233151048@lid)
+      // e NÃO devem ser usados como números de telefone
+      // ============================================================
       
-      console.log('📞 Phone extraction:', { remoteJid, remoteJidAlt, isLID, phoneSource });
+      // Função para verificar se um JID é um LID
+      const isLIDJid = (jid: string): boolean => {
+        if (!jid) return true; // Se vazio, considerar inválido
+        if (jid.includes('@lid')) return true;
+        if (jid.includes('@g.us')) return true; // Grupos também são inválidos
+        
+        // Extrair apenas números
+        const digitsOnly = jid.replace(/\D/g, '');
+        
+        // LIDs geralmente têm mais de 15 dígitos
+        if (digitsOnly.length > 15) return true;
+        
+        // Se não começa com 55, pode ser LID
+        if (digitsOnly.length > 12 && !digitsOnly.startsWith('55')) return true;
+        
+        return false;
+      };
+      
+      // Verificar ambos os JIDs
+      const isRemoteJidLID = isLIDJid(remoteJid);
+      const isRemoteJidAltLID = isLIDJid(remoteJidAlt);
+      
+      console.log('📞 Phone extraction analysis:', { 
+        remoteJid, 
+        remoteJidAlt, 
+        isRemoteJidLID, 
+        isRemoteJidAltLID 
+      });
+      
+      // Escolher a melhor fonte de telefone
+      let phoneSource = '';
+      if (!isRemoteJidAltLID && remoteJidAlt) {
+        phoneSource = remoteJidAlt;
+      } else if (!isRemoteJidLID && remoteJid) {
+        phoneSource = remoteJid;
+      } else {
+        console.log('⚠️ SKIPPING - Ambos JIDs são LIDs ou inválidos:', { remoteJid, remoteJidAlt });
+        continue;
+      }
       
       // FILTRAR MENSAGENS DE GRUPOS - Ignorar JIDs que terminam em @g.us
       if (phoneSource.endsWith('@g.us')) {
@@ -110,8 +149,6 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
       }
       
       // Função para normalizar número de telefone (remover sufixos e caracteres especiais)
-      // CRITICAL: Detecta e remove sufixos incorporados (ex: 551297401253457 -> 5512974012534)
-      // FIXED: Adiciona o 9 em números de 12 dígitos (celulares brasileiros sem o 9)
       const normalizePhoneNumber = (phone: string): string => {
         if (!phone) return '';
         
@@ -158,11 +195,30 @@ async function handleMessageWebhook(webhookData: any, supabase: any) {
         return digitsOnly;
       };
       
+      // Função para validar se é um número brasileiro válido
+      const isValidBrazilianPhone = (phone: string): boolean => {
+        // Número brasileiro deve ter 12-13 dígitos (55 + DDD + 8-9 dígitos)
+        if (!phone.startsWith('55')) return false;
+        if (phone.length < 12 || phone.length > 13) return false;
+        
+        // DDD válido (11-99)
+        const ddd = parseInt(phone.slice(2, 4));
+        if (ddd < 11 || ddd > 99) return false;
+        
+        return true;
+      };
+      
       const messageContent = message.message;
       const messageType = message.messageType || 'text';
       const fromMe = message.key?.fromMe || false;
       const phoneNumber = normalizePhoneNumber(phoneSource);
       const pushName = message.pushName || 'Usuário';
+      
+      // CRITICAL: Validar número antes de continuar
+      if (!isValidBrazilianPhone(phoneNumber)) {
+        console.log('⚠️ SKIPPING - Número inválido (possível LID):', phoneNumber, 'from:', phoneSource);
+        continue;
+      }
       const messageId = message.key?.id;
       const messageStatus = message.status;
 

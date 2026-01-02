@@ -89,27 +89,42 @@ export function useCreateMetaIntegration() {
       if (!currentWorkspace?.id) throw new Error('No workspace selected');
 
       const integrationId = crypto.randomUUID();
+      const webhookVerifyToken = crypto.randomUUID();
       
-      // Initiate OAuth flow
-      const { data: oauthData, error } = await supabase.functions.invoke('meta-oauth-handler', {
-        body: {
-          action: 'initiate',
-          workspaceId: currentWorkspace.id,
-          integrationId,
+      // Create integration directly in the database
+      const { error: insertError } = await supabase
+        .from('meta_integrations')
+        .insert({
+          id: integrationId,
+          workspace_id: currentWorkspace.id,
           name: data.name,
-          appId: data.meta_app_id,
-          appSecret: data.app_secret,
-          selectedPipelineId: data.selected_pipeline_id,
-          selectedTagIds: data.selected_tag_ids
-        }
-      });
+          meta_app_id: data.meta_app_id,
+          app_secret: data.app_secret,
+          access_token: 'pending', // Will be updated after OAuth
+          webhook_verify_token: webhookVerifyToken,
+          selected_pipeline_id: data.selected_pipeline_id,
+          selected_tag_ids: data.selected_tag_ids,
+          field_mapping: {},
+          is_active: false
+        });
 
-      if (error) throw error;
+      if (insertError) {
+        console.error('Error creating integration:', insertError);
+        throw insertError;
+      }
+
+      // Build OAuth URL
+      const redirectUri = `https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/meta-oauth-callback`;
+      const scope = 'leads_retrieval,pages_show_list,pages_read_engagement,pages_manage_ads';
       
+      const oauthUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${encodeURIComponent(data.meta_app_id)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(integrationId)}&scope=${encodeURIComponent(scope)}`;
+
+      console.log('✅ Integration created, OAuth URL:', oauthUrl);
+
       return {
         integration_id: integrationId,
-        oauth_url: oauthData.oauth_url,
-        state: oauthData.state
+        oauth_url: oauthUrl,
+        webhook_verify_token: webhookVerifyToken
       };
     },
     onSuccess: () => {

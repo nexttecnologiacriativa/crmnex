@@ -23,3 +23,9 @@ verify_jwt = false
 
 [functions.whatsapp-audio-transcribe]
 verify_jwt = false
+
+[functions.meta-webhook-receiver]
+verify_jwt = false
+
+[functions.meta-oauth-callback]
+verify_jwt = false

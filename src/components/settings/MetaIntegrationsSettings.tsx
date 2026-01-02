@@ -7,14 +7,16 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useMetaIntegrations, useCreateMetaIntegration, useUpdateMetaIntegration, useDeleteMetaIntegration, useMetaLeadForms, useSyncMetaForms } from '@/hooks/useMetaIntegrations';
 import { usePipelines } from '@/hooks/usePipeline';
 import { useLeadTags } from '@/hooks/useLeadTags';
 import { useWorkspace } from '@/hooks/useWorkspace';
-import { Trash2, Settings, RefreshCw, ExternalLink, Facebook, AlertCircle, CheckCircle2 } from 'lucide-react';
+import MetaSetupInstructions from './MetaSetupInstructions';
+import MetaWebhookLogs from './MetaWebhookLogs';
+import { Trash2, RefreshCw, ExternalLink, Facebook, AlertCircle, CheckCircle2, HelpCircle, Copy } from 'lucide-react';
 
 interface MetaIntegrationsSettingsProps {
   currentUserRole?: 'admin' | 'manager' | 'user';
@@ -24,9 +26,10 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
   const { toast } = useToast();
   const { currentWorkspace } = useWorkspace();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
   const [selectedIntegrationId, setSelectedIntegrationId] = useState<string | null>(null);
   
-  const { data: integrations = [], isLoading } = useMetaIntegrations();
+  const { data: integrations = [], isLoading, refetch } = useMetaIntegrations();
   const { data: pipelines = [] } = usePipelines(currentWorkspace?.id);
   const { data: tags = [] } = useLeadTags();
   const { data: forms = [] } = useMetaLeadForms(selectedIntegrationId || undefined);
@@ -46,6 +49,15 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
     selected_tag_ids: [] as string[]
   });
 
+  const handleTagToggle = (tagId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selected_tag_ids: prev.selected_tag_ids.includes(tagId)
+        ? prev.selected_tag_ids.filter(id => id !== tagId)
+        : [...prev.selected_tag_ids, tagId]
+    }));
+  };
+
   const handleCreateIntegration = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -61,9 +73,15 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
     try {
       const result = await createIntegration.mutateAsync(formData);
       
+      // Build OAuth URL with correct redirect
+      const redirectUri = encodeURIComponent(`https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/meta-oauth-callback`);
+      const scope = encodeURIComponent('leads_retrieval,pages_show_list,pages_read_engagement,pages_manage_ads');
+      
+      const oauthUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${formData.meta_app_id}&redirect_uri=${redirectUri}&state=${result.integration_id}&scope=${scope}`;
+
       // Open OAuth URL in a new window
       const oauthWindow = window.open(
-        result.oauth_url,
+        oauthUrl,
         'meta-oauth',
         'width=600,height=700,scrollbars=yes,resizable=yes'
       );
@@ -81,9 +99,12 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
             selected_tag_ids: []
           });
           
+          // Refresh integrations list
+          refetch();
+          
           toast({
-            title: "Integração criada",
-            description: "A integração com o Meta foi configurada com sucesso!"
+            title: "Processo iniciado",
+            description: "Verifique se a integração foi conectada com sucesso"
           });
         }
       }, 1000);
@@ -115,7 +136,7 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
   };
 
   const handleDeleteIntegration = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta integração?')) return;
+    if (!confirm('Tem certeza que deseja excluir esta integração? Os leads já criados não serão afetados.')) return;
     
     try {
       await deleteIntegration.mutateAsync(id);
@@ -137,27 +158,26 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
       const result = await syncForms.mutateAsync(integrationId);
       toast({
         title: "Formulários sincronizados",
-        description: `${result.synced_forms} formulários foram sincronizados`
+        description: `${result?.synced_forms || 0} formulários foram sincronizados`
       });
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Falha ao sincronizar formulários",
+        description: "Falha ao sincronizar formulários. Verifique se a integração está conectada.",
         variant: "destructive"
       });
     }
   };
 
   const getWebhookUrl = (integrationId: string) => {
-    const baseUrl = window.location.origin.replace('localhost:3000', 'mqotdnvwyjhyiqzbefpm.supabase.co');
-    return `${baseUrl}/functions/v1/meta-webhook-receiver?integration_id=${integrationId}`;
+    return `https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/meta-webhook-receiver?integration_id=${integrationId}`;
   };
 
-  const copyToClipboard = (text: string) => {
+  const copyToClipboard = (text: string, label = 'Texto') => {
     navigator.clipboard.writeText(text);
     toast({
       title: "Copiado!",
-      description: "URL copiada para a área de transferência"
+      description: `${label} copiado para a área de transferência`
     });
   };
 
@@ -167,117 +187,195 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-medium">Integrações Meta Lead Ads</h3>
           <p className="text-sm text-muted-foreground">
-            Configure integrações com formulários do Meta (Facebook/Instagram) para capturar leads automaticamente
+            Capture leads do Facebook e Instagram automaticamente no seu CRM
           </p>
         </div>
         
-        {canEdit && (
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Facebook className="w-4 h-4 mr-2" />
-                Nova Integração Meta
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Nova Integração Meta</DialogTitle>
-                <DialogDescription>
-                  Configure uma nova integração com Meta Lead Ads
-                </DialogDescription>
-              </DialogHeader>
-              
-              <form onSubmit={handleCreateIntegration} className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Nome da Integração</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Ex: Campanha Facebook"
-                    required
-                  />
-                </div>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowInstructions(!showInstructions)}
+          >
+            <HelpCircle className="w-4 h-4 mr-2" />
+            {showInstructions ? 'Ocultar Guia' : 'Como Configurar'}
+          </Button>
+          
+          {canEdit && (
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Facebook className="w-4 h-4 mr-2" />
+                  Nova Integração
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Facebook className="w-5 h-5 text-blue-600" />
+                    Nova Integração Meta Lead Ads
+                  </DialogTitle>
+                  <DialogDescription>
+                    Configure sua integração para receber leads automaticamente
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <form onSubmit={handleCreateIntegration} className="space-y-4">
+                  <div>
+                    <Label htmlFor="name">Nome da Integração *</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="Ex: Leads Facebook Principal"
+                      required
+                    />
+                  </div>
 
-                <div>
-                  <Label htmlFor="meta_app_id">App ID do Meta</Label>
-                  <Input
-                    id="meta_app_id"
-                    value={formData.meta_app_id}
-                    onChange={(e) => setFormData({ ...formData, meta_app_id: e.target.value })}
-                    placeholder="ID do aplicativo Meta"
-                    required
-                  />
-                </div>
+                  <Separator />
 
-                <div>
-                  <Label htmlFor="app_secret">App Secret</Label>
-                  <Input
-                    id="app_secret"
-                    type="password"
-                    value={formData.app_secret}
-                    onChange={(e) => setFormData({ ...formData, app_secret: e.target.value })}
-                    placeholder="Chave secreta do aplicativo"
-                    required
-                  />
-                </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium">Credenciais do Meta</Label>
+                      <Button variant="link" size="sm" className="h-auto p-0" asChild>
+                        <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="w-3 h-3 mr-1" />
+                          Abrir Meta Developer
+                        </a>
+                      </Button>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="meta_app_id">App ID *</Label>
+                      <Input
+                        id="meta_app_id"
+                        value={formData.meta_app_id}
+                        onChange={(e) => setFormData({ ...formData, meta_app_id: e.target.value })}
+                        placeholder="123456789012345"
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Encontre em Configurações {">"} Básico
+                      </p>
+                    </div>
 
-                <div>
-                  <Label>Pipeline de Destino</Label>
-                  <Select 
-                    value={formData.selected_pipeline_id} 
-                    onValueChange={(value) => setFormData({ ...formData, selected_pipeline_id: value })}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um pipeline" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {pipelines.map((pipeline) => (
-                        <SelectItem key={pipeline.id} value={pipeline.id}>
-                          {pipeline.name}
-                        </SelectItem>
+                    <div>
+                      <Label htmlFor="app_secret">App Secret *</Label>
+                      <Input
+                        id="app_secret"
+                        type="password"
+                        value={formData.app_secret}
+                        onChange={(e) => setFormData({ ...formData, app_secret: e.target.value })}
+                        placeholder="Chave secreta do aplicativo"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div>
+                    <Label>Pipeline de Destino *</Label>
+                    <Select 
+                      value={formData.selected_pipeline_id} 
+                      onValueChange={(value) => setFormData({ ...formData, selected_pipeline_id: value })}
+                      required
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione onde os leads serão criados" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {pipelines.map((pipeline) => (
+                          <SelectItem key={pipeline.id} value={pipeline.id}>
+                            {pipeline.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Tags Automáticas (opcional)</Label>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Leads criados receberão estas tags automaticamente
+                    </p>
+                    <div className="flex flex-wrap gap-2 p-3 border rounded-lg max-h-32 overflow-y-auto">
+                      {tags.map((tag) => (
+                        <label 
+                          key={tag.id} 
+                          className="flex items-center gap-2 cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={formData.selected_tag_ids.includes(tag.id)}
+                            onCheckedChange={() => handleTagToggle(tag.id)}
+                          />
+                          <Badge 
+                            variant="outline" 
+                            style={{ backgroundColor: tag.color + '20', color: tag.color, borderColor: tag.color }}
+                          >
+                            {tag.name}
+                          </Badge>
+                        </label>
                       ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                      {tags.length === 0 && (
+                        <span className="text-sm text-muted-foreground">Nenhuma tag disponível</span>
+                      )}
+                    </div>
+                  </div>
 
-                <div className="flex justify-end space-x-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setIsCreateDialogOpen(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={createIntegration.isPending}>
-                    {createIntegration.isPending ? 'Criando...' : 'Criar Integração'}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        )}
+                  <div className="flex justify-end space-x-2 pt-4">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setIsCreateDialogOpen(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button type="submit" disabled={createIntegration.isPending}>
+                      <Facebook className="w-4 h-4 mr-2" />
+                      {createIntegration.isPending ? 'Conectando...' : 'Conectar com Facebook'}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
       </div>
 
+      {/* Instructions Panel */}
+      {showInstructions && (
+        <Card>
+          <CardContent className="pt-6">
+            <MetaSetupInstructions />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Integrations List */}
       <div className="grid gap-4">
         {integrations.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
-              <Facebook className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-medium mb-2">Nenhuma integração Meta configurada</h3>
+              <Facebook className="w-12 h-12 mx-auto mb-4 text-blue-500" />
+              <h3 className="text-lg font-medium mb-2">Nenhuma integração configurada</h3>
               <p className="text-muted-foreground mb-4">
-                Configure uma integração para começar a receber leads do Meta automaticamente
+                Configure sua primeira integração para começar a receber leads do Meta automaticamente
               </p>
               {canEdit && (
-                <Button onClick={() => setIsCreateDialogOpen(true)}>
-                  <Facebook className="w-4 h-4 mr-2" />
-                  Criar Primeira Integração
-                </Button>
+                <div className="flex flex-col items-center gap-2">
+                  <Button onClick={() => setIsCreateDialogOpen(true)}>
+                    <Facebook className="w-4 h-4 mr-2" />
+                    Criar Primeira Integração
+                  </Button>
+                  <Button variant="link" onClick={() => setShowInstructions(true)}>
+                    Ver guia de configuração
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -287,7 +385,9 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <Facebook className="w-5 h-5 text-blue-600" />
+                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                      <Facebook className="w-5 h-5 text-blue-600" />
+                    </div>
                     <div>
                       <CardTitle className="text-base">{integration.name}</CardTitle>
                       <CardDescription>App ID: {integration.meta_app_id}</CardDescription>
@@ -295,15 +395,19 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
                   </div>
                   
                   <div className="flex items-center space-x-2">
-                    {integration.is_active ? (
-                      <Badge variant="default" className="bg-green-100 text-green-800">
+                    {integration.is_active && integration.access_token !== 'pending' ? (
+                      <Badge className="bg-green-100 text-green-800">
                         <CheckCircle2 className="w-3 h-3 mr-1" />
-                        Ativo
+                        Conectado
                       </Badge>
-                    ) : (
+                    ) : integration.access_token === 'pending' ? (
                       <Badge variant="secondary">
                         <AlertCircle className="w-3 h-3 mr-1" />
-                        Inativo
+                        Aguardando OAuth
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline">
+                        Desativado
                       </Badge>
                     )}
                     
@@ -314,21 +418,24 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
                           size="sm"
                           onClick={() => handleSyncForms(integration.id)}
                           disabled={syncForms.isPending}
+                          title="Sincronizar formulários"
                         >
-                          <RefreshCw className="w-4 h-4" />
+                          <RefreshCw className={`w-4 h-4 ${syncForms.isPending ? 'animate-spin' : ''}`} />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleToggleIntegration(integration.id, integration.is_active)}
+                          title={integration.is_active ? 'Desativar' : 'Ativar'}
                         >
-                          <Settings className="w-4 h-4" />
+                          {integration.is_active ? '🔴' : '🟢'}
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteIntegration(integration.id)}
                           className="text-red-600 hover:text-red-700"
+                          title="Excluir integração"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -340,43 +447,50 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
               
               <CardContent>
                 <Tabs defaultValue="config" className="w-full">
-                  <TabsList>
+                  <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="config">Configuração</TabsTrigger>
                     <TabsTrigger value="forms" onClick={() => setSelectedIntegrationId(integration.id)}>
                       Formulários
                     </TabsTrigger>
                     <TabsTrigger value="webhook">Webhook</TabsTrigger>
+                    <TabsTrigger value="logs" onClick={() => setSelectedIntegrationId(integration.id)}>
+                      Logs
+                    </TabsTrigger>
                   </TabsList>
                   
-                  <TabsContent value="config" className="space-y-4">
+                  <TabsContent value="config" className="space-y-4 mt-4">
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <Label className="text-xs text-muted-foreground">Pipeline</Label>
+                        <Label className="text-xs text-muted-foreground">Pipeline de Destino</Label>
                         <p className="font-medium">
                           {pipelines.find(p => p.id === integration.selected_pipeline_id)?.name || 'Pipeline não encontrado'}
                         </p>
                       </div>
                       <div>
-                        <Label className="text-xs text-muted-foreground">Tags</Label>
+                        <Label className="text-xs text-muted-foreground">Tags Automáticas</Label>
                         <div className="flex flex-wrap gap-1 mt-1">
                           {integration.selected_tag_ids.length > 0 ? (
                             integration.selected_tag_ids.map(tagId => {
                               const tag = tags.find(t => t.id === tagId);
                               return tag ? (
-                                <Badge key={tagId} variant="outline" style={{ backgroundColor: tag.color + '20', color: tag.color }}>
+                                <Badge 
+                                  key={tagId} 
+                                  variant="outline" 
+                                  style={{ backgroundColor: tag.color + '20', color: tag.color }}
+                                >
                                   {tag.name}
                                 </Badge>
                               ) : null;
                             })
                           ) : (
-                            <span className="text-muted-foreground">Nenhuma tag selecionada</span>
+                            <span className="text-muted-foreground">Nenhuma tag</span>
                           )}
                         </div>
                       </div>
                     </div>
                   </TabsContent>
                   
-                  <TabsContent value="forms" className="space-y-3">
+                  <TabsContent value="forms" className="space-y-3 mt-4">
                     <div className="flex items-center justify-between">
                       <p className="text-sm text-muted-foreground">Formulários sincronizados</p>
                       <Button
@@ -385,7 +499,7 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
                         onClick={() => handleSyncForms(integration.id)}
                         disabled={syncForms.isPending}
                       >
-                        <RefreshCw className="w-3 h-3 mr-2" />
+                        <RefreshCw className={`w-3 h-3 mr-2 ${syncForms.isPending ? 'animate-spin' : ''}`} />
                         Sincronizar
                       </Button>
                     </div>
@@ -400,7 +514,7 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
                                 <p className="text-xs text-muted-foreground">{form.page_name}</p>
                               </div>
                               <Badge variant="outline">
-                                {form.fields_schema.length} campos
+                                {form.fields_schema?.length || 0} campos
                               </Badge>
                             </div>
                           </div>
@@ -408,50 +522,62 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
                       </div>
                     ) : (
                       <p className="text-sm text-muted-foreground py-4 text-center">
-                        Nenhum formulário encontrado. Clique em "Sincronizar" para buscar formulários.
+                        Nenhum formulário encontrado. Clique em "Sincronizar" para buscar.
                       </p>
                     )}
                   </TabsContent>
                   
-                  <TabsContent value="webhook" className="space-y-3">
-                    <div>
-                      <Label className="text-sm font-medium">URL do Webhook</Label>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Input
-                          value={getWebhookUrl(integration.id)}
-                          readOnly
-                          className="font-mono text-xs"
-                        />
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => copyToClipboard(getWebhookUrl(integration.id))}
-                        >
-                          Copiar
-                        </Button>
+                  <TabsContent value="webhook" className="space-y-4 mt-4">
+                    <div className="p-4 bg-muted rounded-lg space-y-4">
+                      <div>
+                        <Label className="text-sm font-medium">URL do Webhook</Label>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <Input
+                            value={getWebhookUrl(integration.id)}
+                            readOnly
+                            className="font-mono text-xs"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => copyToClipboard(getWebhookUrl(integration.id), 'URL')}
+                          >
+                            <Copy className="w-3 h-3 mr-1" />
+                            Copiar
+                          </Button>
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Configure esta URL como webhook na sua aplicação Meta
-                      </p>
+                      
+                      <div>
+                        <Label className="text-sm font-medium">Token de Verificação</Label>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <Input
+                            value={integration.webhook_verify_token}
+                            readOnly
+                            className="font-mono text-xs"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => copyToClipboard(integration.webhook_verify_token, 'Token')}
+                          >
+                            <Copy className="w-3 h-3 mr-1" />
+                            Copiar
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                     
-                    <div>
-                      <Label className="text-sm font-medium">Token de Verificação</Label>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Input
-                          value={integration.webhook_verify_token}
-                          readOnly
-                          className="font-mono text-xs"
-                        />
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => copyToClipboard(integration.webhook_verify_token)}
-                        >
-                          Copiar
-                        </Button>
-                      </div>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p>📌 Configure esta URL no Meta Developer em <strong>Webhooks</strong></p>
+                      <p>📌 Selecione o campo <strong>leadgen</strong> para receber leads</p>
                     </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="logs" className="mt-4">
+                    {selectedIntegrationId === integration.id && (
+                      <MetaWebhookLogs integrationId={integration.id} />
+                    )}
                   </TabsContent>
                 </Tabs>
               </CardContent>

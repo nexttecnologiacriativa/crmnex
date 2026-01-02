@@ -1771,6 +1771,66 @@ export type Database = {
         }
         Relationships: []
       }
+      meta_webhook_logs: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          event_type: string
+          form_id: string | null
+          id: string
+          integration_id: string | null
+          lead_id: string | null
+          leadgen_id: string | null
+          page_id: string | null
+          payload: Json | null
+          processing_time_ms: number | null
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          event_type?: string
+          form_id?: string | null
+          id?: string
+          integration_id?: string | null
+          lead_id?: string | null
+          leadgen_id?: string | null
+          page_id?: string | null
+          payload?: Json | null
+          processing_time_ms?: number | null
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          event_type?: string
+          form_id?: string | null
+          id?: string
+          integration_id?: string | null
+          lead_id?: string | null
+          leadgen_id?: string | null
+          page_id?: string | null
+          payload?: Json | null
+          processing_time_ms?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_webhook_logs_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "meta_integrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_webhook_logs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       n8n_webhooks: {
         Row: {
           created_at: string

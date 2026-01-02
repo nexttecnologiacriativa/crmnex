@@ -15,6 +15,7 @@ import DebriefingView from "./pages/DebriefingView"
 import Outbound from "./pages/Outbound"
 import SuperAdmin from "./pages/SuperAdmin"
 import ForcePasswordReset from "./pages/ForcePasswordReset"
+import MetaOAuthCallback from "./pages/MetaOAuthCallback"
 
 const queryClient = new QueryClient()
 
@@ -45,6 +46,7 @@ const App = () => {
             <Route path="/outbound" element={<ProtectedRoute><Outbound /></ProtectedRoute>} />
             <Route path="/super-adm-sys" element={<ProtectedRoute><SuperAdmin /></ProtectedRoute>} />
             <Route path="/force-password-reset" element={<ProtectedRoute><ForcePasswordReset /></ProtectedRoute>} />
+            <Route path="/auth/meta/callback" element={<MetaOAuthCallback />} />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>

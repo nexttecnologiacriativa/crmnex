@@ -11,6 +11,7 @@ import UtmManager from '@/components/settings/UtmManager';
 import AISettings from '@/components/settings/AISettings';
 import WebhooksManager from '@/components/webhooks/WebhooksManager';
 import NotificationSoundSettings from '@/components/settings/NotificationSoundSettings';
+import MetaIntegrationsSettings from '@/components/settings/MetaIntegrationsSettings';
 import { useTeamManagement } from '@/hooks/useTeamManagement';
 import ResetWorkspace from '@/components/settings/ResetWorkspace';
 import SettingsSidebar, { type SettingsSection } from '@/components/settings/SettingsSidebar';
@@ -42,6 +43,8 @@ export default function Settings() {
         return <WhatsAppSettings currentUserRole={currentUserRole} />;
       case 'whatsapp-evolution':
         return <WhatsAppEvolutionSettings currentUserRole={currentUserRole} />;
+      case 'meta':
+        return <MetaIntegrationsSettings currentUserRole={currentUserRole} />;
       case 'ai':
         return <AISettings currentUserRole={currentUserRole} />;
       case 'notifications':
@@ -63,6 +66,7 @@ export default function Settings() {
       utms: 'UTMs',
       whatsapp: 'WhatsApp API Oficial',
       'whatsapp-evolution': 'WhatsApp WEB (Evolution)',
+      meta: 'Meta Lead Ads',
       ai: 'Inteligência Artificial',
       notifications: 'Notificações',
       webhooks: 'Webhooks',

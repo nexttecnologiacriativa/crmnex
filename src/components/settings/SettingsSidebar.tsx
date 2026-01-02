@@ -1,4 +1,4 @@
-import { User, Building2, Users, Settings2, Tag, Link2, MessageSquare, Webhook, Bot, Bell } from 'lucide-react';
+import { User, Building2, Users, Settings2, Tag, Link2, MessageSquare, Webhook, Bot, Bell, Share2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import AvatarUpload from './AvatarUpload';
@@ -12,6 +12,7 @@ export type SettingsSection =
   | 'utms'
   | 'whatsapp'
   | 'whatsapp-evolution'
+  | 'meta'
   | 'ai'
   | 'notifications'
   | 'webhooks';
@@ -43,6 +44,7 @@ const menuGroups = [
     items: [
       { id: 'whatsapp' as const, label: 'WhatsApp API', icon: MessageSquare },
       { id: 'whatsapp-evolution' as const, label: 'WhatsApp WEB', icon: MessageSquare },
+      { id: 'meta' as const, label: 'Meta Lead Ads', icon: Share2 },
       { id: 'webhooks' as const, label: 'Webhooks', icon: Webhook },
     ],
   },

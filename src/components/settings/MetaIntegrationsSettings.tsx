@@ -73,41 +73,48 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
     try {
       const result = await createIntegration.mutateAsync(formData);
       
-      // Build OAuth URL with correct redirect
-      const redirectUri = encodeURIComponent(`https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/meta-oauth-callback`);
-      const scope = encodeURIComponent('leads_retrieval,pages_show_list,pages_read_engagement,pages_manage_ads');
+      console.log('✅ Integration created:', result);
       
-      const oauthUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${formData.meta_app_id}&redirect_uri=${redirectUri}&state=${result.integration_id}&scope=${scope}`;
+      // Use the OAuth URL from the result
+      if (result.oauth_url) {
+        // Open OAuth URL in a new window
+        const oauthWindow = window.open(
+          result.oauth_url,
+          'meta-oauth',
+          'width=600,height=700,scrollbars=yes,resizable=yes'
+        );
 
-      // Open OAuth URL in a new window
-      const oauthWindow = window.open(
-        oauthUrl,
-        'meta-oauth',
-        'width=600,height=700,scrollbars=yes,resizable=yes'
-      );
-
-      // Monitor OAuth completion
-      const checkClosed = setInterval(() => {
-        if (oauthWindow?.closed) {
-          clearInterval(checkClosed);
-          setIsCreateDialogOpen(false);
-          setFormData({
-            name: '',
-            meta_app_id: '',
-            app_secret: '',
-            selected_pipeline_id: '',
-            selected_tag_ids: []
-          });
-          
-          // Refresh integrations list
-          refetch();
-          
-          toast({
-            title: "Processo iniciado",
-            description: "Verifique se a integração foi conectada com sucesso"
-          });
-        }
-      }, 1000);
+        // Monitor OAuth completion
+        const checkClosed = setInterval(() => {
+          if (oauthWindow?.closed) {
+            clearInterval(checkClosed);
+            setIsCreateDialogOpen(false);
+            setFormData({
+              name: '',
+              meta_app_id: '',
+              app_secret: '',
+              selected_pipeline_id: '',
+              selected_tag_ids: []
+            });
+            
+            // Refresh integrations list
+            refetch();
+            
+            toast({
+              title: "Processo iniciado",
+              description: "Verifique se a integração foi conectada com sucesso"
+            });
+          }
+        }, 1000);
+      } else {
+        // If no OAuth URL, just close dialog and refresh
+        setIsCreateDialogOpen(false);
+        refetch();
+        toast({
+          title: "Integração criada",
+          description: "Configure o webhook manualmente no Meta Developer"
+        });
+      }
 
     } catch (error) {
       console.error('Error creating Meta integration:', error);

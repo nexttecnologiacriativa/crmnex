@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Clock, UserX, MessageCircle, AlertTriangle, Timer, Zap, Building2 } from 'lucide-react';
 import { useLeadResponseMetrics, formatResponseTime } from '@/hooks/useLeadResponseMetrics';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -39,7 +40,7 @@ export default function ResponseTimeMetrics() {
     return saved ? parseInt(saved, 10) : 30;
   });
   
-  const { data: metrics, isLoading, isError, error } = useLeadResponseMetrics(daysBack);
+  const { data: metrics, isLoading, refetch } = useLeadResponseMetrics(daysBack);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, daysBack.toString());
@@ -185,6 +186,9 @@ export default function ResponseTimeMetrics() {
                 <p className="text-xs text-red-400 mt-1 line-clamp-2">
                   {metrics.whatsAppErrorMessage}
                 </p>
+                <Button variant="secondary" size="sm" className="mt-3" onClick={() => refetch()}>
+                  Tentar novamente
+                </Button>
               </>
             ) : (
               <>

@@ -138,7 +138,12 @@ export default function ResponseTimeMetrics() {
             <p className="text-3xl font-bold text-nexcrm-green">
               {formatResponseTime(metrics.avgWhatsAppResponseTime)}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">tempo médio de resposta</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {metrics.whatsAppPairsTotal > 0 
+                ? `baseado em ${metrics.whatsAppPairsTotal} respostas`
+                : 'sem pares de resposta'
+              }
+            </p>
           </div>
 
           {/* Leads Aguardando Resposta */}

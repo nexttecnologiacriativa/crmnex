@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/hooks/useWorkspace';
+import { normalizeForMatch } from '@/lib/phone';
 
 interface LeadResponseMetrics {
   avgFirstResponseTime: number | null; // em minutos
   avgWhatsAppResponseTime: number | null; // em minutos
+  whatsAppPairsTotal: number;
   leadsWithoutResponse: number;
   leadsNeverContacted: number;
   leadsByIdleTime: {
@@ -32,6 +34,21 @@ export function useLeadResponseMetrics() {
         return getEmptyMetrics();
       }
 
+      // Buscar métricas de resposta do WhatsApp via RPC (mais eficiente)
+      const { data: whatsAppMetrics, error: rpcError } = await supabase.rpc(
+        'get_whatsapp_response_metrics',
+        { p_workspace_id: currentWorkspace.id, p_days_back: 30 }
+      );
+
+      let avgWhatsAppResponseTime: number | null = null;
+      let whatsAppPairsTotal = 0;
+
+      if (!rpcError && whatsAppMetrics && whatsAppMetrics.length > 0) {
+        const result = whatsAppMetrics[0];
+        avgWhatsAppResponseTime = result.avg_minutes ? Number(result.avg_minutes) : null;
+        whatsAppPairsTotal = result.pairs_total || 0;
+      }
+
       // Buscar leads com atividades
       const { data: leads } = await supabase
         .from('leads')
@@ -47,7 +64,11 @@ export function useLeadResponseMetrics() {
         .order('created_at', { ascending: false });
 
       if (!leads || leads.length === 0) {
-        return getEmptyMetrics();
+        return {
+          ...getEmptyMetrics(),
+          avgWhatsAppResponseTime,
+          whatsAppPairsTotal
+        };
       }
 
       // Buscar atividades de todos os leads
@@ -58,20 +79,25 @@ export function useLeadResponseMetrics() {
         .in('lead_id', leadIds)
         .order('created_at', { ascending: true });
 
-      // Buscar conversas do WhatsApp por lead_id e telefone separadamente
+      // Buscar conversas do WhatsApp - queries separadas para evitar .or() muito longo
       const phones = leads.map(l => l.phone).filter(Boolean) as string[];
+      const normalizedPhones = phones.map(p => normalizeForMatch(p));
       
-      // Query 1: Buscar por lead_id
+      // Query por lead_id
       const { data: convByLeadId } = await supabase
         .from('whatsapp_conversations')
         .select('id, lead_id, phone_number, created_at')
         .in('lead_id', leadIds);
 
-      // Query 2: Buscar por phone_number
-      const { data: convByPhone } = await supabase
-        .from('whatsapp_conversations')
-        .select('id, lead_id, phone_number, created_at')
-        .in('phone_number', phones);
+      // Query por phone_number (números normalizados)
+      let convByPhone: typeof convByLeadId = [];
+      if (normalizedPhones.length > 0) {
+        const { data } = await supabase
+          .from('whatsapp_conversations')
+          .select('id, lead_id, phone_number, created_at')
+          .in('phone_number', normalizedPhones);
+        convByPhone = data || [];
+      }
 
       // Combinar e remover duplicatas
       const allConversations = [...(convByLeadId || []), ...(convByPhone || [])];
@@ -81,24 +107,33 @@ export function useLeadResponseMetrics() {
 
       const conversationIds = conversations?.map(c => c.id) || [];
       
-      // Buscar mensagens do WhatsApp
+      // Buscar mensagens do WhatsApp - limitar para as últimas para performance
       let messages: any[] = [];
       if (conversationIds.length > 0) {
-        const { data: msgData } = await supabase
-          .from('whatsapp_messages')
-          .select('conversation_id, created_at, is_from_lead')
-          .in('conversation_id', conversationIds)
-          .order('created_at', { ascending: true });
-        messages = msgData || [];
+        // Buscar em batches se necessário
+        const batchSize = 50;
+        for (let i = 0; i < conversationIds.length; i += batchSize) {
+          const batch = conversationIds.slice(i, i + batchSize);
+          const { data: msgData } = await supabase
+            .from('whatsapp_messages')
+            .select('conversation_id, created_at, is_from_lead, timestamp')
+            .in('conversation_id', batch)
+            .order('created_at', { ascending: false })
+            .limit(500);
+          messages = [...messages, ...(msgData || [])];
+        }
+        // Ordenar cronologicamente
+        messages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
       }
 
-      // Mapear conversas por lead
+      // Mapear conversas por lead usando normalização de telefone
       const conversationByLead = new Map<string, string>();
       conversations?.forEach(conv => {
         if (conv.lead_id) {
           conversationByLead.set(conv.lead_id, conv.id);
         } else if (conv.phone_number) {
-          const lead = leads.find(l => l.phone === conv.phone_number);
+          const normalizedConvPhone = normalizeForMatch(conv.phone_number);
+          const lead = leads.find(l => l.phone && normalizeForMatch(l.phone) === normalizedConvPhone);
           if (lead) {
             conversationByLead.set(lead.id, conv.id);
           }
@@ -114,10 +149,6 @@ export function useLeadResponseMetrics() {
       const idleBuckets = { '1-3 dias': 0, '4-7 dias': 0, '7+ dias': 0 };
       const idleLeadsList: LeadResponseMetrics['idleLeadsList'] = [];
 
-      // WhatsApp response times
-      let totalWhatsAppResponseTime = 0;
-      let whatsAppResponseCount = 0;
-
       for (const lead of leads) {
         const leadCreatedAt = new Date(lead.created_at);
         const leadActivities = activities?.filter(a => a.lead_id === lead.id) || [];
@@ -132,14 +163,15 @@ export function useLeadResponseMetrics() {
 
         let firstContact: Date | null = null;
         if (firstActivity && firstTeamMessage) {
+          const msgTime = new Date(firstTeamMessage.timestamp || firstTeamMessage.created_at).getTime();
           firstContact = new Date(Math.min(
             new Date(firstActivity.created_at).getTime(),
-            new Date(firstTeamMessage.created_at).getTime()
+            msgTime
           ));
         } else if (firstActivity) {
           firstContact = new Date(firstActivity.created_at);
         } else if (firstTeamMessage) {
-          firstContact = new Date(firstTeamMessage.created_at);
+          firstContact = new Date(firstTeamMessage.timestamp || firstTeamMessage.created_at);
         }
 
         // Calcular tempo de primeiro atendimento
@@ -153,36 +185,21 @@ export function useLeadResponseMetrics() {
           leadsNeverContacted++;
         }
 
-        // Calcular tempo médio de resposta no WhatsApp
-        for (let i = 0; i < leadMessages.length; i++) {
-          const msg = leadMessages[i];
-          if (msg.is_from_lead) {
-            // Encontrar próxima resposta da equipe
-            const nextTeamMsg = leadMessages.slice(i + 1).find(m => !m.is_from_lead);
-            if (nextTeamMsg) {
-              const responseTime = (new Date(nextTeamMsg.created_at).getTime() - new Date(msg.created_at).getTime()) / (1000 * 60);
-              if (responseTime > 0 && responseTime < 1440) { // máximo 24h
-                totalWhatsAppResponseTime += responseTime;
-                whatsAppResponseCount++;
-              }
-            }
-          }
-        }
-
         // Última interação
         const lastActivity = leadActivities[leadActivities.length - 1];
         const lastMessage = leadMessages[leadMessages.length - 1];
         
         let lastInteraction: Date | null = null;
         if (lastActivity && lastMessage) {
+          const msgTime = new Date(lastMessage.timestamp || lastMessage.created_at).getTime();
           lastInteraction = new Date(Math.max(
             new Date(lastActivity.created_at).getTime(),
-            new Date(lastMessage.created_at).getTime()
+            msgTime
           ));
         } else if (lastActivity) {
           lastInteraction = new Date(lastActivity.created_at);
         } else if (lastMessage) {
-          lastInteraction = new Date(lastMessage.created_at);
+          lastInteraction = new Date(lastMessage.timestamp || lastMessage.created_at);
         } else {
           lastInteraction = leadCreatedAt;
         }
@@ -214,8 +231,16 @@ export function useLeadResponseMetrics() {
         // Leads aguardando resposta (tem mensagem do lead sem resposta)
         const lastLeadMessage = [...leadMessages].reverse().find(m => m.is_from_lead);
         const lastTeamMessage = [...leadMessages].reverse().find(m => !m.is_from_lead);
-        if (lastLeadMessage && (!lastTeamMessage || new Date(lastLeadMessage.created_at) > new Date(lastTeamMessage.created_at))) {
-          leadsWithoutResponse++;
+        if (lastLeadMessage) {
+          const lastLeadMsgTime = new Date(lastLeadMessage.timestamp || lastLeadMessage.created_at);
+          if (!lastTeamMessage) {
+            leadsWithoutResponse++;
+          } else {
+            const lastTeamMsgTime = new Date(lastTeamMessage.timestamp || lastTeamMessage.created_at);
+            if (lastLeadMsgTime > lastTeamMsgTime) {
+              leadsWithoutResponse++;
+            }
+          }
         }
       }
 
@@ -224,7 +249,8 @@ export function useLeadResponseMetrics() {
 
       return {
         avgFirstResponseTime: firstResponseCount > 0 ? totalFirstResponseTime / firstResponseCount : null,
-        avgWhatsAppResponseTime: whatsAppResponseCount > 0 ? totalWhatsAppResponseTime / whatsAppResponseCount : null,
+        avgWhatsAppResponseTime,
+        whatsAppPairsTotal,
         leadsWithoutResponse,
         leadsNeverContacted,
         leadsByIdleTime: idleBuckets,
@@ -241,6 +267,7 @@ function getEmptyMetrics(): LeadResponseMetrics {
   return {
     avgFirstResponseTime: null,
     avgWhatsAppResponseTime: null,
+    whatsAppPairsTotal: 0,
     leadsWithoutResponse: 0,
     leadsNeverContacted: 0,
     leadsByIdleTime: { '1-3 dias': 0, '4-7 dias': 0, '7+ dias': 0 },

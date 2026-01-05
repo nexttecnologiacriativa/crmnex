@@ -3000,6 +3000,14 @@ export type Database = {
         }
       }
       get_scheduler_stats: { Args: never; Returns: Json }
+      get_whatsapp_response_metrics: {
+        Args: { p_days_back?: number; p_workspace_id: string }
+        Returns: {
+          avg_minutes: number
+          median_minutes: number
+          pairs_total: number
+        }[]
+      }
       get_workspace_stats: { Args: { p_workspace_id: string }; Returns: Json }
       get_workspace_usage: { Args: { p_workspace_id: string }; Returns: Json }
       is_super_admin: { Args: { user_id: string }; Returns: boolean }

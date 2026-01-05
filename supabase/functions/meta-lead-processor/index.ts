@@ -200,7 +200,11 @@ Deno.serve(async (req) => {
       utm_source: 'facebook',
       utm_medium: 'lead_ads',
       utm_campaign: form_id,
-      utm_content: page_id
+      utm_content: page_id,
+      custom_fields: {
+        meta_leadgen_id: leadgen_id,
+        meta_form_id: form_id
+      }
     }
 
     // Merge field mappings: form-specific overrides integration-level

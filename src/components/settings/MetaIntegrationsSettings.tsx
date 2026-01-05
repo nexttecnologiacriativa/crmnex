@@ -17,7 +17,8 @@ import { useWorkspace } from '@/hooks/useWorkspace';
 import MetaSetupInstructions from './MetaSetupInstructions';
 import MetaWebhookLogs from './MetaWebhookLogs';
 import MetaFormSettings from './MetaFormSettings';
-import { Trash2, RefreshCw, ExternalLink, Facebook, AlertCircle, CheckCircle2, HelpCircle, Copy } from 'lucide-react';
+import { Trash2, RefreshCw, ExternalLink, Facebook, AlertCircle, CheckCircle2, HelpCircle, Copy, Download, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MetaIntegrationsSettingsProps {
   currentUserRole?: 'admin' | 'manager' | 'user';
@@ -29,6 +30,7 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
   const [selectedIntegrationId, setSelectedIntegrationId] = useState<string | null>(null);
+  const [fetchingLeads, setFetchingLeads] = useState<string | null>(null);
   
   const { data: integrations = [], isLoading, refetch } = useMetaIntegrations();
   const { data: pipelines = [] } = usePipelines(currentWorkspace?.id);
@@ -187,6 +189,68 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
       title: "Copiado!",
       description: `${label} copiado para a área de transferência`
     });
+  };
+
+  const handleFetchMissingLeads = async (integrationId: string) => {
+    setFetchingLeads(integrationId);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('meta-fetch-leads', {
+        body: { integration_id: integrationId, days_back: 7 }
+      });
+
+      if (error) {
+        console.error('Error fetching missing leads:', error);
+        toast({
+          title: "Erro",
+          description: "Falha ao buscar leads. Verifique os logs.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('Fetch leads result:', data);
+
+      if (data.success) {
+        const { summary, created_leads } = data;
+        
+        if (summary.leads_created > 0) {
+          toast({
+            title: "Leads Recuperados! 🎉",
+            description: `${summary.leads_created} lead(s) criado(s). ${summary.leads_already_in_crm} já existiam no CRM.`,
+          });
+        } else if (summary.leads_found_in_meta > 0) {
+          toast({
+            title: "Nenhum lead novo",
+            description: `${summary.leads_found_in_meta} lead(s) encontrado(s) no Meta, mas todos já existem no CRM.`,
+          });
+        } else {
+          toast({
+            title: "Nenhum lead encontrado",
+            description: "Não foram encontrados leads nos últimos 7 dias.",
+          });
+        }
+
+        if (summary.errors.length > 0) {
+          console.warn('Fetch errors:', summary.errors);
+        }
+      } else {
+        toast({
+          title: "Erro",
+          description: data.message || "Falha ao buscar leads",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao buscar leads perdidos",
+        variant: "destructive"
+      });
+    } finally {
+      setFetchingLeads(null);
+    }
   };
 
   if (isLoading) {
@@ -421,6 +485,19 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
                     
                     {canEdit && (
                       <div className="flex space-x-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleFetchMissingLeads(integration.id)}
+                          disabled={fetchingLeads === integration.id}
+                          title="Buscar leads perdidos"
+                        >
+                          {fetchingLeads === integration.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Download className="w-4 h-4" />
+                          )}
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"

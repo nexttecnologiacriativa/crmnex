@@ -85,35 +85,35 @@ export default function TVFunnelChart({ isDarkMode }: TVFunnelChartProps) {
       "h-full",
       isDarkMode ? "bg-gray-800/50 border-gray-700" : "bg-white/80"
     )}>
-      <CardHeader className="pb-2 sm:pb-3">
+      <CardHeader className="pb-1 pt-2 px-3">
         <CardTitle className={cn(
-          "text-base sm:text-lg flex items-center gap-2",
+          "text-sm sm:text-base flex items-center gap-2",
           isDarkMode ? "text-white" : ""
         )}>
-          <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+          <TrendingUp className="h-4 w-4 text-primary" />
           Funil do Dia
-          <span className="ml-auto flex items-center gap-1 text-xs font-normal text-muted-foreground">
-            <span className="relative flex h-2 w-2">
+          <span className="ml-auto flex items-center gap-1 text-[10px] font-normal text-muted-foreground">
+            <span className="relative flex h-1.5 w-1.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
             </span>
             Tempo real
           </span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 px-3 pb-2">
         {/* Summary Cards */}
-        <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3 sm:mb-4">
+        <div className="grid grid-cols-2 gap-1.5 mb-2">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             className={cn(
-              "p-2 sm:p-3 rounded-lg text-center",
+              "p-1.5 sm:p-2 rounded-lg text-center",
               isDarkMode ? "bg-gray-700/50" : "bg-primary/10"
             )}
           >
             <div className={cn(
-              "text-[10px] sm:text-xs mb-0.5",
+              "text-[9px] sm:text-[10px]",
               isDarkMode ? "text-gray-300" : "text-muted-foreground"
             )}>
               Leads Hoje
@@ -123,7 +123,7 @@ export default function TVFunnelChart({ isDarkMode }: TVFunnelChartProps) {
               initial={{ scale: 0.8 }}
               animate={{ scale: 1 }}
               className={cn(
-                "text-xl sm:text-2xl lg:text-3xl font-bold",
+                "text-lg sm:text-xl font-bold",
                 isDarkMode ? "text-white" : "text-primary"
               )}
             >
@@ -135,12 +135,12 @@ export default function TVFunnelChart({ isDarkMode }: TVFunnelChartProps) {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
             className={cn(
-              "p-2 sm:p-3 rounded-lg text-center",
+              "p-1.5 sm:p-2 rounded-lg text-center",
               isDarkMode ? "bg-gray-700/50" : "bg-green-500/10"
             )}
           >
             <div className={cn(
-              "text-[10px] sm:text-xs mb-0.5",
+              "text-[9px] sm:text-[10px]",
               isDarkMode ? "text-gray-300" : "text-muted-foreground"
             )}>
               Valor Total
@@ -149,20 +149,18 @@ export default function TVFunnelChart({ isDarkMode }: TVFunnelChartProps) {
               key={totalValue}
               initial={{ scale: 0.8 }}
               animate={{ scale: 1 }}
-              className={cn(
-                "text-lg sm:text-xl lg:text-2xl font-bold text-green-500"
-              )}
+              className="text-base sm:text-lg font-bold text-green-500"
             >
               {formatCurrency(totalValue)}
             </motion.div>
           </motion.div>
         </div>
 
-        {/* Funnel Stages */}
-        <div className="space-y-1.5 sm:space-y-2">
+        {/* Funnel Stages - Compact */}
+        <div className="space-y-1">
           {stages.length === 0 ? (
             <div className={cn(
-              "text-center py-6 sm:py-8 text-sm",
+              "text-center py-4 text-xs",
               isDarkMode ? "text-gray-400" : "text-muted-foreground"
             )}>
               Nenhum lead hoje
@@ -176,37 +174,35 @@ export default function TVFunnelChart({ isDarkMode }: TVFunnelChartProps) {
                   key={stage.name}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.08 }}
+                  transition={{ delay: index * 0.05 }}
                   className="relative"
                 >
-                  <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="flex items-center gap-1.5">
                     <div className="flex-1 relative">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${widthPercent}%` }}
-                        transition={{ duration: 0.5, delay: index * 0.1 }}
-                        className="h-8 sm:h-10 lg:h-12 rounded-lg flex items-center justify-between px-2 sm:px-3"
+                        transition={{ duration: 0.4, delay: index * 0.08 }}
+                        className="h-6 sm:h-7 rounded flex items-center justify-between px-2"
                         style={{ 
                           background: `linear-gradient(90deg, ${stage.color}dd, ${stage.color}88)`,
                         }}
                       >
-                        <span className={cn(
-                          "text-xs sm:text-sm font-medium text-white truncate max-w-[60%]"
-                        )}>
+                        <span className="text-[10px] sm:text-xs font-medium text-white truncate max-w-[60%]">
                           {stage.name}
                         </span>
                         <motion.span
                           key={stage.count}
                           initial={{ scale: 0.8 }}
                           animate={{ scale: 1 }}
-                          className="text-sm sm:text-base lg:text-lg font-bold text-white"
+                          className="text-xs sm:text-sm font-bold text-white"
                         >
                           {stage.count}
                         </motion.span>
                       </motion.div>
                     </div>
                     <div className={cn(
-                      "text-xs sm:text-sm font-medium w-16 sm:w-20 text-right",
+                      "text-[10px] sm:text-xs font-medium w-14 sm:w-16 text-right",
                       isDarkMode ? "text-gray-300" : "text-muted-foreground"
                     )}>
                       {formatCurrency(stage.value)}

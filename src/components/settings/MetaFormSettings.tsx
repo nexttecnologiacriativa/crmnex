@@ -11,7 +11,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Save, Tag, ArrowRight } from 'lucide-react';
 
 interface FormField {
-  name: string;
+  name?: string;
+  key?: string;
+  label?: string;
   values?: string[];
 }
 
@@ -222,30 +224,38 @@ export default function MetaFormSettings({ form, integrationTagIds, onUpdate }: 
         {fieldsSchema.length > 0 ? (
           <div className="space-y-2">
             {fieldsSchema.map((field, index) => {
-              // Handle different field formats safely
-              let fieldName = '';
+              // Handle different field formats: string, or object with key/label/name
+              let displayName = '';
+              let fieldKey = '';
+              
               if (typeof field === 'string') {
-                fieldName = field;
-              } else if (field && typeof field === 'object' && 'name' in field) {
-                fieldName = String(field.name || '');
+                displayName = field;
+                fieldKey = field;
+              } else if (field && typeof field === 'object') {
+                // Meta forms use 'label' for display and 'key' for identification
+                displayName = String(field.label || field.key || field.name || '');
+                fieldKey = String(field.key || field.name || '');
               }
               
-              // Skip empty field names
-              if (!fieldName) return null;
+              // Skip empty field keys
+              if (!fieldKey) return null;
               
-              const fieldNameLower = fieldName.toLowerCase();
-              const currentMapping = fieldMapping[fieldName] || fieldMapping[fieldNameLower] || '';
+              const fieldKeyLower = fieldKey.toLowerCase();
+              const currentMapping = fieldMapping[fieldKey] || fieldMapping[fieldKeyLower] || '';
               
               return (
                 <div key={index} className="flex items-center gap-3 p-2 border rounded bg-muted/30">
                   <div className="flex-1">
-                    <p className="text-sm font-medium">{fieldName}</p>
+                    <p className="text-sm font-medium">{displayName}</p>
+                    {displayName !== fieldKey && (
+                      <p className="text-xs text-muted-foreground">{fieldKey}</p>
+                    )}
                   </div>
                   <ArrowRight className="w-4 h-4 text-muted-foreground" />
                   <div className="w-40">
                     <Select 
                       value={currentMapping || '_auto'}
-                      onValueChange={(value) => handleFieldMappingChange(fieldNameLower, value === '_auto' ? '' : value)}
+                      onValueChange={(value) => handleFieldMappingChange(fieldKeyLower, value === '_auto' ? '' : value)}
                     >
                       <SelectTrigger className="h-8 text-sm">
                         <SelectValue placeholder="Automático" />

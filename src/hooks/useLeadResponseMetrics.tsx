@@ -58,12 +58,26 @@ export function useLeadResponseMetrics() {
         .in('lead_id', leadIds)
         .order('created_at', { ascending: true });
 
-      // Buscar conversas do WhatsApp por lead_id ou telefone
+      // Buscar conversas do WhatsApp por lead_id e telefone separadamente
       const phones = leads.map(l => l.phone).filter(Boolean) as string[];
-      const { data: conversations } = await supabase
+      
+      // Query 1: Buscar por lead_id
+      const { data: convByLeadId } = await supabase
         .from('whatsapp_conversations')
         .select('id, lead_id, phone_number, created_at')
-        .or(`lead_id.in.(${leadIds.join(',')}),phone_number.in.(${phones.join(',')})`);
+        .in('lead_id', leadIds);
+
+      // Query 2: Buscar por phone_number
+      const { data: convByPhone } = await supabase
+        .from('whatsapp_conversations')
+        .select('id, lead_id, phone_number, created_at')
+        .in('phone_number', phones);
+
+      // Combinar e remover duplicatas
+      const allConversations = [...(convByLeadId || []), ...(convByPhone || [])];
+      const conversations = allConversations.filter((conv, index, self) => 
+        index === self.findIndex(c => c.id === conv.id)
+      );
 
       const conversationIds = conversations?.map(c => c.id) || [];
       

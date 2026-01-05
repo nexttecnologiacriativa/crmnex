@@ -7,9 +7,171 @@ const corsHeaders = {
 };
 
 interface MergeRequest {
-  sourceLeadId: string;
-  targetLeadId: string;
+  // Single merge mode
+  sourceLeadId?: string;
+  targetLeadId?: string;
+  // Bulk merge mode
+  bulkMerge?: boolean;
+  groups?: Array<{ normalizedPhone: string; leadIds: string[] }>;
   workspaceId: string;
+}
+
+// Helper function to merge a single pair of leads
+async function mergeSingleLead(
+  supabase: ReturnType<typeof createClient>,
+  sourceLeadId: string,
+  targetLeadId: string,
+  workspaceId: string
+): Promise<{ success: boolean; error?: string }> {
+  console.log(`[merge-leads] Merging source=${sourceLeadId} -> target=${targetLeadId}`);
+
+  // Fetch both leads
+  const { data: sourceLead, error: sourceError } = await supabase
+    .from('leads')
+    .select('*')
+    .eq('id', sourceLeadId)
+    .single();
+
+  const { data: targetLead, error: targetError } = await supabase
+    .from('leads')
+    .select('*')
+    .eq('id', targetLeadId)
+    .single();
+
+  if (sourceError || !sourceLead) {
+    return { success: false, error: 'Source lead not found' };
+  }
+
+  if (targetError || !targetLead) {
+    return { success: false, error: 'Target lead not found' };
+  }
+
+  // Merge lead data (fill empty fields in target with source values)
+  const mergedData: Record<string, any> = {};
+  
+  const fillableFields = ['email', 'company', 'position', 'source', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+  
+  for (const field of fillableFields) {
+    if (!targetLead[field] && sourceLead[field]) {
+      mergedData[field] = sourceLead[field];
+    }
+  }
+
+  // Merge notes
+  if (sourceLead.notes && targetLead.notes) {
+    mergedData.notes = `${targetLead.notes}\n\n--- Notas do lead mesclado ---\n${sourceLead.notes}`;
+  } else if (sourceLead.notes && !targetLead.notes) {
+    mergedData.notes = sourceLead.notes;
+  }
+
+  // Merge value (sum values)
+  if (sourceLead.value || targetLead.value) {
+    mergedData.value = (targetLead.value || 0) + (sourceLead.value || 0);
+  }
+
+  // Deep merge custom_fields
+  const sourceCustomFields = sourceLead.custom_fields || {};
+  const targetCustomFields = targetLead.custom_fields || {};
+  mergedData.custom_fields = { ...sourceCustomFields, ...targetCustomFields };
+
+  // Update target lead with merged data
+  if (Object.keys(mergedData).length > 0) {
+    const { error: updateError } = await supabase
+      .from('leads')
+      .update(mergedData)
+      .eq('id', targetLeadId);
+
+    if (updateError) {
+      return { success: false, error: `Failed to update target lead: ${updateError.message}` };
+    }
+  }
+
+  // Transfer tags (avoiding duplicates)
+  const { data: sourceTags } = await supabase
+    .from('lead_tag_relations')
+    .select('tag_id')
+    .eq('lead_id', sourceLeadId);
+
+  const { data: targetTags } = await supabase
+    .from('lead_tag_relations')
+    .select('tag_id')
+    .eq('lead_id', targetLeadId);
+
+  const existingTagIds = new Set((targetTags || []).map(t => t.tag_id));
+  const newTags = (sourceTags || []).filter(t => !existingTagIds.has(t.tag_id));
+
+  if (newTags.length > 0) {
+    await supabase
+      .from('lead_tag_relations')
+      .insert(newTags.map(t => ({ lead_id: targetLeadId, tag_id: t.tag_id })));
+  }
+
+  // Delete source tag relations
+  await supabase.from('lead_tag_relations').delete().eq('lead_id', sourceLeadId);
+
+  // Transfer activities
+  await supabase
+    .from('lead_activities')
+    .update({ lead_id: targetLeadId })
+    .eq('lead_id', sourceLeadId);
+
+  // Transfer tasks
+  await supabase
+    .from('tasks')
+    .update({ lead_id: targetLeadId })
+    .eq('lead_id', sourceLeadId);
+
+  // Transfer appointments
+  await supabase
+    .from('lead_appointments')
+    .update({ lead_id: targetLeadId })
+    .eq('lead_id', sourceLeadId);
+
+  // Transfer WhatsApp conversations
+  await supabase
+    .from('whatsapp_conversations')
+    .update({ lead_id: targetLeadId })
+    .eq('lead_id', sourceLeadId);
+
+  // Transfer pipeline relations
+  const { data: sourceRelations } = await supabase
+    .from('lead_pipeline_relations')
+    .select('pipeline_id, stage_id')
+    .eq('lead_id', sourceLeadId);
+
+  const { data: targetRelations } = await supabase
+    .from('lead_pipeline_relations')
+    .select('pipeline_id')
+    .eq('lead_id', targetLeadId);
+
+  const existingPipelineIds = new Set((targetRelations || []).map(r => r.pipeline_id));
+  const newRelations = (sourceRelations || []).filter(r => !existingPipelineIds.has(r.pipeline_id));
+
+  if (newRelations.length > 0) {
+    await supabase
+      .from('lead_pipeline_relations')
+      .insert(newRelations.map(r => ({
+        lead_id: targetLeadId,
+        pipeline_id: r.pipeline_id,
+        stage_id: r.stage_id,
+        is_primary: false
+      })));
+  }
+
+  // Delete source pipeline relations
+  await supabase.from('lead_pipeline_relations').delete().eq('lead_id', sourceLeadId);
+
+  // Delete source lead
+  const { error: deleteError } = await supabase
+    .from('leads')
+    .delete()
+    .eq('id', sourceLeadId);
+
+  if (deleteError) {
+    return { success: false, error: `Failed to delete source lead: ${deleteError.message}` };
+  }
+
+  return { success: true };
 }
 
 serve(async (req) => {
@@ -22,257 +184,105 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { sourceLeadId, targetLeadId, workspaceId }: MergeRequest = await req.json();
+    const request: MergeRequest = await req.json();
+    const { bulkMerge, groups, sourceLeadId, targetLeadId, workspaceId } = request;
 
-    console.log(`[merge-leads] Starting merge: source=${sourceLeadId} -> target=${targetLeadId}`);
-
-    if (!sourceLeadId || !targetLeadId || !workspaceId) {
+    if (!workspaceId) {
       return new Response(
-        JSON.stringify({ error: 'sourceLeadId, targetLeadId and workspaceId are required' }),
+        JSON.stringify({ success: false, error: 'Missing workspaceId' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Bulk merge mode
+    if (bulkMerge && groups && groups.length > 0) {
+      console.log(`[merge-leads] Starting bulk merge for ${groups.length} groups`);
+      
+      let groupsProcessed = 0;
+      let leadsMerged = 0;
+      const errors: string[] = [];
+
+      for (const group of groups) {
+        if (group.leadIds.length < 2) continue;
+
+        // Fetch leads to find the most recent one
+        const { data: leads, error: fetchError } = await supabase
+          .from('leads')
+          .select('id, created_at')
+          .in('id', group.leadIds)
+          .eq('workspace_id', workspaceId)
+          .order('created_at', { ascending: false });
+
+        if (fetchError || !leads || leads.length < 2) {
+          errors.push(`Group ${group.normalizedPhone}: Failed to fetch leads`);
+          continue;
+        }
+
+        // Most recent lead is the target
+        const targetId = leads[0].id;
+        const sourceIds = leads.slice(1).map(l => l.id);
+
+        // Merge each source into target
+        for (const sourceId of sourceIds) {
+          const result = await mergeSingleLead(supabase, sourceId, targetId, workspaceId);
+          if (result.success) {
+            leadsMerged++;
+          } else {
+            errors.push(`Failed to merge ${sourceId}: ${result.error}`);
+          }
+        }
+
+        groupsProcessed++;
+      }
+
+      console.log(`[merge-leads] Bulk merge complete: ${groupsProcessed} groups, ${leadsMerged} leads merged`);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          groupsProcessed, 
+          leadsMerged,
+          errors: errors.length > 0 ? errors : undefined
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Single merge mode
+    if (!sourceLeadId || !targetLeadId) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Missing required fields for single merge' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     if (sourceLeadId === targetLeadId) {
       return new Response(
-        JSON.stringify({ error: 'Source and target leads must be different' }),
+        JSON.stringify({ success: false, error: 'Source and target leads must be different' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Fetch both leads
-    const { data: sourceLead, error: sourceError } = await supabase
-      .from('leads')
-      .select('*')
-      .eq('id', sourceLeadId)
-      .single();
+    const result = await mergeSingleLead(supabase, sourceLeadId, targetLeadId, workspaceId);
 
-    const { data: targetLead, error: targetError } = await supabase
-      .from('leads')
-      .select('*')
-      .eq('id', targetLeadId)
-      .single();
-
-    if (sourceError || !sourceLead) {
-      console.error('[merge-leads] Source lead not found:', sourceError);
+    if (!result.success) {
       return new Response(
-        JSON.stringify({ error: 'Source lead not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: result.error }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (targetError || !targetLead) {
-      console.error('[merge-leads] Target lead not found:', targetError);
-      return new Response(
-        JSON.stringify({ error: 'Target lead not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Merge lead data (fill empty fields in target with source values)
-    const mergedData: Record<string, any> = {};
-    
-    // Fields to potentially fill from source
-    const fillableFields = ['email', 'company', 'position', 'source', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
-    
-    for (const field of fillableFields) {
-      if (!targetLead[field] && sourceLead[field]) {
-        mergedData[field] = sourceLead[field];
-      }
-    }
-
-    // Merge notes (concatenate)
-    if (sourceLead.notes && targetLead.notes) {
-      mergedData.notes = `${targetLead.notes}\n\n--- Notas do lead mesclado ---\n${sourceLead.notes}`;
-    } else if (sourceLead.notes && !targetLead.notes) {
-      mergedData.notes = sourceLead.notes;
-    }
-
-    // Merge value (keep higher or sum based on preference - keeping higher for now)
-    if (sourceLead.value && targetLead.value) {
-      mergedData.value = Math.max(sourceLead.value, targetLead.value);
-    } else if (sourceLead.value && !targetLead.value) {
-      mergedData.value = sourceLead.value;
-    }
-
-    // Deep merge custom_fields
-    const sourceCustomFields = sourceLead.custom_fields || {};
-    const targetCustomFields = targetLead.custom_fields || {};
-    mergedData.custom_fields = { ...sourceCustomFields, ...targetCustomFields };
-
-    // Update target lead with merged data
-    if (Object.keys(mergedData).length > 0) {
-      const { error: updateError } = await supabase
-        .from('leads')
-        .update(mergedData)
-        .eq('id', targetLeadId);
-
-      if (updateError) {
-        console.error('[merge-leads] Error updating target lead:', updateError);
-        throw updateError;
-      }
-      console.log('[merge-leads] Updated target lead with merged data');
-    }
-
-    // Transfer tags (avoiding duplicates)
-    const { data: sourceTags } = await supabase
-      .from('lead_tag_relations')
-      .select('tag_id')
-      .eq('lead_id', sourceLeadId);
-
-    const { data: targetTags } = await supabase
-      .from('lead_tag_relations')
-      .select('tag_id')
-      .eq('lead_id', targetLeadId);
-
-    const existingTagIds = new Set((targetTags || []).map(t => t.tag_id));
-    const newTags = (sourceTags || []).filter(t => !existingTagIds.has(t.tag_id));
-
-    if (newTags.length > 0) {
-      const { error: tagsError } = await supabase
-        .from('lead_tag_relations')
-        .insert(newTags.map(t => ({ lead_id: targetLeadId, tag_id: t.tag_id })));
-
-      if (tagsError) {
-        console.error('[merge-leads] Error transferring tags:', tagsError);
-      } else {
-        console.log(`[merge-leads] Transferred ${newTags.length} tags`);
-      }
-    }
-
-    // Delete source tag relations before deleting lead
-    await supabase.from('lead_tag_relations').delete().eq('lead_id', sourceLeadId);
-
-    // Transfer activities
-    const { error: activitiesError } = await supabase
-      .from('lead_activities')
-      .update({ lead_id: targetLeadId })
-      .eq('lead_id', sourceLeadId);
-
-    if (activitiesError) {
-      console.error('[merge-leads] Error transferring activities:', activitiesError);
-    } else {
-      console.log('[merge-leads] Transferred activities');
-    }
-
-    // Transfer tasks
-    const { error: tasksError } = await supabase
-      .from('tasks')
-      .update({ lead_id: targetLeadId })
-      .eq('lead_id', sourceLeadId);
-
-    if (tasksError) {
-      console.error('[merge-leads] Error transferring tasks:', tasksError);
-    } else {
-      console.log('[merge-leads] Transferred tasks');
-    }
-
-    // Transfer appointments
-    const { error: appointmentsError } = await supabase
-      .from('lead_appointments')
-      .update({ lead_id: targetLeadId })
-      .eq('lead_id', sourceLeadId);
-
-    if (appointmentsError) {
-      console.error('[merge-leads] Error transferring appointments:', appointmentsError);
-    } else {
-      console.log('[merge-leads] Transferred appointments');
-    }
-
-    // Transfer WhatsApp conversations
-    const { error: conversationsError } = await supabase
-      .from('whatsapp_conversations')
-      .update({ lead_id: targetLeadId })
-      .eq('lead_id', sourceLeadId);
-
-    if (conversationsError) {
-      console.error('[merge-leads] Error transferring conversations:', conversationsError);
-    } else {
-      console.log('[merge-leads] Transferred WhatsApp conversations');
-    }
-
-    // Transfer pipeline relations (non-primary only, delete duplicates)
-    const { data: sourceRelations } = await supabase
-      .from('lead_pipeline_relations')
-      .select('pipeline_id, stage_id')
-      .eq('lead_id', sourceLeadId);
-
-    const { data: targetRelations } = await supabase
-      .from('lead_pipeline_relations')
-      .select('pipeline_id')
-      .eq('lead_id', targetLeadId);
-
-    const existingPipelineIds = new Set((targetRelations || []).map(r => r.pipeline_id));
-    const newRelations = (sourceRelations || []).filter(r => !existingPipelineIds.has(r.pipeline_id));
-
-    if (newRelations.length > 0) {
-      const { error: relationsError } = await supabase
-        .from('lead_pipeline_relations')
-        .insert(newRelations.map(r => ({
-          lead_id: targetLeadId,
-          pipeline_id: r.pipeline_id,
-          stage_id: r.stage_id,
-          is_primary: false
-        })));
-
-      if (relationsError) {
-        console.error('[merge-leads] Error transferring pipeline relations:', relationsError);
-      } else {
-        console.log(`[merge-leads] Transferred ${newRelations.length} pipeline relations`);
-      }
-    }
-
-    // Delete source pipeline relations
-    await supabase.from('lead_pipeline_relations').delete().eq('lead_id', sourceLeadId);
-
-    // Create merge activity
-    const { error: activityError } = await supabase
-      .from('lead_activities')
-      .insert({
-        lead_id: targetLeadId,
-        user_id: targetLead.assigned_to || sourceLead.assigned_to || targetLead.workspace_id,
-        activity_type: 'lead_merged',
-        title: 'Lead mesclado',
-        description: `Lead "${sourceLead.name}" foi mesclado a este lead`,
-        metadata: {
-          source_lead_id: sourceLeadId,
-          source_lead_name: sourceLead.name,
-          source_lead_phone: sourceLead.phone,
-          merged_at: new Date().toISOString()
-        }
-      });
-
-    if (activityError) {
-      console.error('[merge-leads] Error creating merge activity:', activityError);
-    }
-
-    // Finally, delete the source lead
-    const { error: deleteError } = await supabase
-      .from('leads')
-      .delete()
-      .eq('id', sourceLeadId);
-
-    if (deleteError) {
-      console.error('[merge-leads] Error deleting source lead:', deleteError);
-      throw deleteError;
-    }
-
-    console.log('[merge-leads] Merge completed successfully');
+    console.log(`[merge-leads] Single merge completed: ${sourceLeadId} -> ${targetLeadId}`);
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'Leads mesclados com sucesso',
-        targetLeadId,
-        mergedData
-      }),
+      JSON.stringify({ success: true, targetLeadId }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('[merge-leads] Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ success: false, error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

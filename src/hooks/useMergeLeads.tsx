@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -37,7 +36,7 @@ export function useDuplicateLeads() {
         .select('id, name, email, phone, company, source, value, created_at, updated_at, assigned_to, workspace_id')
         .eq('workspace_id', currentWorkspace.id)
         .not('phone', 'is', null)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: false }); // Most recent first
 
       if (error) throw error;
 
@@ -55,7 +54,7 @@ export function useDuplicateLeads() {
         phoneGroups.set(normalized, existing);
       }
 
-      // Filter only groups with 2+ leads
+      // Filter only groups with 2+ leads (first lead in each group is most recent)
       const duplicates: DuplicateGroup[] = [];
       phoneGroups.forEach((leads, normalizedPhone) => {
         if (leads.length >= 2) {
@@ -99,6 +98,50 @@ export function useMergeLeads() {
       toast({
         title: 'Leads mesclados',
         description: 'Os leads foram mesclados com sucesso',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro ao mesclar leads',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+export function useBulkMergeLeads() {
+  const { currentWorkspace } = useWorkspace();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (groups: DuplicateGroup[]) => {
+      if (!currentWorkspace?.id) throw new Error('No workspace');
+
+      const { data, error } = await supabase.functions.invoke('merge-leads', {
+        body: {
+          bulkMerge: true,
+          groups: groups.map(g => ({
+            normalizedPhone: g.normalizedPhone,
+            leadIds: g.leads.map(l => l.id)
+          })),
+          workspaceId: currentWorkspace.id
+        }
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || 'Bulk merge failed');
+
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['duplicate-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['lead-activities'] });
+      toast({
+        title: 'Mesclagem concluída',
+        description: `${data.groupsProcessed} grupos processados, ${data.leadsMerged} leads mesclados`,
       });
     },
     onError: (error: Error) => {

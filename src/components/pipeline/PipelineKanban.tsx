@@ -432,8 +432,7 @@ export default function PipelineKanban({
         <div 
           ref={topScrollRef}
           onScroll={handleTopScroll}
-          className="overflow-x-auto overflow-y-hidden h-4 min-h-[16px] bg-blue-100 hover:bg-blue-200 rounded-lg mb-2 cursor-grab active:cursor-grabbing scrollbar-thin scrollbar-thumb-blue-400 scrollbar-track-blue-100"
-          style={{ scrollbarWidth: 'thin' }}
+          className="overflow-x-auto overflow-y-hidden h-3 min-h-[12px] mb-2"
         >
           <div style={{ width: scrollContentWidth, height: 1 }} />
         </div>
@@ -442,7 +441,7 @@ export default function PipelineKanban({
         <div 
           ref={contentScrollRef}
           onScroll={handleContentScroll}
-          className="flex-1 overflow-x-auto overflow-y-hidden"
+          className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-none"
         >
           <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable droppableId="stages" direction="horizontal" type="stage">

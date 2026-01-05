@@ -117,6 +117,9 @@ export default function PipelineKanban({
           lead_pipeline_relations!inner (
             stage_id,
             pipeline_id
+          ),
+          whatsapp_conversations (
+            profile_picture_url
           )
         `)
         .eq('workspace_id', workspace.id)
@@ -129,10 +132,11 @@ export default function PipelineKanban({
         return [];
       }
       
-      // Usar o stage_id da relação específica deste pipeline
+      // Usar o stage_id da relação específica deste pipeline e extrair foto do WhatsApp
       return (data || []).map(lead => ({
         ...lead,
-        stage_id: lead.lead_pipeline_relations?.[0]?.stage_id || lead.stage_id
+        stage_id: lead.lead_pipeline_relations?.[0]?.stage_id || lead.stage_id,
+        profile_picture_url: lead.whatsapp_conversations?.[0]?.profile_picture_url || null
       }));
     },
     enabled: !!selectedPipelineId && !!workspace?.id

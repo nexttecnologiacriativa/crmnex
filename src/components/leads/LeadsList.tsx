@@ -1,15 +1,16 @@
 
 import { useState } from 'react';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { useLeads } from '@/hooks/useLeads';
 import { useWorkspace } from '@/hooks/useWorkspace';
+import { useDuplicateLeads } from '@/hooks/useMergeLeads';
 import CreateLeadDialog from './CreateLeadDialog';
 import LeadsListView from './LeadsListView';
 import TagManager from './TagManager';
 import LeadsFilters from './LeadsFilters';
 import LeadsImportExport from './LeadsImportExport';
+import DuplicateLeadsManager from './DuplicateLeadsManager';
 
 export default function LeadsList() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -19,6 +20,10 @@ export default function LeadsList() {
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isDuplicatesOpen, setIsDuplicatesOpen] = useState(false);
+  
+  const { data: duplicateGroups = [] } = useDuplicateLeads();
+  const duplicateCount = duplicateGroups.reduce((acc, group) => acc + group.leads.length - 1, 0);
   
   console.log('LeadsList - Rendering component');
   
@@ -128,6 +133,19 @@ export default function LeadsList() {
         <div className="flex items-center gap-2">
           <LeadsImportExport leads={filteredLeads} />
           <TagManager />
+          <Button 
+            variant="outline" 
+            onClick={() => setIsDuplicatesOpen(true)}
+            className="relative"
+          >
+            <Users className="h-4 w-4 mr-2" />
+            Duplicatas
+            {duplicateCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                {duplicateCount}
+              </span>
+            )}
+          </Button>
           <Button onClick={() => setIsCreateDialogOpen(true)} className="gradient-premium text-white">
             <Plus className="h-4 w-4 mr-2" />
             Novo Lead
@@ -170,6 +188,11 @@ export default function LeadsList() {
       <CreateLeadDialog
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
+      />
+
+      <DuplicateLeadsManager
+        open={isDuplicatesOpen}
+        onOpenChange={setIsDuplicatesOpen}
       />
     </div>
   );

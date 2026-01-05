@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.meta-fetch-leads]
 verify_jwt = false
+
+[functions.merge-leads]
+verify_jwt = false

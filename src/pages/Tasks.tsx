@@ -137,22 +137,23 @@ export default function Tasks() {
   return (
     <>
       <DashboardLayout>
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
+        <div className="p-4 md:p-6">
+          {/* Header - responsivo */}
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-nexcrm-green">
+              <h1 className="text-2xl md:text-3xl font-bold text-nexcrm-green">
                 Tarefas
               </h1>
-              <p className="text-gray-600 mt-2">Gerencie suas tarefas e acompanhe o progresso</p>
+              <p className="text-gray-600 mt-1 md:mt-2 text-sm md:text-base">Gerencie suas tarefas e acompanhe o progresso</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 md:gap-3">
               {/* Botões de visualização */}
               <div className="flex items-center bg-gray-100 rounded-lg p-1">
                 <Button
                   variant={viewMode === 'list' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('list')}
-                  className="h-8"
+                  className="h-8 px-2 md:px-3"
                 >
                   <List className="h-4 w-4" />
                 </Button>
@@ -160,7 +161,7 @@ export default function Tasks() {
                   variant={viewMode === 'cards' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('cards')}
-                  className="h-8"
+                  className="h-8 px-2 md:px-3"
                 >
                   <Grid className="h-4 w-4" />
                 </Button>
@@ -168,15 +169,15 @@ export default function Tasks() {
                   variant={viewMode === 'calendar' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('calendar')}
-                  className="h-8"
+                  className="h-8 px-2 md:px-3"
                 >
                   <Calendar className="h-4 w-4" />
                 </Button>
               </div>
 
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Tarefa
+              <Button onClick={() => setIsCreateDialogOpen(true)} className="px-3 md:px-4">
+                <Plus className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Nova Tarefa</span>
               </Button>
             </div>
           </div>

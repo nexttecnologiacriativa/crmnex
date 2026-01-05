@@ -19,7 +19,7 @@ import { normalizeForMatch, ensureCountryCode55, phonesMatch } from '@/lib/phone
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { MessageCircle, Search, Send, Users, Wifi, WifiOff, Plus, UserSearch, UserPlus, Image as ImageIcon, Trash2, Download, AlertCircle, Video, FileText, Eye, User, Copy } from 'lucide-react';
+import { MessageCircle, Search, Send, Users, Wifi, WifiOff, Plus, UserSearch, UserPlus, Image as ImageIcon, Trash2, Download, AlertCircle, Video, FileText, Eye, User, Copy, ArrowLeft } from 'lucide-react';
 import CreateLeadFromConversationDialog from '@/components/whatsapp/CreateLeadFromConversationDialog';
 import ConversationCard from '@/components/whatsapp/ConversationCard';
 import { toast } from 'sonner';
@@ -33,6 +33,8 @@ import { useWhatsAppSyncStatus } from '@/hooks/useWhatsAppSync';
 import { useClearAllConversations } from '@/hooks/useWhatsAppClear';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useQuery } from '@tanstack/react-query';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 // Audio functionality has been removed from this component
 // Image size limit: 5MB (to ensure compatibility with WhatsApp/Evolution API)
@@ -124,6 +126,9 @@ const compressImage = async (file: File): Promise<File> => {
   });
 };
 export default function UnifiedAtendimento() {
+  const isMobile = useIsMobile();
+  const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
+  
   const {
     currentWorkspace
   } = useWorkspace();
@@ -1082,22 +1087,21 @@ export default function UnifiedAtendimento() {
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="flex h-[calc(100vh-260px)] bg-background rounded-b-lg overflow-hidden">
-          {/* Sidebar */}
-          <div className="w-80 border-r flex flex-col">
-            <div className="p-4 border-b bg-card">
+        <div className={cn(
+          "flex bg-background rounded-b-lg overflow-hidden",
+          isMobile ? "h-[calc(100vh-180px)]" : "h-[calc(100vh-260px)]"
+        )}>
+          {/* Sidebar - hidden on mobile when viewing chat */}
+          <div className={cn(
+            "border-r flex flex-col",
+            isMobile ? "w-full" : "w-80",
+            isMobile && mobileView === 'chat' && "hidden"
+          )}>
+            <div className="p-3 md:p-4 border-b bg-card">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-semibold">Conversas</h2>
                 <div className="flex items-center gap-2">
                   {connectedInstances.length > 0 ? <Wifi className="w-4 h-4 text-primary" /> : <WifiOff className="w-4 h-4 text-destructive" />}
-                  {/* Temporarily disabled sync status badge 
-                   {syncStatuses && syncStatuses.length > 0 && (
-                    <Badge variant="outline" className="text-green-600 border-green-200 text-xs">
-                      <Download className="h-3 w-3 mr-1" />
-                      {syncStatuses[0]?.total_messages || 0} msgs sync
-                    </Badge>
-                   )}
-                   */}
                 </div>
               </div>
               <div className="relative">
@@ -1131,6 +1135,11 @@ export default function UnifiedAtendimento() {
                 return <ConversationCard key={conv.id} conversation={conv} lead={conv.leads} assignee={conv.assignee} tags={leadTags} isSelected={selectedConvId === conv.id} unread={hasNewMessages || !conv.is_read} onClick={() => {
                   setSelectedConvId(conv.id);
                   
+                  // Em mobile, mudar para a view de chat
+                  if (isMobile) {
+                    setMobileView('chat');
+                  }
+                  
                   // Auto-selecionar a instância da conversa se disponível
                   const convInstanceName = getInstanceNameFromConversation(conv);
                   if (convInstanceName) {
@@ -1154,38 +1163,59 @@ export default function UnifiedAtendimento() {
             </ScrollArea>
           </div>
 
-          {/* Chat area */}
-          <div className="flex-1 flex flex-col">
+          {/* Chat area - hidden on mobile when viewing list */}
+          <div className={cn(
+            "flex-1 flex flex-col",
+            isMobile && mobileView === 'list' && "hidden"
+          )}>
             {selectedConv ? <>
-                <div className="border-b p-4 bg-card">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="min-w-0 flex-1 flex items-center gap-3">
-                      {/* Profile Picture */}
+                <div className="border-b p-3 md:p-4 bg-card">
+                  <div className="flex items-center gap-2 md:gap-4">
+                    {/* Back button - mobile only */}
+                    {isMobile && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-9 w-9 p-0 flex-shrink-0"
+                        onClick={() => setMobileView('list')}
+                      >
+                        <ArrowLeft className="h-5 w-5" />
+                      </Button>
+                    )}
+                    
+                    <div className="min-w-0 flex-1 flex items-center gap-2 md:gap-3">
+                      {/* Profile Picture - smaller on mobile */}
                       {(selectedConv as any).profile_picture_url ? (
                         <img 
                           src={(selectedConv as any).profile_picture_url} 
                           alt={selectedConv.contact_name || 'Contato'}
-                          className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                          className={cn(
+                            "rounded-full object-cover flex-shrink-0",
+                            isMobile ? "w-9 h-9" : "w-12 h-12"
+                          )}
                           onError={(e) => {
                             (e.target as HTMLImageElement).style.display = 'none';
                           }}
                         />
                       ) : (
-                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                          <User className="w-6 h-6 text-muted-foreground" />
+                        <div className={cn(
+                          "rounded-full bg-muted flex items-center justify-center flex-shrink-0",
+                          isMobile ? "w-9 h-9" : "w-12 h-12"
+                        )}>
+                          <User className={isMobile ? "w-4 h-4" : "w-6 h-6"} />
                         </div>
                       )}
-                      <div className="flex-1">
-                        <h3 className="font-medium truncate">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium truncate text-sm md:text-base">
                           {(() => {
                         const lead = findLeadByPhone(selectedConv.phone_number || '');
                         return lead ? getLeadDisplayName(lead) : selectedConv.contact_name || selectedConv.phone_number || 'Contato';
                       })()}
                         </h3>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground truncate">
                           {selectedConv.phone_number}
                         </p>
-                        {(selectedConv as any).instance_id && (() => {
+                        {!isMobile && (selectedConv as any).instance_id && (() => {
                           const conversationInstance = instances.find((i: any) => i.id === (selectedConv as any).instance_id);
                           if (conversationInstance) {
                             return (
@@ -1200,7 +1230,7 @@ export default function UnifiedAtendimento() {
                           return null;
                         })()}
                       </div>
-                      {!findLeadByPhone(selectedConv.phone_number || '') && <Button variant="outline" size="sm" className="gap-2 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700" onClick={() => {
+                      {!isMobile && !findLeadByPhone(selectedConv.phone_number || '') && <Button variant="outline" size="sm" className="gap-2 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700" onClick={() => {
                     setSelectedConvForLead(selectedConv);
                     setCreateLeadOpen(true);
                   }}>
@@ -1208,26 +1238,28 @@ export default function UnifiedAtendimento() {
                           Cadastrar Lead
                         </Button>}
                     </div>
-                    {/* Instance picker */}
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <Label className="text-xs text-muted-foreground">Instância</Label>
-                        <Select value={selectedInstanceName} onValueChange={setSelectedInstanceName}>
-                          <SelectTrigger className="w-[200px] h-8">
-                            <SelectValue placeholder="Selecione a instância" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {connectedInstances.map((i: any) => <SelectItem key={i.instance_name} value={i.instance_name}>
-                                {i.display_name || i.instance_name.replace(/^ws_\w+_/, '')}
-                              </SelectItem>)}
-                          </SelectContent>
-                        </Select>
+                    {/* Instance picker - hidden on mobile */}
+                    {!isMobile && (
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs text-muted-foreground">Instância</Label>
+                          <Select value={selectedInstanceName} onValueChange={setSelectedInstanceName}>
+                            <SelectTrigger className="w-[200px] h-8">
+                              <SelectValue placeholder="Selecione a instância" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {connectedInstances.map((i: any) => <SelectItem key={i.instance_name} value={i.instance_name}>
+                                  {i.display_name || i.instance_name.replace(/^ws_\w+_/, '')}
+                                </SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
 
-                <ScrollArea className="flex-1 p-6">
+                <ScrollArea className="flex-1 p-3 md:p-6">
                   <div className="space-y-4">
                     {messages.map((m: any) => <div key={m.id} className={`flex ${m.is_from_lead ? 'justify-start' : 'justify-end'}`}>
                         <div className={`max-w-[70%] rounded-xl px-4 py-3 shadow-sm ${m.is_from_lead ? 'bg-muted text-foreground' : 'bg-primary text-primary-foreground'}`}>
@@ -1338,12 +1370,13 @@ export default function UnifiedAtendimento() {
                    </div>
                  </ScrollArea>
 
-                <div className="border-t p-4 bg-card">
+                <div className="border-t p-3 md:p-4 bg-card safe-area-bottom">
                   <Textarea
                     placeholder="Digite uma mensagem..."
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    className="w-full resize-none mb-3"
+                    className={cn("w-full resize-none mb-2 md:mb-3", isMobile && "min-h-[60px]")}
+                    rows={isMobile ? 2 : 3}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -1352,8 +1385,8 @@ export default function UnifiedAtendimento() {
                     }}
                   />
                   
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1 md:gap-2">
                       <ChatAudioSender
                         selectedConv={selectedConv}
                         selectedInstanceName={selectedInstanceName}
@@ -1376,37 +1409,42 @@ export default function UnifiedAtendimento() {
                         onClick={() => fileInputRef.current?.click()}
                         disabled={!selectedInstanceName || isUploadingImage}
                         title="Enviar imagem"
+                        className="h-8 w-8 md:h-9 md:w-auto p-0 md:px-3"
                       >
                         <ImageIcon className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => videoInputRef.current?.click()}
-                        disabled={!selectedInstanceName || isUploadingVideo}
-                        title="Enviar vídeo"
-                      >
-                        <Video className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => documentInputRef.current?.click()}
-                        disabled={!selectedInstanceName || isUploadingDocument}
-                        title="Enviar documento"
-                      >
-                        <FileText className="h-4 w-4" />
-                      </Button>
+                      {!isMobile && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => videoInputRef.current?.click()}
+                            disabled={!selectedInstanceName || isUploadingVideo}
+                            title="Enviar vídeo"
+                          >
+                            <Video className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => documentInputRef.current?.click()}
+                            disabled={!selectedInstanceName || isUploadingDocument}
+                            title="Enviar documento"
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                     
                     <Button
                       onClick={handleSend}
-                      size="lg"
-                      className="px-6"
+                      size={isMobile ? "default" : "lg"}
+                      className={isMobile ? "px-4" : "px-6"}
                       disabled={!message.trim() || !selectedInstanceName || isSendingMessage}
                     >
-                      <Send className="h-5 w-5 mr-2" />
-                      Enviar
+                      <Send className="h-4 w-4 md:h-5 md:w-5 md:mr-2" />
+                      <span className="hidden md:inline">Enviar</span>
                     </Button>
                   </div>
                   

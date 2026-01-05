@@ -9,7 +9,7 @@ export default function Leads() {
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen p-6">
+      <div className="min-h-screen p-4 md:p-6">
         <LeadsList />
       </div>
     </DashboardLayout>

@@ -15,6 +15,7 @@ import { useEnsureDefaultWorkspace } from '@/hooks/useWorkspace';
 import { useDeletePipelineStage, useReorderPipelineStages } from '@/hooks/usePipeline';
 import { useStagePagination } from '@/hooks/useStagePagination';
 import { useLeadsRealtime } from '@/hooks/useLeadsRealtime';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { differenceInDays } from 'date-fns';
 
 import { PipelineFiltersState } from './PipelineFilters';
@@ -69,6 +70,7 @@ export default function PipelineKanban({
   const { workspace } = useEnsureDefaultWorkspace();
   const deleteStage = useDeletePipelineStage();
   const reorderStages = useReorderPipelineStages();
+  const isMobile = useIsMobile();
   
   // Habilita atualização em tempo real dos leads
   useLeadsRealtime();
@@ -193,13 +195,13 @@ export default function PipelineKanban({
   const contentScrollRef = useRef<HTMLDivElement>(null);
 
   // Calcular largura do conteúdo para a barra de scroll do topo
+  const stageWidth = isMobile ? 280 : 320; // w-70 ou w-80
   const scrollContentWidth = useMemo(() => {
     const stageCount = stages?.length || 0;
-    const stageWidth = 320; // w-80 = 20rem = 320px
-    const gap = 24; // gap-6 = 1.5rem = 24px
-    const extraButtonWidth = 320; // Botão "Nova Etapa"
-    return (stageCount * stageWidth) + ((stageCount) * gap) + extraButtonWidth + 48; // padding extra
-  }, [stages?.length]);
+    const gap = isMobile ? 16 : 24; // gap-4 ou gap-6
+    const extraButtonWidth = stageWidth;
+    return (stageCount * stageWidth) + ((stageCount) * gap) + extraButtonWidth + 48;
+  }, [stages?.length, isMobile, stageWidth]);
 
   // Sincronizar scroll da barra do topo com o conteúdo
   const handleTopScroll = useCallback(() => {
@@ -456,76 +458,77 @@ export default function PipelineKanban({
         >
           <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable droppableId="stages" direction="horizontal" type="stage">
-              {provided => <div ref={provided.innerRef} {...provided.droppableProps} className="flex gap-6 h-full pb-4">
+              {provided => <div ref={provided.innerRef} {...provided.droppableProps} className={`flex h-full pb-4 ${isMobile ? 'gap-4' : 'gap-6'}`}>
               {stages?.map((stage, index) => {
             const stageLeads = filteredLeads(leadsByStage?.[stage.id] || []);
             const visibleLeads = getVisibleLeads(stage.id, stageLeads);
             const showLoadMore = hasMoreLeads(stage.id, stageLeads);
             
-            return <Draggable key={stage.id} draggableId={stage.id} index={index}>
-                    {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} className={`flex-shrink-0 w-80 h-full group ${snapshot.isDragging ? 'rotate-2' : ''}`}>
+            return <Draggable key={stage.id} draggableId={stage.id} index={index} isDragDisabled={isMobile}>
+                    {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} className={`flex-shrink-0 h-full group ${snapshot.isDragging ? 'rotate-2' : ''} ${isMobile ? 'w-[280px]' : 'w-80'}`}>
                         <div className={`h-full bg-white border border-gray-200 rounded-lg shadow-sm flex flex-col`}>
-                          <div {...provided.dragHandleProps} className="bg-gray-100 p-4 flex items-center justify-between rounded-t-lg cursor-move hover:bg-gray-200 transition-colors flex-shrink-0">
-                            <div className="flex items-center gap-2">
-                              <GripVertical className="h-4 w-4 text-gray-400" />
-                              <div className="w-3 h-3 rounded-full" style={{
+                          <div {...provided.dragHandleProps} className={`bg-gray-100 flex items-center justify-between rounded-t-lg cursor-move hover:bg-gray-200 transition-colors flex-shrink-0 ${isMobile ? 'p-3' : 'p-4'}`}>
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              {!isMobile && <GripVertical className="h-4 w-4 text-gray-400 flex-shrink-0" />}
+                              <div className="w-3 h-3 rounded-full flex-shrink-0" style={{
                         backgroundColor: stage.color || '#6b7280'
                       }} />
-                              <div className="flex-1">
-                                <h3 className="text-sm font-semibold text-gray-900 relative overflow-hidden">
+                              <div className="flex-1 min-w-0">
+                                <h3 className={`font-semibold text-gray-900 relative overflow-hidden truncate ${isMobile ? 'text-xs' : 'text-sm'}`}>
                                   <span className="relative z-10 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent font-bold">
                                     {stage.name}
                                   </span>
-                                  <div className="absolute inset-0 bg-gradient-to-r from-purple-100 to-blue-100 opacity-20 rounded animate-pulse"></div>
                                 </h3>
-                                <div className="text-xs text-gray-600 mt-1 my-[2px]">
+                                <div className={`text-gray-600 mt-0.5 ${isMobile ? 'text-[10px]' : 'text-xs'}`}>
                                   R$ {stageLeads.reduce((sum, lead) => sum + Math.max(lead.value || 0, 0), 0).toLocaleString('pt-BR', {
                             minimumFractionDigits: 2
                           })}
                                 </div>
                               </div>
-                              <span className="text-sm text-gray-500 bg-white px-2 py-1 rounded">
+                              <span className={`text-gray-500 bg-white px-2 py-0.5 rounded flex-shrink-0 ${isMobile ? 'text-xs' : 'text-sm'}`}>
                                 {visibleLeads.length}{stageLeads.length > visibleLeads.length && `/${stageLeads.length}`}
                               </span>
                             </div>
-                            <div className="flex items-center gap-1">
-                              {selectionMode && stageLeads.length > 0 && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    selectAllLeadsInStage(visibleLeads);
-                                  }}
-                                  className="opacity-0 group-hover:opacity-100 transition-opacity text-xs"
-                                >
-                                  {visibleLeads.every(lead => selectedLeads.includes(lead.id)) ? 'Desmarcar' : 'Marcar'} Todos
+                            {!isMobile && (
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                {selectionMode && stageLeads.length > 0 && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      selectAllLeadsInStage(visibleLeads);
+                                    }}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                                  >
+                                    {visibleLeads.every(lead => selectedLeads.includes(lead.id)) ? 'Desmarcar' : 'Marcar'} Todos
+                                  </Button>
+                                )}
+                                <Button variant="ghost" size="sm" onClick={e => {
+                          e.stopPropagation();
+                          handleAddLead();
+                        }} className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0">
+                                  <Plus className="h-4 w-4" />
                                 </Button>
-                              )}
-                              <Button variant="ghost" size="sm" onClick={e => {
-                        e.stopPropagation();
-                        handleAddLead();
-                      }} className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0">
-                                <Plus className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={e => {
-                        e.stopPropagation();
-                        setEditingStage(stage);
-                      }} className="opacity-0 group-hover:opacity-100 transition-opacity text-xs">
-                                Editar
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={e => {
-                        e.stopPropagation();
-                        handleDeleteStage(stage.id);
-                      }} className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0 text-red-600 hover:text-red-700">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
+                                <Button variant="ghost" size="sm" onClick={e => {
+                          e.stopPropagation();
+                          setEditingStage(stage);
+                        }} className="opacity-0 group-hover:opacity-100 transition-opacity text-xs">
+                                  Editar
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={e => {
+                          e.stopPropagation();
+                          handleDeleteStage(stage.id);
+                        }} className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0 text-red-600 hover:text-red-700">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
                           </div>
 
                           <Droppable droppableId={stage.id}>
-                            {(provided, snapshot) => <div ref={provided.innerRef} {...provided.droppableProps} className={`p-4 space-y-3 flex-1 overflow-y-auto ${snapshot.isDraggingOver ? 'bg-blue-50' : ''}`}>
-                                {visibleLeads.map((lead, index) => <Draggable key={lead.id} draggableId={lead.id} index={index}>
+                            {(provided, snapshot) => <div ref={provided.innerRef} {...provided.droppableProps} className={`space-y-3 flex-1 overflow-y-auto ${snapshot.isDraggingOver ? 'bg-blue-50' : ''} ${isMobile ? 'p-3' : 'p-4'}`}>
+                                {visibleLeads.map((lead, index) => <Draggable key={lead.id} draggableId={lead.id} index={index} isDragDisabled={isMobile}>
                                      {provided => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
                                         <LeadKanbanCard 
                                           lead={lead}
@@ -542,20 +545,22 @@ export default function PipelineKanban({
                                       variant="ghost"
                                       size="sm"
                                       onClick={() => loadMoreLeads(stage.id)}
-                                      className="w-full text-gray-500 hover:text-gray-700"
+                                      className="w-full text-gray-500 hover:text-gray-700 text-xs"
                                     >
-                                      <ChevronDown className="h-4 w-4 mr-2" />
-                                      Carregar mais ({stageLeads.length - visibleLeads.length} restantes)
+                                      <ChevronDown className="h-4 w-4 mr-1" />
+                                      +{stageLeads.length - visibleLeads.length}
                                     </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => loadAllLeads(stage.id, stageLeads.length)}
-                                      className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
-                                    >
-                                      <List className="h-4 w-4 mr-2" />
-                                      Ver todos ({stageLeads.length})
-                                    </Button>
+                                    {!isMobile && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => loadAllLeads(stage.id, stageLeads.length)}
+                                        className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
+                                      >
+                                        <List className="h-4 w-4 mr-2" />
+                                        Ver todos ({stageLeads.length})
+                                      </Button>
+                                    )}
                                   </div>
                                 )}
                               </div>}
@@ -566,10 +571,10 @@ export default function PipelineKanban({
           })}
               {provided.placeholder}
 
-              <div className="flex-shrink-0 w-80 h-full flex items-start pt-4">
-                <Button variant="outline" className="w-full h-16 text-gray-500 border-2 border-dashed border-gray-300 hover:border-gray-400" onClick={() => setIsCreateStageOpen(true)}>
-                  <Plus className="h-5 w-5 mr-2" />
-                  Nova Etapa
+              <div className={`flex-shrink-0 h-full flex items-start pt-4 ${isMobile ? 'w-[280px]' : 'w-80'}`}>
+                <Button variant="outline" className={`w-full h-12 md:h-16 text-gray-500 border-2 border-dashed border-gray-300 hover:border-gray-400 ${isMobile ? 'text-sm' : ''}`} onClick={() => setIsCreateStageOpen(true)}>
+                  <Plus className="h-4 w-4 md:h-5 md:w-5 mr-2" />
+                  {isMobile ? 'Nova' : 'Nova Etapa'}
                 </Button>
               </div>
             </div>}

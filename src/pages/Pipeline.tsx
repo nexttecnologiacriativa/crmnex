@@ -8,6 +8,7 @@ import { usePipelines } from '@/hooks/usePipeline';
 import { useEnsureDefaultWorkspace } from '@/hooks/useWorkspace';
 import { useWorkspaceSettings } from '@/hooks/useWorkspaceSettings';
 import { useTeamManagement } from '@/hooks/useTeamManagement';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LayoutGrid, List, CheckSquare, Square, Search } from 'lucide-react';
@@ -19,6 +20,8 @@ export default function Pipeline() {
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [filters, setFilters] = useState<PipelineFiltersState>(defaultFilters);
   const [quickSearch, setQuickSearch] = useState('');
+  
+  const isMobile = useIsMobile();
 
   // Debounce para busca rápida
   useEffect(() => {
@@ -78,15 +81,16 @@ export default function Pipeline() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 h-[calc(100vh-2rem)] flex flex-col overflow-hidden">
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-bold text-nexcrm-green">
+      <div className="p-3 md:p-6 h-[calc(100vh-2rem)] md:h-[calc(100vh-2rem)] flex flex-col overflow-hidden">
+        <div className="mb-4 md:mb-6">
+          {/* Header - responsivo */}
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
+            <h1 className="text-2xl md:text-3xl font-bold text-nexcrm-green">
               Pipeline
             </h1>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <PipelineFilters filters={filters} onFiltersChange={setFilters} />
-              {viewMode === 'kanban' && (
+              {viewMode === 'kanban' && !isMobile && (
                 <Button
                   variant={selectionMode ? "default" : "outline"}
                   size="sm"
@@ -95,10 +99,12 @@ export default function Pipeline() {
                     setSelectedLeads([]);
                   }}
                 >
-                  {selectionMode ? <CheckSquare className="h-4 w-4 mr-2" /> : <Square className="h-4 w-4 mr-2" />}
-                  {selectionMode ? 'Sair da Seleção' : 'Seleção Múltipla'}
+                  {selectionMode ? <CheckSquare className="h-4 w-4 md:mr-2" /> : <Square className="h-4 w-4 md:mr-2" />}
+                  <span className="hidden md:inline">
+                    {selectionMode ? 'Sair da Seleção' : 'Seleção Múltipla'}
+                  </span>
                   {selectionMode && selectedLeads.length > 0 && (
-                    <span className="ml-2 bg-white/20 px-1.5 py-0.5 rounded text-xs">
+                    <span className="ml-1 md:ml-2 bg-white/20 px-1.5 py-0.5 rounded text-xs">
                       {selectedLeads.length}
                     </span>
                   )}
@@ -108,26 +114,30 @@ export default function Pipeline() {
                 variant={viewMode === 'kanban' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setViewMode('kanban')}
+                className="px-2 md:px-3"
               >
-                <LayoutGrid className="h-4 w-4 mr-2" />
-                Kanban
+                <LayoutGrid className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Kanban</span>
               </Button>
               <Button
                 variant={viewMode === 'list' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setViewMode('list')}
+                className="px-2 md:px-3"
               >
-                <List className="h-4 w-4 mr-2" />
-                Lista
+                <List className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Lista</span>
               </Button>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          
+          {/* Controles secundários - responsivo */}
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
             <PipelineSelector 
               selectedPipelineId={selectedPipelineId}
               onPipelineChange={setSelectedPipelineId}
             />
-            <div className="relative flex-1 max-w-xs">
+            <div className="relative flex-1 md:max-w-xs">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar lead..."
@@ -136,6 +146,25 @@ export default function Pipeline() {
                 className="pl-9"
               />
             </div>
+            <div className="hidden md:block">
+              <ActiveFilterBadges
+                filters={filters}
+                members={members}
+                onRemoveFilter={(key) => {
+                  if (key === 'tags') {
+                    setFilters(prev => ({ ...prev, tags: [] }));
+                  } else if (key === 'hasValue') {
+                    setFilters(prev => ({ ...prev, hasValue: null }));
+                  } else {
+                    setFilters(prev => ({ ...prev, [key]: '' }));
+                  }
+                }}
+              />
+            </div>
+          </div>
+          
+          {/* Badges de filtro em mobile - linha separada */}
+          <div className="md:hidden mt-2">
             <ActiveFilterBadges
               filters={filters}
               members={members}
@@ -151,6 +180,7 @@ export default function Pipeline() {
             />
           </div>
         </div>
+        
         <div className="flex-1 overflow-hidden">
           {viewMode === 'kanban' ? (
             <PipelineKanban 

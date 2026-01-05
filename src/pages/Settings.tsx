@@ -15,10 +15,23 @@ import MetaIntegrationsSettings from '@/components/settings/MetaIntegrationsSett
 import { useTeamManagement } from '@/hooks/useTeamManagement';
 import ResetWorkspace from '@/components/settings/ResetWorkspace';
 import SettingsSidebar, { type SettingsSection } from '@/components/settings/SettingsSidebar';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Menu } from 'lucide-react';
 
 export default function Settings() {
   const { currentUserRole } = useTeamManagement();
   const [activeSection, setActiveSection] = useState<SettingsSection>('profile');
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const isMobile = useIsMobile();
+
+  const handleSectionChange = (section: SettingsSection) => {
+    setActiveSection(section);
+    if (isMobile) {
+      setSheetOpen(false);
+    }
+  };
 
   const renderContent = () => {
     switch (activeSection) {
@@ -77,22 +90,43 @@ export default function Settings() {
   return (
     <DashboardLayout>
       <div className="flex h-full">
-        {/* Sidebar */}
-        <SettingsSidebar
-          activeSection={activeSection}
-          onSectionChange={setActiveSection}
-        />
+        {/* Sidebar - Desktop */}
+        {!isMobile && (
+          <SettingsSidebar
+            activeSection={activeSection}
+            onSectionChange={setActiveSection}
+          />
+        )}
 
         {/* Main Content */}
         <div className="flex-1 overflow-y-auto">
-          <div className="p-6 max-w-4xl">
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold text-gray-900">
-                {getSectionTitle()}
-              </h1>
-              <p className="text-gray-500 mt-1">
-                Gerencie suas configurações de {getSectionTitle().toLowerCase()}
-              </p>
+          <div className="p-4 md:p-6 max-w-4xl">
+            <div className="mb-6 flex items-center gap-3">
+              {/* Mobile menu trigger */}
+              {isMobile && (
+                <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" size="icon" className="h-9 w-9 flex-shrink-0">
+                      <Menu className="h-5 w-5" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="p-0 w-72">
+                    <SettingsSidebar
+                      activeSection={activeSection}
+                      onSectionChange={handleSectionChange}
+                    />
+                  </SheetContent>
+                </Sheet>
+              )}
+              
+              <div>
+                <h1 className="text-xl md:text-2xl font-bold text-gray-900">
+                  {getSectionTitle()}
+                </h1>
+                <p className="text-gray-500 text-sm mt-1 hidden md:block">
+                  Gerencie suas configurações de {getSectionTitle().toLowerCase()}
+                </p>
+              </div>
             </div>
 
             {renderContent()}

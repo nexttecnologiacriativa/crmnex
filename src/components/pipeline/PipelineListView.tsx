@@ -8,21 +8,17 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { format } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar, DollarSign, Mail, Phone, Tag, User, Search, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getLeadDisplayName } from '@/lib/leadUtils';
 import PipelineTagSelector from './PipelineTagSelector';
+import { PipelineFiltersState } from './PipelineFilters';
 
 interface PipelineListViewProps {
   selectedPipelineId: string | null;
-  filters: {
-    search: string;
-    priority: string;
-    source: string;
-    assignee: string;
-  };
+  filters: PipelineFiltersState;
 }
 
 export default function PipelineListView({ selectedPipelineId, filters }: PipelineListViewProps) {
@@ -78,15 +74,57 @@ export default function PipelineListView({ selectedPipelineId, filters }: Pipeli
     enabled: !!selectedPipelineId,
   });
 
-  // Filtrar leads
+  // Filtrar leads com filtros avançados
   const filteredLeads = leads.filter(lead => {
-    const matchesSearch = !searchTerm || 
-      getLeadDisplayName(lead).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.phone?.includes(searchTerm) ||
-      lead.company?.toLowerCase().includes(searchTerm.toLowerCase());
+    // Busca (usa searchTerm local E filters.search)
+    const searchQuery = searchTerm || filters.search;
+    const matchesSearch = !searchQuery || 
+      getLeadDisplayName(lead).toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.phone?.includes(searchQuery) ||
+      lead.company?.toLowerCase().includes(searchQuery.toLowerCase());
     
-    return matchesSearch;
+    const matchesSource = !filters.source || lead.source === filters.source;
+    const matchesAssignee = !filters.assignee || lead.assigned_to === filters.assignee;
+    const matchesPipelineTag = !filters.pipelineTag || lead.pipeline_tag === filters.pipelineTag;
+    
+    // Filtro de dias na etapa
+    let matchesDaysInStage = true;
+    if (filters.daysInStage) {
+      const daysLimit = parseInt(filters.daysInStage);
+      const stageDate = lead.pipeline_stage_updated_at || lead.updated_at || lead.created_at;
+      if (stageDate) {
+        const daysDiff = differenceInDays(new Date(), new Date(stageDate));
+        matchesDaysInStage = daysDiff >= daysLimit;
+      }
+    }
+    
+    // Filtro de valor mínimo e máximo
+    let matchesMinValue = true;
+    let matchesMaxValue = true;
+    if (filters.minValue) {
+      matchesMinValue = (lead.value || 0) >= parseFloat(filters.minValue);
+    }
+    if (filters.maxValue) {
+      matchesMaxValue = (lead.value || 0) <= parseFloat(filters.maxValue);
+    }
+    
+    // Filtro de "tem valor"
+    let matchesHasValue = true;
+    if (filters.hasValue === true) {
+      matchesHasValue = lead.value != null && lead.value > 0;
+    }
+    
+    // Filtro de tags
+    let matchesTags = true;
+    if (filters.tags && filters.tags.length > 0) {
+      const leadTagRelations = lead.lead_tag_relations || [];
+      const leadTagNames = leadTagRelations.map((r: any) => r.lead_tags?.name).filter(Boolean);
+      matchesTags = filters.tags.some(tag => leadTagNames.includes(tag));
+    }
+    
+    return matchesSearch && matchesSource && matchesAssignee && matchesPipelineTag && 
+           matchesDaysInStage && matchesMinValue && matchesMaxValue && matchesHasValue && matchesTags;
   });
 
   const getTagValue = (pipelineTag: string | null) => {

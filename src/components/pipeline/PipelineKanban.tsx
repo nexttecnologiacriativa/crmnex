@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { Plus, Trash2, GripVertical, CheckSquare, Square, ChevronDown, List } from 'lucide-react';
+import { Plus, Trash2, GripVertical, ChevronDown, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import LeadKanbanCard from './LeadKanbanCard';
@@ -17,15 +17,13 @@ import { useStagePagination } from '@/hooks/useStagePagination';
 import { useWhatsAppValidation } from '@/hooks/useWhatsAppValidation';
 import { useLeadsRealtime } from '@/hooks/useLeadsRealtime';
 import { isBrazilianMobile } from '@/lib/phone';
+import { differenceInDays } from 'date-fns';
+
+import { PipelineFiltersState } from './PipelineFilters';
 
 interface PipelineKanbanProps {
   selectedPipelineId: string | null;
-  filters: {
-    search: string;
-    priority: string;
-    source: string;
-    assignee: string;
-  };
+  filters: PipelineFiltersState;
   selectionMode?: boolean;
   selectedLeads?: string[];
   onSelectionChange?: (leads: string[]) => void;
@@ -338,11 +336,52 @@ export default function PipelineKanban({
   const filteredLeads = (leads: any[]) => {
     return leads.filter(lead => {
       const leadDisplayName = lead.name || lead.email || '';
-      const matchesSearch = !filters.search || leadDisplayName.toLowerCase().includes(filters.search.toLowerCase()) || lead.company?.toLowerCase().includes(filters.search.toLowerCase()) || lead.email?.toLowerCase().includes(filters.search.toLowerCase());
-      const matchesPriority = !filters.priority || lead.priority === filters.priority;
+      const matchesSearch = !filters.search || 
+        leadDisplayName.toLowerCase().includes(filters.search.toLowerCase()) || 
+        lead.company?.toLowerCase().includes(filters.search.toLowerCase()) || 
+        lead.email?.toLowerCase().includes(filters.search.toLowerCase()) ||
+        lead.phone?.toLowerCase().includes(filters.search.toLowerCase());
+      
       const matchesSource = !filters.source || lead.source === filters.source;
       const matchesAssignee = !filters.assignee || lead.assigned_to === filters.assignee;
-      return matchesSearch && matchesPriority && matchesSource && matchesAssignee;
+      const matchesPipelineTag = !filters.pipelineTag || lead.pipeline_tag === filters.pipelineTag;
+      
+      // Filtro de dias na etapa
+      let matchesDaysInStage = true;
+      if (filters.daysInStage) {
+        const daysLimit = parseInt(filters.daysInStage);
+        const stageDate = lead.pipeline_stage_updated_at || lead.updated_at || lead.created_at;
+        if (stageDate) {
+          const daysDiff = differenceInDays(new Date(), new Date(stageDate));
+          matchesDaysInStage = daysDiff >= daysLimit;
+        }
+      }
+      
+      // Filtro de valor mínimo e máximo
+      let matchesMinValue = true;
+      let matchesMaxValue = true;
+      if (filters.minValue) {
+        matchesMinValue = (lead.value || 0) >= parseFloat(filters.minValue);
+      }
+      if (filters.maxValue) {
+        matchesMaxValue = (lead.value || 0) <= parseFloat(filters.maxValue);
+      }
+      
+      // Filtro de "tem valor"
+      let matchesHasValue = true;
+      if (filters.hasValue === true) {
+        matchesHasValue = lead.value != null && lead.value > 0;
+      }
+      
+      // Filtro de tags
+      let matchesTags = true;
+      if (filters.tags && filters.tags.length > 0) {
+        const leadTagNames = lead.tags?.map((t: any) => t.name) || [];
+        matchesTags = filters.tags.some(tag => leadTagNames.includes(tag));
+      }
+      
+      return matchesSearch && matchesSource && matchesAssignee && matchesPipelineTag && 
+             matchesDaysInStage && matchesMinValue && matchesMaxValue && matchesHasValue && matchesTags;
     });
   };
 

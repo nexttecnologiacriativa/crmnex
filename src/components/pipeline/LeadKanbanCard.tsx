@@ -93,8 +93,24 @@ export default function LeadKanbanCard({
             />
           )}
           
-          {/* Avatar com iniciais */}
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
+          {/* Avatar com foto do WhatsApp ou iniciais */}
+          {lead.profile_picture_url ? (
+            <img 
+              src={lead.profile_picture_url} 
+              alt={getLeadDisplayName(lead)}
+              className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+              onError={(e) => {
+                const target = e.currentTarget;
+                target.style.display = 'none';
+                const fallback = target.nextElementSibling as HTMLElement;
+                if (fallback) fallback.style.display = 'flex';
+              }}
+            />
+          ) : null}
+          <div 
+            className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-xs font-medium flex-shrink-0"
+            style={{ display: lead.profile_picture_url ? 'none' : 'flex' }}
+          >
             <AvatarInitials name={getLeadDisplayName(lead)} />
           </div>
           

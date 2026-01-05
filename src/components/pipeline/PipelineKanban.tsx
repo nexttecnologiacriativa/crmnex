@@ -440,7 +440,7 @@ export default function PipelineKanban({
                                   <div className="absolute inset-0 bg-gradient-to-r from-purple-100 to-blue-100 opacity-20 rounded animate-pulse"></div>
                                 </h3>
                                 <div className="text-xs text-gray-600 mt-1 my-[2px]">
-                                  R$ {stageLeads.reduce((sum, lead) => sum + (lead.value || 0), 0).toLocaleString('pt-BR', {
+                                  R$ {stageLeads.reduce((sum, lead) => sum + Math.max(lead.value || 0, 0), 0).toLocaleString('pt-BR', {
                             minimumFractionDigits: 2
                           })}
                                 </div>

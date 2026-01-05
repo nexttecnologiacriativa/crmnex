@@ -3,10 +3,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { normalizeForMatch } from '@/lib/phone';
 
-interface LeadResponseMetrics {
+export interface LeadResponseMetrics {
   avgFirstResponseTime: number | null; // em minutos
   avgWhatsAppResponseTime: number | null; // em minutos
   whatsAppPairsTotal: number;
+  whatsAppErrorMessage: string | null; // erro do RPC, se houver
   leadsWithoutResponse: number;
   leadsNeverContacted: number;
   leadsByIdleTime: {
@@ -24,11 +25,11 @@ interface LeadResponseMetrics {
   }>;
 }
 
-export function useLeadResponseMetrics() {
+export function useLeadResponseMetrics(daysBack: number = 30) {
   const { currentWorkspace } = useWorkspace();
 
   return useQuery({
-    queryKey: ['lead-response-metrics', currentWorkspace?.id],
+    queryKey: ['lead-response-metrics', currentWorkspace?.id, daysBack],
     queryFn: async (): Promise<LeadResponseMetrics> => {
       if (!currentWorkspace?.id) {
         return getEmptyMetrics();
@@ -37,13 +38,21 @@ export function useLeadResponseMetrics() {
       // Buscar métricas de resposta do WhatsApp via RPC (mais eficiente)
       const { data: whatsAppMetrics, error: rpcError } = await supabase.rpc(
         'get_whatsapp_response_metrics',
-        { p_workspace_id: currentWorkspace.id, p_days_back: 30 }
+        { p_workspace_id: currentWorkspace.id, p_days_back: daysBack }
       );
 
       let avgWhatsAppResponseTime: number | null = null;
       let whatsAppPairsTotal = 0;
+      let whatsAppErrorMessage: string | null = null;
 
-      if (!rpcError && whatsAppMetrics && whatsAppMetrics.length > 0) {
+      if (rpcError) {
+        console.error('[get_whatsapp_response_metrics] RPC error:', { 
+          workspaceId: currentWorkspace.id, 
+          daysBack,
+          error: rpcError 
+        });
+        whatsAppErrorMessage = rpcError.message || 'Erro ao carregar métricas';
+      } else if (whatsAppMetrics && whatsAppMetrics.length > 0) {
         const result = whatsAppMetrics[0];
         avgWhatsAppResponseTime = result.avg_minutes ? Number(result.avg_minutes) : null;
         whatsAppPairsTotal = result.pairs_total || 0;
@@ -67,7 +76,8 @@ export function useLeadResponseMetrics() {
         return {
           ...getEmptyMetrics(),
           avgWhatsAppResponseTime,
-          whatsAppPairsTotal
+          whatsAppPairsTotal,
+          whatsAppErrorMessage
         };
       }
 
@@ -251,6 +261,7 @@ export function useLeadResponseMetrics() {
         avgFirstResponseTime: firstResponseCount > 0 ? totalFirstResponseTime / firstResponseCount : null,
         avgWhatsAppResponseTime,
         whatsAppPairsTotal,
+        whatsAppErrorMessage,
         leadsWithoutResponse,
         leadsNeverContacted,
         leadsByIdleTime: idleBuckets,
@@ -268,6 +279,7 @@ function getEmptyMetrics(): LeadResponseMetrics {
     avgFirstResponseTime: null,
     avgWhatsAppResponseTime: null,
     whatsAppPairsTotal: 0,
+    whatsAppErrorMessage: null,
     leadsWithoutResponse: 0,
     leadsNeverContacted: 0,
     leadsByIdleTime: { '1-3 dias': 0, '4-7 dias': 0, '7+ dias': 0 },

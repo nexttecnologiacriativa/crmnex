@@ -1,9 +1,20 @@
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, UserX, MessageCircle, AlertTriangle, Timer, Zap } from 'lucide-react';
+import { Clock, UserX, MessageCircle, AlertTriangle, Timer, Zap, Building2 } from 'lucide-react';
 import { useLeadResponseMetrics, formatResponseTime } from '@/hooks/useLeadResponseMetrics';
+import { useWorkspace } from '@/hooks/useWorkspace';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { cn } from '@/lib/utils';
+
+const PERIOD_OPTIONS = [
+  { label: '7d', value: 7 },
+  { label: '30d', value: 30 },
+  { label: '90d', value: 90 },
+  { label: '1 ano', value: 365 }
+];
+
+const STORAGE_KEY = 'dashboard_whatsapp_days_back';
 
 function getStatusIndicator(type: 'response' | 'whatsapp', value: number | null) {
   if (value === null) return { color: 'bg-muted', pulse: false, label: 'Sem dados' };
@@ -22,7 +33,17 @@ function getStatusIndicator(type: 'response' | 'whatsapp', value: number | null)
 }
 
 export default function ResponseTimeMetrics() {
-  const { data: metrics, isLoading } = useLeadResponseMetrics();
+  const { currentWorkspace } = useWorkspace();
+  const [daysBack, setDaysBack] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? parseInt(saved, 10) : 30;
+  });
+  
+  const { data: metrics, isLoading, isError, error } = useLeadResponseMetrics(daysBack);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, daysBack.toString());
+  }, [daysBack]);
 
   if (isLoading) {
     return (
@@ -70,13 +91,35 @@ export default function ResponseTimeMetrics() {
         <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-1/3 w-24 h-24 bg-white/5 rounded-full translate-y-1/2" />
         
-        <CardTitle className="flex items-center gap-3 relative">
-          <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-            <Timer className="h-6 w-6" />
+        <CardTitle className="flex items-center justify-between gap-3 relative">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+              <Timer className="h-6 w-6" />
+            </div>
+            <div>
+              <span className="text-xl font-bold">Tempo de Atendimento</span>
+              <p className="text-sm text-white/70 font-normal mt-0.5 flex items-center gap-2">
+                <Building2 className="h-3.5 w-3.5" />
+                {currentWorkspace?.name || 'Carregando...'}
+              </p>
+            </div>
           </div>
-          <div>
-            <span className="text-xl font-bold">Tempo de Atendimento</span>
-            <p className="text-sm text-white/70 font-normal mt-0.5">Métricas de resposta e engajamento com leads</p>
+          {/* Period selector */}
+          <div className="flex gap-1 bg-white/10 rounded-lg p-1">
+            {PERIOD_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => setDaysBack(option.value)}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
+                  daysBack === option.value
+                    ? "bg-white text-nexcrm-blue"
+                    : "text-white/80 hover:bg-white/10"
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
         </CardTitle>
       </CardHeader>
@@ -118,12 +161,12 @@ export default function ResponseTimeMetrics() {
             <div className="absolute top-3 right-3">
               <span className={cn(
                 "flex h-3 w-3 rounded-full",
-                whatsAppStatus.color
+                metrics.whatsAppErrorMessage ? 'bg-red-500' : whatsAppStatus.color
               )}>
-                {whatsAppStatus.pulse && (
+                {(whatsAppStatus.pulse || metrics.whatsAppErrorMessage) && (
                   <span className={cn(
                     "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
-                    whatsAppStatus.color
+                    metrics.whatsAppErrorMessage ? 'bg-red-500' : whatsAppStatus.color
                   )} />
                 )}
               </span>
@@ -135,15 +178,27 @@ export default function ResponseTimeMetrics() {
               </div>
               <span className="text-sm font-medium text-muted-foreground">Resposta WhatsApp</span>
             </div>
-            <p className="text-3xl font-bold text-nexcrm-green">
-              {formatResponseTime(metrics.avgWhatsAppResponseTime)}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {metrics.whatsAppPairsTotal > 0 
-                ? `baseado em ${metrics.whatsAppPairsTotal} respostas`
-                : 'sem pares de resposta'
-              }
-            </p>
+            
+            {metrics.whatsAppErrorMessage ? (
+              <>
+                <p className="text-lg font-bold text-red-500">Erro</p>
+                <p className="text-xs text-red-400 mt-1 line-clamp-2">
+                  {metrics.whatsAppErrorMessage}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-3xl font-bold text-nexcrm-green">
+                  {formatResponseTime(metrics.avgWhatsAppResponseTime)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {metrics.whatsAppPairsTotal > 0 
+                    ? `baseado em ${metrics.whatsAppPairsTotal} respostas (${daysBack}d)`
+                    : `sem pares nos últimos ${daysBack} dias`
+                  }
+                </p>
+              </>
+            )}
           </div>
 
           {/* Leads Aguardando Resposta */}

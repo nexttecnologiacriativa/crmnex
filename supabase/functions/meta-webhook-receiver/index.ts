@@ -81,6 +81,14 @@ Deno.serve(async (req) => {
 
   const startTime = Date.now();
   
+  // Get request headers for debugging
+  const headers: Record<string, string> = {};
+  req.headers.forEach((value, key) => {
+    headers[key] = key.toLowerCase().includes('secret') || key.toLowerCase().includes('token') 
+      ? '[REDACTED]' 
+      : value;
+  });
+  
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -93,7 +101,9 @@ Deno.serve(async (req) => {
     console.log('🔔 Meta webhook received:', { 
       method: req.method, 
       integrationId,
-      url: req.url 
+      url: req.url,
+      headers: headers,
+      timestamp: new Date().toISOString()
     });
 
     if (!integrationId) {

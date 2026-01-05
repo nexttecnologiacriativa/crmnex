@@ -60,14 +60,15 @@ Deno.serve(async (req) => {
         `Para testar a integração completa, use a "Lead Ads Testing Tool" do Meta ` +
         `ou envie um lead real pelo formulário.`
       
+      // Return 200 OK with is_test flag to avoid webhook receiver marking as error
       return new Response(
         JSON.stringify({ 
-          error: 'webhook_test_event',
+          success: true,
+          is_test: true,
           message: testMessage,
-          leadgen_id: leadgen_id,
-          is_test: true
+          leadgen_id: leadgen_id
         }),
-        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 

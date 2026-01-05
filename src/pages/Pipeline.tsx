@@ -68,7 +68,7 @@ export default function Pipeline() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
+      <div className="p-6 h-[calc(100vh-2rem)] flex flex-col overflow-hidden">
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-3xl font-bold text-nexcrm-green">
@@ -98,17 +98,19 @@ export default function Pipeline() {
             onPipelineChange={setSelectedPipelineId}
           />
         </div>
-        {viewMode === 'kanban' ? (
-          <PipelineKanban 
-            selectedPipelineId={selectedPipelineId}
-            filters={filters}
-          />
-        ) : (
-          <PipelineListView 
-            selectedPipelineId={selectedPipelineId}
-            filters={filters}
-          />
-        )}
+        <div className="flex-1 overflow-hidden">
+          {viewMode === 'kanban' ? (
+            <PipelineKanban 
+              selectedPipelineId={selectedPipelineId}
+              filters={filters}
+            />
+          ) : (
+            <PipelineListView 
+              selectedPipelineId={selectedPipelineId}
+              filters={filters}
+            />
+          )}
+        </div>
       </div>
     </DashboardLayout>
   );

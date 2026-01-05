@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import TVMetricCard from '@/components/tv-dashboard/TVMetricCard';
 import TVActivityFeed from '@/components/tv-dashboard/TVActivityFeed';
 import TVFunnelChart from '@/components/tv-dashboard/TVFunnelChart';
-import TVLeaderboard from '@/components/tv-dashboard/TVLeaderboard';
+
 import TVSettings from '@/components/tv-dashboard/TVSettings';
 import TVAppointmentsCard from '@/components/tv-dashboard/TVAppointmentsCard';
 import TVResponseTimeCard from '@/components/tv-dashboard/TVResponseTimeCard';
@@ -190,16 +190,11 @@ export default function TVDashboard() {
           </div>
 
           {/* Row 2: Funil + Tempo de Atendimento */}
-          <div className="min-h-[180px] lg:min-h-0">
+          <div className="min-h-[200px] lg:min-h-0">
             <TVFunnelChart isDarkMode={isDarkMode} />
           </div>
-          <div className="min-h-[160px] lg:min-h-0">
+          <div className="min-h-[200px] lg:min-h-0">
             <TVResponseTimeCard isDarkMode={isDarkMode} />
-          </div>
-
-          {/* Row 3: Leaderboard full width */}
-          <div className="lg:col-span-2 min-h-[140px]">
-            <TVLeaderboard isDarkMode={isDarkMode} />
           </div>
         </div>
       </div>

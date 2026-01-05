@@ -10,6 +10,28 @@ interface MetaLeadRequest {
   leadgen_id: string
   form_id: string
   page_id: string
+  log_id?: string
+}
+
+interface GraphAPIError {
+  message: string
+  type: string
+  code: number
+  error_subcode?: number
+  fbtrace_id?: string
+}
+
+// Detect if this is a Meta webhook test (fake IDs)
+function isTestLeadgenId(leadgenId: string): boolean {
+  // Meta webhook test uses placeholder IDs like "444444444444444" or patterns like all same digits
+  if (/^(\d)\1{10,}$/.test(leadgenId)) {
+    return true
+  }
+  // Also check for known test patterns
+  if (leadgenId.startsWith('0') || leadgenId === 'test' || leadgenId.length < 10) {
+    return true
+  }
+  return false
 }
 
 Deno.serve(async (req) => {
@@ -18,14 +40,36 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now()
+
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { integration_id, leadgen_id, form_id, page_id } = await req.json() as MetaLeadRequest
-    console.log(`Processing lead ${leadgen_id} for integration ${integration_id}`)
+    const { integration_id, leadgen_id, form_id, page_id, log_id } = await req.json() as MetaLeadRequest
+    console.log(`🎯 Processing lead ${leadgen_id} for integration ${integration_id}`)
+
+    // Check if this is a test webhook with fake IDs
+    if (isTestLeadgenId(leadgen_id)) {
+      console.log(`⚠️ Detected Meta webhook test with fake leadgen_id: ${leadgen_id}`)
+      
+      const testMessage = `Este é um evento de TESTE do console de Webhooks do Meta. ` +
+        `O leadgen_id "${leadgen_id}" é fictício e não existe no Graph API. ` +
+        `Para testar a integração completa, use a "Lead Ads Testing Tool" do Meta ` +
+        `ou envie um lead real pelo formulário.`
+      
+      return new Response(
+        JSON.stringify({ 
+          error: 'webhook_test_event',
+          message: testMessage,
+          leadgen_id: leadgen_id,
+          is_test: true
+        }),
+        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     // Get integration details
     const { data: integration, error: integrationError } = await supabase
@@ -35,36 +79,76 @@ Deno.serve(async (req) => {
       .single()
 
     if (integrationError || !integration) {
-      console.error('Integration not found:', integrationError)
+      console.error('❌ Integration not found:', integrationError)
       return new Response(
-        JSON.stringify({ error: 'Integration not found' }),
+        JSON.stringify({ error: 'integration_not_found', message: 'Integration not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     if (!integration.is_active) {
-      console.log('Integration is not active, skipping lead processing')
+      console.log('⚠️ Integration is not active, skipping lead processing')
       return new Response(
-        JSON.stringify({ error: 'Integration is not active' }),
+        JSON.stringify({ error: 'integration_inactive', message: 'Integration is not active' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Fetch lead data from Meta API
-    const leadResponse = await fetch(
-      `https://graph.facebook.com/v18.0/${leadgen_id}?access_token=${integration.access_token}`
-    )
+    // Fetch lead data from Meta API with specific fields
+    const graphApiUrl = `https://graph.facebook.com/v18.0/${leadgen_id}?` + 
+      `fields=created_time,field_data,form_id,ad_id,adgroup_id,campaign_id,platform&` +
+      `access_token=${integration.access_token}`
+    
+    console.log(`📡 Fetching lead from Graph API: ${leadgen_id}`)
+    
+    const leadResponse = await fetch(graphApiUrl)
+    const leadResponseBody = await leadResponse.text()
 
     if (!leadResponse.ok) {
-      console.error('Failed to fetch lead from Meta API:', leadResponse.statusText)
+      let errorDetail: GraphAPIError | null = null
+      try {
+        const errorJson = JSON.parse(leadResponseBody)
+        errorDetail = errorJson.error as GraphAPIError
+      } catch {
+        // Response wasn't JSON
+      }
+
+      const errorMessage = errorDetail 
+        ? `Graph API Error: ${errorDetail.message} (code: ${errorDetail.code}, subcode: ${errorDetail.error_subcode || 'N/A'}, trace: ${errorDetail.fbtrace_id || 'N/A'})`
+        : `Graph API Error: HTTP ${leadResponse.status} - ${leadResponseBody.substring(0, 200)}`
+
+      console.error(`❌ Failed to fetch lead from Graph API:`, errorMessage)
+
+      // Determine appropriate status code
+      let statusCode = 500
+      if (leadResponse.status === 400) statusCode = 400
+      else if (leadResponse.status === 401 || leadResponse.status === 403) statusCode = 401
+      else if (leadResponse.status === 404) statusCode = 404
+
       return new Response(
-        JSON.stringify({ error: 'Failed to fetch lead data' }),
+        JSON.stringify({ 
+          error: 'graph_api_error',
+          message: errorMessage,
+          graph_status: leadResponse.status,
+          graph_error: errorDetail,
+          leadgen_id: leadgen_id
+        }),
+        { status: statusCode, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    let leadData
+    try {
+      leadData = JSON.parse(leadResponseBody)
+    } catch {
+      console.error('❌ Failed to parse Graph API response:', leadResponseBody.substring(0, 200))
+      return new Response(
+        JSON.stringify({ error: 'parse_error', message: 'Failed to parse Graph API response' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    const leadData = await leadResponse.json()
-    console.log('Lead data from Meta:', JSON.stringify(leadData, null, 2))
+    console.log('✅ Lead data from Meta:', JSON.stringify(leadData, null, 2))
 
     // Get form details if not exists
     const { data: existingForm } = await supabase
@@ -100,11 +184,13 @@ Deno.serve(async (req) => {
             page_name: pageData.name || 'Unknown Page',
             fields_schema: leadData.field_data || []
           })
+        
+        console.log('✅ Form registered:', formData.name)
       }
     }
 
     // Map Meta lead data to CRM lead format
-    const mappedData: any = {
+    const mappedData: Record<string, unknown> = {
       workspace_id: integration.workspace_id,
       pipeline_id: integration.selected_pipeline_id,
       source: 'Meta Lead Ads',
@@ -147,7 +233,7 @@ Deno.serve(async (req) => {
               if (!mappedData.custom_fields) {
                 mappedData.custom_fields = {}
               }
-              mappedData.custom_fields[metaFieldName] = field.values?.[0] || ''
+              (mappedData.custom_fields as Record<string, string>)[metaFieldName] = field.values?.[0] || ''
           }
         }
       }
@@ -161,7 +247,8 @@ Deno.serve(async (req) => {
       .single()
 
     if (pipeline?.pipeline_stages?.length > 0) {
-      const firstStage = pipeline.pipeline_stages.sort((a, b) => a.position - b.position)[0]
+      const stages = pipeline.pipeline_stages as Array<{ id: string; position: number }>
+      const firstStage = stages.sort((a, b) => a.position - b.position)[0]
       mappedData.stage_id = firstStage.id
     }
 
@@ -170,7 +257,7 @@ Deno.serve(async (req) => {
       mappedData.name = 'Lead from Meta'
     }
 
-    console.log('Mapped lead data:', JSON.stringify(mappedData, null, 2))
+    console.log('📝 Mapped lead data:', JSON.stringify(mappedData, null, 2))
 
     // Create lead in CRM
     const { data: newLead, error: leadError } = await supabase
@@ -180,40 +267,55 @@ Deno.serve(async (req) => {
       .single()
 
     if (leadError) {
-      console.error('Error creating lead:', leadError)
+      console.error('❌ Error creating lead:', leadError)
       return new Response(
-        JSON.stringify({ error: 'Failed to create lead' }),
+        JSON.stringify({ 
+          error: 'lead_creation_failed', 
+          message: leadError.message,
+          details: leadError.details
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     // Apply tags if configured
     if (integration.selected_tag_ids && integration.selected_tag_ids.length > 0) {
-      const tagInserts = integration.selected_tag_ids.map(tagId => ({
+      const tagInserts = integration.selected_tag_ids.map((tagId: string) => ({
         lead_id: newLead.id,
         tag_id: tagId
       }))
 
-      await supabase
+      const { error: tagError } = await supabase
         .from('lead_tag_relations')
         .insert(tagInserts)
+      
+      if (tagError) {
+        console.warn('⚠️ Error applying tags:', tagError)
+      } else {
+        console.log(`✅ Applied ${tagInserts.length} tags to lead`)
+      }
     }
 
-    console.log(`Lead created successfully: ${newLead.id}`)
+    const processingTime = Date.now() - startTime
+    console.log(`✅ Lead created successfully: ${newLead.id} (${processingTime}ms)`)
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         lead_id: newLead.id,
-        leadgen_id: leadgen_id
+        leadgen_id: leadgen_id,
+        processing_time_ms: processingTime
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
-    console.error('Meta lead processor error:', error)
+    console.error('❌ Meta lead processor error:', error)
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ 
+        error: 'internal_error', 
+        message: error instanceof Error ? error.message : 'Internal server error' 
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

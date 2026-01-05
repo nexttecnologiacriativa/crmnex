@@ -37,6 +37,42 @@ async function verifySignature(payload: string, signature: string, secret: strin
   }
 }
 
+// Extract error details from processor response
+function extractErrorMessage(processorResponse: { error?: { message?: string }; data?: unknown }): string {
+  // Try to get detailed error from the response data
+  if (processorResponse.data && typeof processorResponse.data === 'object') {
+    const data = processorResponse.data as Record<string, unknown>
+    if (data.message) return String(data.message)
+    if (data.error) return String(data.error)
+  }
+  
+  // Fall back to error object
+  if (processorResponse.error?.message) {
+    return processorResponse.error.message
+  }
+  
+  return 'Unknown error during lead processing'
+}
+
+// Determine log status based on processor response
+function determineLogStatus(processorResponse: { error?: unknown; data?: unknown }): string {
+  if (processorResponse.data && typeof processorResponse.data === 'object') {
+    const data = processorResponse.data as Record<string, unknown>
+    
+    // Check if it's a test webhook (HTTP 422)
+    if (data.is_test === true || data.error === 'webhook_test_event') {
+      return 'test_ignored'
+    }
+    
+    // Check if it was successful
+    if (data.success === true) {
+      return 'success'
+    }
+  }
+  
+  return 'error'
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -141,6 +177,7 @@ Deno.serve(async (req) => {
 
       // Process leadgen entries
       let leadsProcessed = 0;
+      let testsIgnored = 0;
       
       if (payload.entry) {
         for (const entry of payload.entry) {
@@ -179,22 +216,41 @@ Deno.serve(async (req) => {
                   }
                 })
 
-                if (processorResponse.error) {
-                  console.error('❌ Error processing lead:', processorResponse.error)
+                // Determine the status and extract error message
+                const logStatus = determineLogStatus(processorResponse)
+                const errorMessage = logStatus !== 'success' ? extractErrorMessage(processorResponse) : null
+
+                if (logStatus === 'test_ignored') {
+                  console.log(`⚠️ Test webhook ignored: ${leadgenId}`)
+                  testsIgnored++
                   
-                  // Update log with error
+                  if (logEntry?.id) {
+                    await supabase
+                      .from('meta_webhook_logs')
+                      .update({
+                        status: 'test_ignored',
+                        error_message: errorMessage,
+                        processing_time_ms: Date.now() - startTime
+                      })
+                      .eq('id', logEntry.id);
+                  }
+                } else if (logStatus === 'error' || processorResponse.error) {
+                  console.error('❌ Error processing lead:', errorMessage)
+                  
+                  // Update log with detailed error
                   if (logEntry?.id) {
                     await supabase
                       .from('meta_webhook_logs')
                       .update({
                         status: 'error',
-                        error_message: processorResponse.error.message || 'Unknown error',
+                        error_message: errorMessage,
                         processing_time_ms: Date.now() - startTime
                       })
                       .eq('id', logEntry.id);
                   }
                 } else {
-                  console.log('✅ Lead processed successfully:', processorResponse.data);
+                  const responseData = processorResponse.data as Record<string, unknown> | null
+                  console.log('✅ Lead processed successfully:', responseData);
                   leadsProcessed++;
                   
                   // Update log with success
@@ -203,7 +259,7 @@ Deno.serve(async (req) => {
                       .from('meta_webhook_logs')
                       .update({
                         status: 'success',
-                        lead_id: processorResponse.data?.lead_id,
+                        lead_id: responseData?.lead_id as string | undefined,
                         processing_time_ms: Date.now() - startTime
                       })
                       .eq('id', logEntry.id);
@@ -215,10 +271,11 @@ Deno.serve(async (req) => {
         }
       }
 
-      console.log(`✅ Webhook processed. Leads created: ${leadsProcessed}`);
+      console.log(`✅ Webhook processed. Leads created: ${leadsProcessed}, Tests ignored: ${testsIgnored}`);
       return new Response(JSON.stringify({ 
         success: true, 
-        leads_processed: leadsProcessed 
+        leads_processed: leadsProcessed,
+        tests_ignored: testsIgnored
       }), { 
         status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

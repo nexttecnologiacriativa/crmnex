@@ -1,24 +1,49 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, UserX, MessageCircle, AlertTriangle } from 'lucide-react';
+import { Clock, UserX, MessageCircle, AlertTriangle, Timer, Zap } from 'lucide-react';
 import { useLeadResponseMetrics, formatResponseTime } from '@/hooks/useLeadResponseMetrics';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { cn } from '@/lib/utils';
+
+function getStatusIndicator(type: 'response' | 'whatsapp', value: number | null) {
+  if (value === null) return { color: 'bg-muted', pulse: false, label: 'Sem dados' };
+  
+  if (type === 'response') {
+    // Tempo de primeiro atendimento: < 2h bom, < 24h ok, > 24h ruim
+    if (value < 120) return { color: 'bg-nexcrm-green', pulse: false, label: 'Excelente' };
+    if (value < 1440) return { color: 'bg-amber-500', pulse: false, label: 'Atenção' };
+    return { color: 'bg-red-500', pulse: true, label: 'Crítico' };
+  } else {
+    // Tempo de resposta WhatsApp: < 15min bom, < 60min ok, > 60min ruim
+    if (value < 15) return { color: 'bg-nexcrm-green', pulse: false, label: 'Excelente' };
+    if (value < 60) return { color: 'bg-amber-500', pulse: false, label: 'Atenção' };
+    return { color: 'bg-red-500', pulse: true, label: 'Crítico' };
+  }
+}
 
 export default function ResponseTimeMetrics() {
   const { data: metrics, isLoading } = useLeadResponseMetrics();
 
   if (isLoading) {
     return (
-      <Card className="border-0 shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-nexcrm-blue/10 to-nexcrm-green/10 p-6">
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Tempo de Atendimento
+      <Card className="border-0 shadow-xl rounded-2xl overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-nexcrm-blue via-nexcrm-blue/80 to-nexcrm-green p-6 text-white">
+          <CardTitle className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+              <Timer className="h-5 w-5" />
+            </div>
+            <div>
+              <span className="text-lg font-bold">Tempo de Atendimento</span>
+              <p className="text-xs text-white/70 font-normal mt-0.5">Métricas de resposta e engajamento</p>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="flex items-center justify-center h-32">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-nexcrm-blue"></div>
+          <div className="flex items-center justify-center h-40">
+            <div className="flex flex-col items-center gap-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-nexcrm-blue"></div>
+              <span className="text-sm text-muted-foreground">Calculando métricas...</span>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -26,6 +51,9 @@ export default function ResponseTimeMetrics() {
   }
 
   if (!metrics) return null;
+
+  const firstResponseStatus = getStatusIndicator('response', metrics.avgFirstResponseTime);
+  const whatsAppStatus = getStatusIndicator('whatsapp', metrics.avgWhatsAppResponseTime);
 
   const idleData = [
     { name: '1-3 dias', value: metrics.leadsByIdleTime['1-3 dias'], color: 'hsl(var(--nexcrm-green))' },
@@ -36,87 +64,148 @@ export default function ResponseTimeMetrics() {
   const totalIdle = idleData.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <Card className="border-0 shadow-lg">
-      <CardHeader className="bg-gradient-to-r from-nexcrm-blue/10 to-nexcrm-green/10 p-6">
-        <CardTitle className="flex items-center gap-2">
-          <Clock className="h-5 w-5 text-nexcrm-blue" />
-          Tempo de Atendimento
+    <Card className="border-0 shadow-xl rounded-2xl overflow-hidden">
+      <CardHeader className="bg-gradient-to-r from-nexcrm-blue via-nexcrm-blue/90 to-nexcrm-green p-6 text-white relative overflow-hidden">
+        {/* Decorative elements */}
+        <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-1/3 w-24 h-24 bg-white/5 rounded-full translate-y-1/2" />
+        
+        <CardTitle className="flex items-center gap-3 relative">
+          <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+            <Timer className="h-6 w-6" />
+          </div>
+          <div>
+            <span className="text-xl font-bold">Tempo de Atendimento</span>
+            <p className="text-sm text-white/70 font-normal mt-0.5">Métricas de resposta e engajamento com leads</p>
+          </div>
         </CardTitle>
       </CardHeader>
+      
       <CardContent className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Tempo Médio de 1º Atendimento */}
-          <div className="bg-gradient-to-br from-nexcrm-blue/10 to-nexcrm-blue/5 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-nexcrm-blue/20 flex items-center justify-center">
-                <Clock className="h-4 w-4 text-nexcrm-blue" />
-              </div>
-              <span className="text-sm text-muted-foreground">1º Atendimento</span>
+          <div className="relative bg-gradient-to-br from-nexcrm-blue/10 via-nexcrm-blue/5 to-transparent rounded-2xl p-5 border border-nexcrm-blue/20 hover:border-nexcrm-blue/40 transition-colors group">
+            {/* Status indicator */}
+            <div className="absolute top-3 right-3">
+              <span className={cn(
+                "flex h-3 w-3 rounded-full",
+                firstResponseStatus.color
+              )}>
+                {firstResponseStatus.pulse && (
+                  <span className={cn(
+                    "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
+                    firstResponseStatus.color
+                  )} />
+                )}
+              </span>
             </div>
-            <p className="text-2xl font-bold text-nexcrm-blue">
+            
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-nexcrm-blue/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Clock className="h-5 w-5 text-nexcrm-blue" />
+              </div>
+              <span className="text-sm font-medium text-muted-foreground">1º Atendimento</span>
+            </div>
+            <p className="text-3xl font-bold text-nexcrm-blue">
               {formatResponseTime(metrics.avgFirstResponseTime)}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">tempo médio</p>
+            <p className="text-xs text-muted-foreground mt-1">tempo médio de resposta</p>
           </div>
 
           {/* Tempo de Resposta WhatsApp */}
-          <div className="bg-gradient-to-br from-nexcrm-green/10 to-nexcrm-green/5 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-nexcrm-green/20 flex items-center justify-center">
-                <MessageCircle className="h-4 w-4 text-nexcrm-green" />
-              </div>
-              <span className="text-sm text-muted-foreground">Resposta WhatsApp</span>
+          <div className="relative bg-gradient-to-br from-nexcrm-green/10 via-nexcrm-green/5 to-transparent rounded-2xl p-5 border border-nexcrm-green/20 hover:border-nexcrm-green/40 transition-colors group">
+            {/* Status indicator */}
+            <div className="absolute top-3 right-3">
+              <span className={cn(
+                "flex h-3 w-3 rounded-full",
+                whatsAppStatus.color
+              )}>
+                {whatsAppStatus.pulse && (
+                  <span className={cn(
+                    "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
+                    whatsAppStatus.color
+                  )} />
+                )}
+              </span>
             </div>
-            <p className="text-2xl font-bold text-nexcrm-green">
+            
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-nexcrm-green/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <MessageCircle className="h-5 w-5 text-nexcrm-green" />
+              </div>
+              <span className="text-sm font-medium text-muted-foreground">Resposta WhatsApp</span>
+            </div>
+            <p className="text-3xl font-bold text-nexcrm-green">
               {formatResponseTime(metrics.avgWhatsAppResponseTime)}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">tempo médio</p>
+            <p className="text-xs text-muted-foreground mt-1">tempo médio de resposta</p>
           </div>
 
           {/* Leads Aguardando Resposta */}
-          <div className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <div className="relative bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent rounded-2xl p-5 border border-amber-500/20 hover:border-amber-500/40 transition-colors group">
+            {metrics.leadsWithoutResponse > 0 && (
+              <div className="absolute top-3 right-3">
+                <span className="flex h-3 w-3 rounded-full bg-amber-500">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75" />
+                </span>
               </div>
-              <span className="text-sm text-muted-foreground">Aguardando Resposta</span>
+            )}
+            
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <AlertTriangle className="h-5 w-5 text-amber-600" />
+              </div>
+              <span className="text-sm font-medium text-muted-foreground">Aguardando</span>
             </div>
-            <p className="text-2xl font-bold text-amber-600">
+            <p className="text-3xl font-bold text-amber-600">
               {metrics.leadsWithoutResponse}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">leads</p>
+            <p className="text-xs text-muted-foreground mt-1">leads sem resposta</p>
           </div>
 
           {/* Leads Nunca Contatados */}
-          <div className="bg-gradient-to-br from-red-500/10 to-red-500/5 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
-                <UserX className="h-4 w-4 text-red-600" />
+          <div className="relative bg-gradient-to-br from-red-500/10 via-red-500/5 to-transparent rounded-2xl p-5 border border-red-500/20 hover:border-red-500/40 transition-colors group">
+            {metrics.leadsNeverContacted > 5 && (
+              <div className="absolute top-3 right-3">
+                <span className="flex h-3 w-3 rounded-full bg-red-500">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+                </span>
               </div>
-              <span className="text-sm text-muted-foreground">Sem Contato</span>
+            )}
+            
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <UserX className="h-5 w-5 text-red-600" />
+              </div>
+              <span className="text-sm font-medium text-muted-foreground">Sem Contato</span>
             </div>
-            <p className="text-2xl font-bold text-red-600">
+            <p className="text-3xl font-bold text-red-600">
               {metrics.leadsNeverContacted}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">leads</p>
+            <p className="text-xs text-muted-foreground mt-1">leads nunca contatados</p>
           </div>
         </div>
 
         {/* Gráfico de Leads Parados */}
         {totalIdle > 0 && (
           <div className="mt-6 pt-6 border-t">
-            <h4 className="text-sm font-medium mb-4">Leads por Tempo Parado</h4>
-            <div className="flex items-center gap-6">
-              <div className="w-32 h-32">
+            <div className="flex items-center gap-2 mb-4">
+              <Zap className="h-4 w-4 text-nexcrm-blue" />
+              <h4 className="text-sm font-semibold">Leads por Tempo Parado</h4>
+              <Badge variant="secondary" className="ml-auto">{totalIdle} leads inativos</Badge>
+            </div>
+            <div className="flex items-center gap-8">
+              <div className="w-40 h-40">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={idleData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={25}
-                      outerRadius={50}
+                      innerRadius={30}
+                      outerRadius={60}
                       dataKey="value"
+                      strokeWidth={0}
                     >
                       {idleData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
@@ -124,21 +213,35 @@ export default function ResponseTimeMetrics() {
                     </Pie>
                     <Tooltip 
                       formatter={(value: number) => [`${value} leads`, '']}
+                      contentStyle={{ 
+                        borderRadius: '12px', 
+                        border: 'none', 
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                        padding: '8px 12px'
+                      }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="flex-1 space-y-2">
+              <div className="flex-1 space-y-3">
                 {idleData.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                  <div key={index} className="flex items-center justify-between p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors">
+                    <div className="flex items-center gap-3">
                       <div 
-                        className="w-3 h-3 rounded-full" 
+                        className="w-4 h-4 rounded-full shadow-sm" 
                         style={{ backgroundColor: item.color }}
                       />
-                      <span className="text-sm">{item.name}</span>
+                      <span className="text-sm font-medium">{item.name}</span>
                     </div>
-                    <Badge variant="outline" className="text-xs">
+                    <Badge 
+                      variant="outline" 
+                      className={cn(
+                        "text-xs font-semibold",
+                        item.name === '7+ dias' && "border-red-200 bg-red-50 text-red-600",
+                        item.name === '4-7 dias' && "border-amber-200 bg-amber-50 text-amber-600",
+                        item.name === '1-3 dias' && "border-green-200 bg-green-50 text-green-600"
+                      )}
+                    >
                       {item.value} leads
                     </Badge>
                   </div>

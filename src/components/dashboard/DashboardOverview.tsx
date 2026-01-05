@@ -1,9 +1,8 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
-import { Users, TrendingUp, CheckSquare, Activity, Eye, ExternalLink, PieChart, Calendar } from 'lucide-react';
+import { Users, TrendingUp, CheckSquare, Activity, Eye, ExternalLink, PieChart, Calendar, Sparkles } from 'lucide-react';
 import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { useLeads, useLeadsCount } from '@/hooks/useLeads';
 import { useTasks } from '@/hooks/useTasks';
@@ -40,7 +39,8 @@ export default function DashboardOverview() {
       title: 'Total de Leads',
       value: (leadsCount ?? leads.length),
       icon: Users,
-      gradient: 'from-nexcrm-blue to-nexcrm-blue/80',
+      gradient: 'from-nexcrm-blue via-nexcrm-blue to-blue-600',
+      iconBg: 'bg-white/20',
     },
     {
       title: 'Leads este mês',
@@ -50,19 +50,22 @@ export default function DashboardOverview() {
         return leadDate.getMonth() === now.getMonth() && leadDate.getFullYear() === now.getFullYear();
       }).length,
       icon: TrendingUp,
-      gradient: 'from-nexcrm-green to-nexcrm-green/80',
+      gradient: 'from-nexcrm-green via-nexcrm-green to-emerald-600',
+      iconBg: 'bg-white/20',
     },
     {
       title: 'Tarefas Pendentes',
       value: pendingTasks.length,
       icon: CheckSquare,
-      gradient: 'from-nexcrm-blue/80 to-nexcrm-blue/60',
+      gradient: 'from-amber-500 via-amber-500 to-orange-500',
+      iconBg: 'bg-white/20',
     },
     {
       title: 'Total de Tarefas',
       value: tasks.length,
       icon: Activity,
-      gradient: 'from-nexcrm-green/80 to-nexcrm-green/60',
+      gradient: 'from-purple-500 via-purple-500 to-indigo-600',
+      iconBg: 'bg-white/20',
     },
   ];
 
@@ -110,19 +113,31 @@ export default function DashboardOverview() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 md:space-y-8">
-      {/* Stats Cards */}
+      {/* Stats Cards - Visual Impactante */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {stats.map((stat, index) => (
-          <Card key={index} className="border-0 shadow-lg overflow-hidden">
+          <Card 
+            key={index} 
+            className="border-0 shadow-xl rounded-2xl overflow-hidden hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 group"
+          >
             <CardContent className="p-0">
-              <div className="bg-nexcrm-green p-4 md:p-6 text-white">
-                <div className="flex items-center justify-between">
+              <div className={`bg-gradient-to-br ${stat.gradient} p-6 text-white relative overflow-hidden`}>
+                {/* Decorative patterns */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-110 transition-transform duration-500" />
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+                <div className="absolute top-1/2 right-1/4 w-16 h-16 bg-white/5 rounded-full" />
+                
+                <div className="relative flex items-center justify-between">
                   <div>
-                    <p className="text-xs md:text-sm font-medium text-white/90">{stat.title}</p>
-                    <p className="text-2xl md:text-3xl font-bold">{stat.value}</p>
+                    <p className="text-sm font-medium text-white/80 mb-1">{stat.title}</p>
+                    <p className="text-4xl font-bold tracking-tight">{stat.value}</p>
+                    <div className="flex items-center gap-1 mt-2 text-xs text-white/70">
+                      <Sparkles className="h-3 w-3" />
+                      <span>Atualizado agora</span>
+                    </div>
                   </div>
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/20 backdrop-blur-sm">
-                    <stat.icon className="h-6 w-6 text-white" />
+                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${stat.iconBg} backdrop-blur-sm group-hover:scale-110 transition-transform duration-300`}>
+                    <stat.icon className="h-8 w-8 text-white" />
                   </div>
                 </div>
               </div>
@@ -131,72 +146,35 @@ export default function DashboardOverview() {
         ))}
       </div>
 
+      {/* Response Time Metrics - Moved ABOVE AI Insights */}
+      <ResponseTimeMetrics />
+
       {/* AI Insights Section */}
       <AIInsightsCard />
 
       {/* Leads Funnel Chart */}
       <LeadsFunnelChart />
 
-      {/* Performance by Origin */}
-      <Card className="border-0 shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-nexcrm-blue/10 to-nexcrm-green/10 p-6">
-          <CardTitle className="flex items-center gap-2">
-            <PieChart className="h-5 w-5" />
-            Performance por Origem (UTM)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          {utmData.length > 0 ? (
-            <ChartContainer config={chartConfig} className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <RechartsPieChart>
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Pie 
-                    data={utmData} 
-                    cx="50%" 
-                    cy="50%" 
-                    outerRadius="70%"
-                    fill="#8884d8" 
-                    dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}`}
-                    labelLine={false}
-                  >
-                    {utmData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <ChartLegend content={<ChartLegendContent />} />
-                </RechartsPieChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          ) : (
-            <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-              Nenhum dado de UTM disponível
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Response Time Metrics */}
-      <ResponseTimeMetrics />
-
-      {/* Appointments Card - Full Width */}
+      {/* Appointments Card */}
       <AppointmentsCard />
 
       {/* Recent Content */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
         {/* Recent Leads */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-nexcrm-blue/10 to-nexcrm-green/10 p-4 md:p-6">
+        <Card className="border-0 shadow-xl rounded-2xl overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-nexcrm-blue/10 via-nexcrm-blue/5 to-transparent p-4 md:p-6 border-b">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base md:text-lg font-semibold text-nexcrm-blue">
-                Últimos 5 Leads
+              <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-nexcrm-blue/10 flex items-center justify-center">
+                  <Users className="h-4 w-4 text-nexcrm-blue" />
+                </div>
+                Últimos Leads
               </CardTitle>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate('/leads')}
-                className="text-nexcrm-green hover:text-nexcrm-green/80"
+                className="text-nexcrm-blue hover:text-nexcrm-blue/80 hover:bg-nexcrm-blue/10"
               >
                 <ExternalLink className="h-4 w-4 mr-1" />
                 <span className="hidden sm:inline">Ver todos</span>
@@ -205,19 +183,28 @@ export default function DashboardOverview() {
           </CardHeader>
           <CardContent className="p-4 md:p-6">
             {recentLeads.length > 0 ? (
-              <div className="space-y-3 md:space-y-4">
-                {recentLeads.map((lead) => (
-                  <div key={lead.id} className="border rounded-lg p-3 hover:bg-gray-50 transition-colors">
+              <div className="space-y-3">
+                {recentLeads.map((lead, index) => (
+                  <div 
+                    key={lead.id} 
+                    className="border border-border/50 rounded-xl p-4 hover:bg-muted/50 hover:border-nexcrm-blue/30 transition-all duration-200 cursor-pointer group"
+                    onClick={() => navigate(`/leads/${lead.id}`)}
+                  >
                     <div className="flex items-center justify-between">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-sm md:text-base truncate">{getLeadDisplayName(lead)}</p>
-                        <p className="text-xs md:text-sm text-gray-600 truncate">{lead.company}</p>
+                      <div className="min-w-0 flex-1 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-nexcrm-blue to-nexcrm-green flex items-center justify-center text-white font-semibold text-sm">
+                          {getLeadDisplayName(lead).charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm group-hover:text-nexcrm-blue transition-colors truncate">{getLeadDisplayName(lead)}</p>
+                          <p className="text-xs text-muted-foreground truncate">{lead.company || lead.email || 'Sem empresa'}</p>
+                        </div>
                       </div>
                       <div className="text-right ml-2 flex-shrink-0">
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="secondary" className="text-xs bg-nexcrm-blue/10 text-nexcrm-blue border-0">
                           {lead.utm_source || 'Direto'}
                         </Badge>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                           {new Date(lead.created_at).toLocaleDateString('pt-BR')}
                         </p>
                       </div>
@@ -226,23 +213,29 @@ export default function DashboardOverview() {
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-center py-8 text-sm md:text-base">Nenhum lead encontrado</p>
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <Users className="h-12 w-12 mb-3 opacity-20" />
+                <p className="text-sm">Nenhum lead encontrado</p>
+              </div>
             )}
           </CardContent>
         </Card>
 
         {/* Recent Tasks */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-nexcrm-green/10 to-nexcrm-blue/10 p-4 md:p-6">
+        <Card className="border-0 shadow-xl rounded-2xl overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-nexcrm-green/10 via-nexcrm-green/5 to-transparent p-4 md:p-6 border-b">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base md:text-lg font-semibold text-nexcrm-green">
-                Últimas 5 Tarefas
+              <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-nexcrm-green/10 flex items-center justify-center">
+                  <CheckSquare className="h-4 w-4 text-nexcrm-green" />
+                </div>
+                Últimas Tarefas
               </CardTitle>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate('/tasks')}
-                className="text-nexcrm-blue hover:text-nexcrm-blue/80"
+                className="text-nexcrm-green hover:text-nexcrm-green/80 hover:bg-nexcrm-green/10"
               >
                 <ExternalLink className="h-4 w-4 mr-1" />
                 <span className="hidden sm:inline">Ver todos</span>
@@ -251,29 +244,33 @@ export default function DashboardOverview() {
           </CardHeader>
           <CardContent className="p-4 md:p-6">
             {recentTasks.length > 0 ? (
-              <div className="space-y-3 md:space-y-4">
+              <div className="space-y-3">
                 {recentTasks.map((task) => (
-                  <div key={task.id} className="border rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                  <div 
+                    key={task.id} 
+                    className="border border-border/50 rounded-xl p-4 hover:bg-muted/50 hover:border-nexcrm-green/30 transition-all duration-200 cursor-pointer group"
+                    onClick={() => handleViewTask(task)}
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm md:text-base truncate">{task.title}</p>
-                        <p className="text-xs md:text-sm text-gray-600 truncate">{task.description}</p>
+                        <p className="font-semibold text-sm group-hover:text-nexcrm-green transition-colors truncate">{task.title}</p>
+                        <p className="text-xs text-muted-foreground truncate mt-1">{task.description}</p>
                         {task.leads && (
                           <p className="text-xs text-nexcrm-blue mt-1 truncate">
                             Lead: {task.leads.name}
                           </p>
                         )}
                       </div>
-                      <div className="text-right flex items-center gap-2 ml-2 flex-shrink-0">
+                      <div className="text-right flex items-center gap-2 ml-3 flex-shrink-0">
                         <div>
                           <Badge 
-                            variant={task.priority === 'high' || task.priority === 'urgent' ? 'destructive' : 'outline'}
+                            variant={task.priority === 'high' || task.priority === 'urgent' ? 'destructive' : 'secondary'}
                             className="text-xs"
                           >
                             {priorityLabels[task.priority]}
                           </Badge>
                           {task.due_date && (
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-muted-foreground mt-1">
                               {new Date(task.due_date).toLocaleDateString('pt-BR')}
                             </p>
                           )}
@@ -281,8 +278,11 @@ export default function DashboardOverview() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-nexcrm-green"
-                          onClick={() => handleViewTask(task)}
+                          className="text-nexcrm-green opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewTask(task);
+                          }}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -292,7 +292,10 @@ export default function DashboardOverview() {
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-center py-8 text-sm md:text-base">Nenhuma tarefa encontrada</p>
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <CheckSquare className="h-12 w-12 mb-3 opacity-20" />
+                <p className="text-sm">Nenhuma tarefa encontrada</p>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -301,16 +304,18 @@ export default function DashboardOverview() {
       {/* Charts Row - Responsive Layout */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
         {/* UTM Sources Chart */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="p-4 md:p-6">
-            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-              <PieChart className="h-4 w-4 md:h-5 md:w-5 text-nexcrm-blue" />
-              <span className="truncate">Leads por Origem (UTM Source)</span>
+        <Card className="border-0 shadow-xl rounded-2xl overflow-hidden">
+          <CardHeader className="p-4 md:p-6 border-b bg-gradient-to-r from-nexcrm-blue/5 to-transparent">
+            <CardTitle className="flex items-center gap-2 text-lg font-bold">
+              <div className="w-8 h-8 rounded-lg bg-nexcrm-blue/10 flex items-center justify-center">
+                <PieChart className="h-4 w-4 text-nexcrm-blue" />
+              </div>
+              Leads por Origem
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 md:p-6">
             {utmData.length > 0 ? (
-              <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px] lg:h-[350px]">
+              <ChartContainer config={chartConfig} className="h-[280px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartsPieChart>
                     <ChartTooltip content={<ChartTooltipContent />} />
@@ -333,24 +338,29 @@ export default function DashboardOverview() {
                 </ResponsiveContainer>
               </ChartContainer>
             ) : (
-              <p className="text-gray-500 text-center py-8 text-sm md:text-base">Nenhum dado de UTM disponível</p>
+              <div className="h-[280px] flex flex-col items-center justify-center text-muted-foreground">
+                <PieChart className="h-12 w-12 mb-3 opacity-20" />
+                <p className="text-sm">Nenhum dado de UTM disponível</p>
+              </div>
             )}
           </CardContent>
         </Card>
 
         {/* Tasks Status Chart */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="p-4 md:p-6">
-            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-              <Calendar className="h-4 w-4 md:h-5 md:w-5 text-nexcrm-green" />
-              <span className="truncate">Tarefas por Status</span>
+        <Card className="border-0 shadow-xl rounded-2xl overflow-hidden">
+          <CardHeader className="p-4 md:p-6 border-b bg-gradient-to-r from-nexcrm-green/5 to-transparent">
+            <CardTitle className="flex items-center gap-2 text-lg font-bold">
+              <div className="w-8 h-8 rounded-lg bg-nexcrm-green/10 flex items-center justify-center">
+                <Calendar className="h-4 w-4 text-nexcrm-green" />
+              </div>
+              Tarefas por Status
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 md:p-6">
-            <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px] lg:h-[350px]">
+            <ChartContainer config={chartConfig} className="h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={taskStatusData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
+                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                   <XAxis 
                     dataKey="status" 
                     tick={{ fontSize: 12 }}
@@ -361,7 +371,7 @@ export default function DashboardOverview() {
                   />
                   <YAxis tick={{ fontSize: 12 }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="count" fill="hsl(var(--nexcrm-green))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="count" fill="hsl(var(--nexcrm-green))" radius={[8, 8, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </ChartContainer>

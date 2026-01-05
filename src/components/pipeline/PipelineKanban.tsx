@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { Plus, Trash2, GripVertical, CheckSquare, Square, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, GripVertical, CheckSquare, Square, ChevronDown, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import LeadKanbanCard from './LeadKanbanCard';
@@ -145,7 +145,7 @@ export default function PipelineKanban({
     return acc;
   }, {});
 
-  const { getVisibleLeads, loadMoreLeads, hasMoreLeads, resetPagination } = useStagePagination({ 
+  const { getVisibleLeads, loadMoreLeads, loadAllLeads, hasMoreLeads, resetPagination } = useStagePagination({ 
     leads: leads || [],
     leadsPerPage: 20 
   });
@@ -402,8 +402,8 @@ export default function PipelineKanban({
       </div>
 
       <div className="flex-1 overflow-hidden flex flex-col">
-        <ScrollArea className="h-full">
-          <ScrollBar orientation="horizontal" className="opacity-100 h-3 bg-gray-100 rounded-lg mb-2" />
+        <ScrollArea className="h-full flex flex-col">
+          <ScrollBar orientation="horizontal" className="flex opacity-100 h-3 bg-blue-100 hover:bg-blue-200 rounded-lg mb-2 cursor-grab active:cursor-grabbing" />
           <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable droppableId="stages" direction="horizontal" type="stage">
               {provided => <div ref={provided.innerRef} {...provided.droppableProps} className="flex gap-6 h-full pb-4">
@@ -488,15 +488,26 @@ export default function PipelineKanban({
                                   </Draggable>)}
                                 {provided.placeholder}
                                 {showLoadMore && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => loadMoreLeads(stage.id)}
-                                    className="w-full mt-2 text-gray-500 hover:text-gray-700"
-                                  >
-                                    <ChevronDown className="h-4 w-4 mr-2" />
-                                    Carregar mais leads ({stageLeads.length - visibleLeads.length} restantes)
-                                  </Button>
+                                  <div className="flex flex-col gap-2 mt-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => loadMoreLeads(stage.id)}
+                                      className="w-full text-gray-500 hover:text-gray-700"
+                                    >
+                                      <ChevronDown className="h-4 w-4 mr-2" />
+                                      Carregar mais ({stageLeads.length - visibleLeads.length} restantes)
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => loadAllLeads(stage.id, stageLeads.length)}
+                                      className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
+                                    >
+                                      <List className="h-4 w-4 mr-2" />
+                                      Ver todos ({stageLeads.length})
+                                    </Button>
+                                  </div>
                                 )}
                               </div>}
                           </Droppable>

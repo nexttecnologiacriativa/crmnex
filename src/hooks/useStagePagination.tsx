@@ -20,6 +20,14 @@ export function useStagePagination({ leads, leadsPerPage = 20 }: UseStagePaginat
     }));
   }, []);
 
+  const loadAllLeads = useCallback((stageId: string, totalLeads: number) => {
+    const pagesNeeded = Math.ceil(totalLeads / leadsPerPage);
+    setLoadedPages(prev => ({
+      ...prev,
+      [stageId]: pagesNeeded
+    }));
+  }, [leadsPerPage]);
+
   const hasMoreLeads = useCallback((stageId: string, stageLeads: any[]) => {
     const pages = loadedPages[stageId] || 1;
     return stageLeads.length > pages * leadsPerPage;
@@ -36,6 +44,7 @@ export function useStagePagination({ leads, leadsPerPage = 20 }: UseStagePaginat
   return {
     getVisibleLeads,
     loadMoreLeads,
+    loadAllLeads,
     hasMoreLeads,
     resetPagination
   };

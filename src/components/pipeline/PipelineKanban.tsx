@@ -117,9 +117,6 @@ export default function PipelineKanban({
           lead_pipeline_relations!inner (
             stage_id,
             pipeline_id
-          ),
-          whatsapp_conversations (
-            profile_picture_url
           )
         `)
         .eq('workspace_id', workspace.id)
@@ -132,11 +129,27 @@ export default function PipelineKanban({
         return [];
       }
       
-      // Usar o stage_id da relação específica deste pipeline e extrair foto do WhatsApp
+      // Buscar fotos do WhatsApp separadamente (não há FK formal)
+      const leadIds = (data || []).map(l => l.id);
+      const { data: conversations } = await supabase
+        .from('whatsapp_conversations')
+        .select('lead_id, profile_picture_url')
+        .in('lead_id', leadIds)
+        .not('profile_picture_url', 'is', null);
+
+      // Criar mapa de fotos por lead_id
+      const photoMap: Record<string, string> = {};
+      (conversations || []).forEach(c => {
+        if (c.lead_id && c.profile_picture_url) {
+          photoMap[c.lead_id] = c.profile_picture_url;
+        }
+      });
+      
+      // Usar o stage_id da relação específica deste pipeline e adicionar foto do WhatsApp
       return (data || []).map(lead => ({
         ...lead,
         stage_id: lead.lead_pipeline_relations?.[0]?.stage_id || lead.stage_id,
-        profile_picture_url: lead.whatsapp_conversations?.[0]?.profile_picture_url || null
+        profile_picture_url: photoMap[lead.id] || null
       }));
     },
     enabled: !!selectedPipelineId && !!workspace?.id

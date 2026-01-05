@@ -14,6 +14,7 @@ import { getLeadDisplayName } from '../../lib/leadUtils';
 import LeadsFunnelChart from './LeadsFunnelChart';
 import AIInsightsCard from './AIInsightsCard';
 import AppointmentsCard from './AppointmentsCard';
+import ResponseTimeMetrics from './ResponseTimeMetrics';
 
 export default function DashboardOverview() {
   const { currentWorkspace } = useWorkspace();
@@ -175,6 +176,9 @@ export default function DashboardOverview() {
           )}
         </CardContent>
       </Card>
+
+      {/* Response Time Metrics */}
+      <ResponseTimeMetrics />
 
       {/* Appointments Card - Full Width */}
       <AppointmentsCard />

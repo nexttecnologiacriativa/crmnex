@@ -30,6 +30,8 @@ export interface MetaLeadForm {
   last_sync_at: string | null;
   created_at: string;
   updated_at: string;
+  selected_tag_ids?: string[];
+  field_mapping?: Record<string, string>;
 }
 
 export interface CreateMetaIntegrationData {

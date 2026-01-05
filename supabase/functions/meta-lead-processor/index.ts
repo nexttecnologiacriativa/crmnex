@@ -150,10 +150,10 @@ Deno.serve(async (req) => {
 
     console.log('✅ Lead data from Meta:', JSON.stringify(leadData, null, 2))
 
-    // Get form details if not exists
+    // Get form details (with tags and field mapping)
     const { data: existingForm } = await supabase
       .from('meta_lead_forms')
-      .select('*')
+      .select('*, selected_tag_ids, field_mapping')
       .eq('integration_id', integration_id)
       .eq('meta_form_id', form_id)
       .single()
@@ -182,7 +182,9 @@ Deno.serve(async (req) => {
             form_name: formData.name || 'Unknown Form',
             page_id: page_id,
             page_name: pageData.name || 'Unknown Page',
-            fields_schema: leadData.field_data || []
+            fields_schema: leadData.field_data || [],
+            selected_tag_ids: [],
+            field_mapping: {}
           })
         
         console.log('✅ Form registered:', formData.name)
@@ -200,33 +202,49 @@ Deno.serve(async (req) => {
       utm_content: page_id
     }
 
-    // Apply field mapping
-    const fieldMapping = integration.field_mapping || {}
+    // Merge field mappings: form-specific overrides integration-level
+    const integrationMapping = integration.field_mapping || {}
+    const formMapping = existingForm?.field_mapping || {}
+    const fieldMapping = { ...integrationMapping, ...formMapping }
+    
+    console.log('📋 Field mapping:', JSON.stringify(fieldMapping, null, 2))
     
     if (leadData.field_data) {
       for (const field of leadData.field_data) {
         const metaFieldName = field.name.toLowerCase()
         const crmField = fieldMapping[metaFieldName]
 
-        if (crmField) {
-          mappedData[crmField] = field.values?.[0] || ''
+        if (crmField && crmField !== '') {
+          // Skip if set to ignore
+          if (crmField === '_ignore') continue
+          
+          // Handle custom fields
+          if (crmField.startsWith('custom_fields.')) {
+            const customFieldName = crmField.replace('custom_fields.', '')
+            if (!mappedData.custom_fields) {
+              mappedData.custom_fields = {}
+            }
+            (mappedData.custom_fields as Record<string, string>)[customFieldName] = field.values?.[0] || ''
+          } else {
+            mappedData[crmField] = field.values?.[0] || ''
+          }
         } else {
           // Default mapping for common fields
           switch (metaFieldName) {
             case 'full_name':
             case 'name':
-              mappedData.name = field.values?.[0] || ''
+              if (!mappedData.name) mappedData.name = field.values?.[0] || ''
               break
             case 'email':
-              mappedData.email = field.values?.[0] || ''
+              if (!mappedData.email) mappedData.email = field.values?.[0] || ''
               break
             case 'phone_number':
             case 'phone':
-              mappedData.phone = field.values?.[0] || ''
+              if (!mappedData.phone) mappedData.phone = field.values?.[0] || ''
               break
             case 'company_name':
             case 'company':
-              mappedData.company = field.values?.[0] || ''
+              if (!mappedData.company) mappedData.company = field.values?.[0] || ''
               break
             default:
               // Store unmapped fields in custom_fields
@@ -278,9 +296,15 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Determine which tags to apply: form-specific or integration-level
+    const formTagIds = existingForm?.selected_tag_ids || []
+    const tagsToApply = (formTagIds.length > 0) ? formTagIds : (integration.selected_tag_ids || [])
+    
+    console.log('🏷️ Tags to apply:', tagsToApply, '(form-specific:', formTagIds.length > 0, ')')
+
     // Apply tags if configured
-    if (integration.selected_tag_ids && integration.selected_tag_ids.length > 0) {
-      const tagInserts = integration.selected_tag_ids.map((tagId: string) => ({
+    if (tagsToApply.length > 0) {
+      const tagInserts = tagsToApply.map((tagId: string) => ({
         lead_id: newLead.id,
         tag_id: tagId
       }))

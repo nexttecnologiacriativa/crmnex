@@ -16,6 +16,7 @@ import { useLeadTags } from '@/hooks/useLeadTags';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import MetaSetupInstructions from './MetaSetupInstructions';
 import MetaWebhookLogs from './MetaWebhookLogs';
+import MetaFormSettings from './MetaFormSettings';
 import { Trash2, RefreshCw, ExternalLink, Facebook, AlertCircle, CheckCircle2, HelpCircle, Copy } from 'lucide-react';
 
 interface MetaIntegrationsSettingsProps {
@@ -511,25 +512,24 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
                       </Button>
                     </div>
                     
-                    {forms.length > 0 ? (
-                      <div className="space-y-2">
+                    {selectedIntegrationId === integration.id && forms.length > 0 ? (
+                      <div className="space-y-4">
                         {forms.map((form) => (
-                          <div key={form.id} className="p-3 border rounded-lg">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="font-medium text-sm">{form.form_name}</p>
-                                <p className="text-xs text-muted-foreground">{form.page_name}</p>
-                              </div>
-                              <Badge variant="outline">
-                                {form.fields_schema?.length || 0} campos
-                              </Badge>
-                            </div>
-                          </div>
+                          <MetaFormSettings 
+                            key={form.id} 
+                            form={form}
+                            integrationTagIds={integration.selected_tag_ids || []}
+                            onUpdate={() => refetch()}
+                          />
                         ))}
                       </div>
-                    ) : (
+                    ) : selectedIntegrationId === integration.id ? (
                       <p className="text-sm text-muted-foreground py-4 text-center">
                         Nenhum formulário encontrado. Clique em "Sincronizar" para buscar.
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground py-4 text-center">
+                        Clique na aba para carregar os formulários
                       </p>
                     )}
                   </TabsContent>

@@ -5,7 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useLeadById, useUpdateLead } from '@/hooks/useLeads';
 import { useWorkspaces } from '@/hooks/useWorkspace';
 import { useLeadActivities, useCreateLeadActivity } from '@/hooks/useLeadActivities';
@@ -20,6 +22,7 @@ import LeadTimeline from './LeadTimeline';
 import { LeadAppointments } from './LeadAppointments';
 import { useDeleteLead } from '@/hooks/useLeads';
 import { getLeadDisplayName } from '@/lib/leadUtils';
+import { supabase } from '@/integrations/supabase/client';
 
 const statusColors = {
   new: 'bg-blue-100 text-blue-800',
@@ -61,6 +64,43 @@ export default function LeadDetailPage() {
   const { data: workspaces } = useWorkspaces();
   const currentWorkspace = workspaces?.[0];
   const { data: lead, isLoading: isLoadingLead } = useLeadById(id);
+
+  // Buscar foto do WhatsApp
+  const { data: profilePicture } = useQuery({
+    queryKey: ['lead-whatsapp-photo', lead?.id, lead?.phone],
+    queryFn: async () => {
+      if (!lead) return null;
+      
+      // Buscar por lead_id primeiro
+      const { data: byLeadId } = await supabase
+        .from('whatsapp_conversations')
+        .select('profile_picture_url')
+        .eq('lead_id', lead.id)
+        .not('profile_picture_url', 'is', null)
+        .limit(1)
+        .maybeSingle();
+      
+      if (byLeadId?.profile_picture_url) {
+        return byLeadId.profile_picture_url;
+      }
+      
+      // Fallback: buscar por telefone
+      if (lead.phone) {
+        const { data: byPhone } = await supabase
+          .from('whatsapp_conversations')
+          .select('profile_picture_url')
+          .eq('phone_number', lead.phone)
+          .not('profile_picture_url', 'is', null)
+          .limit(1)
+          .maybeSingle();
+        
+        return byPhone?.profile_picture_url || null;
+      }
+      
+      return null;
+    },
+    enabled: !!lead
+  });
 
   const { data: activities = [] } = useLeadActivities(id || '');
   
@@ -139,6 +179,18 @@ export default function LeadDetailPage() {
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Voltar
               </Button>
+              
+              {/* Avatar do Lead com foto do WhatsApp */}
+              <Avatar className="h-16 w-16 border-2 border-white shadow-lg shrink-0">
+                <AvatarImage 
+                  src={profilePicture || undefined} 
+                  alt={getLeadDisplayName(lead)}
+                />
+                <AvatarFallback className="text-lg font-semibold bg-gradient-to-br from-nexcrm-green to-nexcrm-blue text-white">
+                  {getLeadDisplayName(lead).split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              
               <div className="flex-1">
                 <h1 className="text-2xl md:text-3xl font-bold text-nexcrm-green">
                   {getLeadDisplayName(lead)}

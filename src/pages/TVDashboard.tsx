@@ -134,8 +134,8 @@ export default function TVDashboard() {
           </div>
         )}
 
-        {/* Hero Metrics */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 mb-3">
+        {/* Hero Metrics - Compact */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5 sm:gap-2 mb-2">
           <TVMetricCard
             title="Leads Hoje"
             value={metrics.leadsToday}
@@ -179,29 +179,27 @@ export default function TVDashboard() {
           />
         </div>
 
-        {/* Main Dashboard Grid - Responsive */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-3 min-h-0 overflow-auto">
-          {/* Left Column */}
-          <div className="flex flex-col gap-3 min-h-0">
-            <div className="min-h-[200px] lg:min-h-0 lg:flex-1">
-              <TVAppointmentsCard isDarkMode={isDarkMode} />
-            </div>
-            <div className="min-h-[200px] lg:min-h-0 lg:flex-1">
-              <TVResponseTimeCard isDarkMode={isDarkMode} />
-            </div>
+        {/* Main Dashboard Grid */}
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-2 min-h-0 overflow-auto">
+          {/* Row 1: Agendamentos + Atividades lado a lado */}
+          <div className="min-h-[160px] lg:min-h-0">
+            <TVAppointmentsCard isDarkMode={isDarkMode} />
+          </div>
+          <div className="min-h-[160px] lg:min-h-0">
+            <TVActivityFeed isDarkMode={isDarkMode} />
           </div>
 
-          {/* Right Column */}
-          <div className="flex flex-col gap-3 min-h-0">
-            <div className="min-h-[280px] lg:min-h-0 lg:flex-[1.2]">
-              <TVFunnelChart isDarkMode={isDarkMode} />
-            </div>
-            <div className="min-h-[200px] lg:min-h-0 lg:flex-1">
-              <TVLeaderboard isDarkMode={isDarkMode} />
-            </div>
-            <div className="min-h-[180px] lg:min-h-0 lg:flex-[0.8]">
-              <TVActivityFeed isDarkMode={isDarkMode} />
-            </div>
+          {/* Row 2: Funil + Tempo de Atendimento */}
+          <div className="min-h-[180px] lg:min-h-0">
+            <TVFunnelChart isDarkMode={isDarkMode} />
+          </div>
+          <div className="min-h-[160px] lg:min-h-0">
+            <TVResponseTimeCard isDarkMode={isDarkMode} />
+          </div>
+
+          {/* Row 3: Leaderboard full width */}
+          <div className="lg:col-span-2 min-h-[140px]">
+            <TVLeaderboard isDarkMode={isDarkMode} />
           </div>
         </div>
       </div>

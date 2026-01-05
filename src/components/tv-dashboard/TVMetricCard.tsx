@@ -86,7 +86,7 @@ export default function TVMetricCard({
       }}
       transition={{ duration: 0.5 }}
     >
-      <Card className={cn('p-4 transition-all hover:scale-105 relative overflow-hidden shadow-2xl h-full', variantStyles[variant])}>
+      <Card className={cn('p-2 sm:p-3 transition-all hover:scale-105 relative overflow-hidden shadow-xl h-full', variantStyles[variant])}>
         {isUpdating && (
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-[shimmer_1s_ease-in-out]" 
             style={{
@@ -96,9 +96,9 @@ export default function TVMetricCard({
           />
         )}
         
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-1.5 sm:mb-2">
           <motion.span 
-            className="text-3xl drop-shadow-lg"
+            className="text-xl sm:text-2xl drop-shadow-lg"
             animate={{ rotate: isUpdating ? [0, 10, -10, 0] : 0 }}
             transition={{ duration: 0.5 }}
           >
@@ -107,23 +107,23 @@ export default function TVMetricCard({
           {change !== undefined && (
             <motion.div 
               className={cn(
-                'flex items-center gap-1 text-sm font-bold px-2 py-1 rounded-full',
+                'flex items-center gap-0.5 text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded-full',
                 isDarkMode ? 'text-white bg-white/20' : 'text-[hsl(209,100%,15%)] bg-white/60'
               )}
               animate={{ scale: isUpdating ? [1, 1.1, 1] : 1 }}
             >
-              {change >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+              {change >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
               {Math.abs(change)}%
             </motion.div>
           )}
         </div>
 
-        <div className="space-y-2 relative z-10">
-          <p className="text-sm font-semibold text-white/90">
+        <div className="space-y-1 relative z-10">
+          <p className="text-[10px] sm:text-xs font-semibold text-white/90">
             {title}
           </p>
           <motion.p 
-            className="text-3xl font-bold drop-shadow-lg text-white"
+            className="text-xl sm:text-2xl font-bold drop-shadow-lg text-white"
             animate={{ 
               scale: isUpdating ? [1, 1.05, 1] : 1
             }}
@@ -135,20 +135,20 @@ export default function TVMetricCard({
           </motion.p>
 
         {goal && (
-          <div className="space-y-1 mt-2">
-            <div className="flex justify-between text-xs font-semibold text-white/80">
+          <div className="space-y-0.5 mt-1">
+            <div className="flex justify-between text-[9px] sm:text-[10px] font-semibold text-white/80">
               <span>Meta: {prefix}{goal.toLocaleString('pt-BR')}{suffix}</span>
-              <span className="font-bold px-2 rounded-full text-white bg-white/20">
+              <span className="font-bold px-1 rounded-full text-white bg-white/20">
                 {goalProgress?.toFixed(0)}%
               </span>
             </div>
             <div className={cn(
-              "w-full rounded-full h-2",
+              "w-full rounded-full h-1.5",
               isDarkMode ? "bg-white/20" : "bg-white/40"
             )}>
               <motion.div
                 className={cn(
-                  'h-2 rounded-full transition-all duration-1000',
+                  'h-1.5 rounded-full transition-all duration-1000',
                   isAboveGoal && (isDarkMode ? 'bg-white' : 'bg-[hsl(87,57%,45%)]'),
                   isNearGoal && (isDarkMode ? 'bg-yellow-300' : 'bg-[hsl(87,50%,50%)]'),
                   !isAboveGoal && !isNearGoal && (isDarkMode ? 'bg-white/50' : 'bg-[hsl(209,100%,25%)]')

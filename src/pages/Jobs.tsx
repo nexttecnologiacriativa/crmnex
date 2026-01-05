@@ -64,52 +64,55 @@ export default function Jobs() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
-        <div className="mb-6">
-          <div className="flex items-center justify-between">
+      <div className="p-4 md:p-6">
+        <div className="mb-4 md:mb-6">
+          {/* Header - responsivo */}
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-nexcrm-green">
+              <h1 className="text-2xl md:text-3xl font-bold text-nexcrm-green">
                 Jobs
               </h1>
-              <p className="text-gray-600 mt-1">
+              <p className="text-gray-600 mt-1 text-sm md:text-base">
                 Gerencie tarefas e projetos da sua equipe
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 md:gap-3 flex-wrap">
               <div className="flex items-center bg-gray-100 rounded-lg p-1">
                 <Button
                   variant={viewMode === 'kanban' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('kanban')}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-1 md:gap-2 px-2 md:px-3"
                 >
                   <Kanban className="h-4 w-4" />
-                  Kanban
+                  <span className="hidden md:inline">Kanban</span>
                 </Button>
                 <Button
                   variant={viewMode === 'list' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('list')}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-1 md:gap-2 px-2 md:px-3"
                 >
                   <List className="h-4 w-4" />
-                  Lista
+                  <span className="hidden md:inline">Lista</span>
                 </Button>
               </div>
               <Button
                 variant="outline"
                 onClick={() => setIsFiltersOpen(true)}
-                className="flex items-center gap-2"
+                size="sm"
+                className="flex items-center gap-1 md:gap-2 px-2 md:px-3"
               >
                 <Filter className="h-4 w-4" />
-                Filtros
+                <span className="hidden md:inline">Filtros</span>
               </Button>
               <Button
                 onClick={() => setIsCreateDialogOpen(true)}
-                className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                size="sm"
+                className="flex items-center gap-1 md:gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-2 md:px-3"
               >
                 <Plus className="h-4 w-4" />
-                Novo Job
+                <span className="hidden md:inline">Novo Job</span>
               </Button>
             </div>
           </div>

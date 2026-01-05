@@ -5,10 +5,9 @@ import TVMetricCard from '@/components/tv-dashboard/TVMetricCard';
 import TVActivityFeed from '@/components/tv-dashboard/TVActivityFeed';
 import TVFunnelChart from '@/components/tv-dashboard/TVFunnelChart';
 import TVLeaderboard from '@/components/tv-dashboard/TVLeaderboard';
-import TVPerformanceChart from '@/components/tv-dashboard/TVPerformanceChart';
-import TVTopTags from '@/components/tv-dashboard/TVTopTags';
 import TVSettings from '@/components/tv-dashboard/TVSettings';
 import TVAppointmentsCard from '@/components/tv-dashboard/TVAppointmentsCard';
+import TVResponseTimeCard from '@/components/tv-dashboard/TVResponseTimeCard';
 import { useTVDashboardMetrics } from '@/hooks/useTVDashboardMetrics';
 import { useTVDashboardRealtime } from '@/hooks/useTVDashboardRealtime';
 import { cn } from '@/lib/utils';
@@ -136,7 +135,7 @@ export default function TVDashboard() {
         )}
 
         {/* Hero Metrics */}
-        <div className="grid grid-cols-5 gap-3 mb-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 mb-3">
           <TVMetricCard
             title="Leads Hoje"
             value={metrics.leadsToday}
@@ -180,31 +179,28 @@ export default function TVDashboard() {
           />
         </div>
 
-        {/* Main Dashboard Grid - Otimizado para uma tela */}
-        <div className="flex-1 grid grid-cols-12 gap-3 min-h-0">
-          {/* Left Column - Appointments & Funnel */}
-          <div className="col-span-7 flex flex-col gap-3 min-h-0">
-            <div className="flex-[0.8] min-h-0">
+        {/* Main Dashboard Grid - Responsive */}
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-3 min-h-0 overflow-auto">
+          {/* Left Column */}
+          <div className="flex flex-col gap-3 min-h-0">
+            <div className="min-h-[200px] lg:min-h-0 lg:flex-1">
               <TVAppointmentsCard isDarkMode={isDarkMode} />
             </div>
-            <div className="flex-[1.2] min-h-0">
-              <TVFunnelChart isDarkMode={isDarkMode} />
+            <div className="min-h-[200px] lg:min-h-0 lg:flex-1">
+              <TVResponseTimeCard isDarkMode={isDarkMode} />
             </div>
           </div>
 
-          {/* Right Column - Leaderboard, Activities, Performance & Tags */}
-          <div className="col-span-5 flex flex-col gap-3 min-h-0">
-            <div className="flex-[1.2] min-h-0">
+          {/* Right Column */}
+          <div className="flex flex-col gap-3 min-h-0">
+            <div className="min-h-[280px] lg:min-h-0 lg:flex-[1.2]">
+              <TVFunnelChart isDarkMode={isDarkMode} />
+            </div>
+            <div className="min-h-[200px] lg:min-h-0 lg:flex-1">
               <TVLeaderboard isDarkMode={isDarkMode} />
             </div>
-            <div className="flex-1 min-h-0">
+            <div className="min-h-[180px] lg:min-h-0 lg:flex-[0.8]">
               <TVActivityFeed isDarkMode={isDarkMode} />
-            </div>
-            <div className="flex-[0.9] min-h-0">
-              <TVPerformanceChart isDarkMode={isDarkMode} />
-            </div>
-            <div className="flex-[0.7] min-h-0">
-              <TVTopTags isDarkMode={isDarkMode} />
             </div>
           </div>
         </div>

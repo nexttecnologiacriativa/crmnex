@@ -58,7 +58,7 @@ export default function AIInsightsCard() {
     queryKey: ['ai-insights', currentWorkspace?.id],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('crm-ai-insights', {
-        body: { force_refresh: false }
+        body: { force_refresh: false, workspace_id: currentWorkspace?.id }
       });
       
       if (error) {
@@ -83,7 +83,7 @@ export default function AIInsightsCard() {
       
       // Call the function with force_refresh to bypass cache
       const { data, error } = await supabase.functions.invoke('crm-ai-insights', {
-        body: { force_refresh: true }
+        body: { force_refresh: true, workspace_id: currentWorkspace.id }
       });
       
       if (error) {

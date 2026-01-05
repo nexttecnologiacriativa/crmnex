@@ -82,15 +82,29 @@ export default function TVFunnelChart({ isDarkMode }: TVFunnelChartProps) {
 
   return (
     <Card className={cn(
-      "h-full",
-      isDarkMode ? "bg-gray-800/50 border-gray-700" : "bg-white/80"
+      "h-full border-0 shadow-xl rounded-2xl overflow-hidden relative transition-all duration-300 hover:shadow-2xl",
+      isDarkMode ? "bg-gray-800/90" : "bg-white"
     )}>
-      <CardHeader className="pb-1 pt-2 px-3">
+      {/* Decorative Elements */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
+      <div className="absolute bottom-0 left-0 w-24 h-24 bg-green-500/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-xl" />
+
+      <CardHeader className={cn(
+        "pb-1 pt-2 px-3 border-b relative",
+        isDarkMode 
+          ? "bg-gradient-to-r from-green-500/20 via-green-500/10 to-transparent border-gray-700/50"
+          : "bg-gradient-to-r from-green-500/10 via-green-500/5 to-transparent border-gray-100"
+      )}>
         <CardTitle className={cn(
           "text-sm sm:text-base flex items-center gap-2",
-          isDarkMode ? "text-white" : ""
+          isDarkMode ? "text-white" : "text-gray-800"
         )}>
-          <TrendingUp className="h-4 w-4 text-primary" />
+          <div className={cn(
+            "w-7 h-7 rounded-lg flex items-center justify-center",
+            isDarkMode ? "bg-green-500/20" : "bg-green-500/10"
+          )}>
+            <TrendingUp className="h-4 w-4 text-green-500" />
+          </div>
           Funil do Dia
           <span className="ml-auto flex items-center gap-1 text-[10px] font-normal text-muted-foreground">
             <span className="relative flex h-1.5 w-1.5">
@@ -101,20 +115,22 @@ export default function TVFunnelChart({ isDarkMode }: TVFunnelChartProps) {
           </span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-0 px-3 pb-2">
+      <CardContent className="pt-2 px-3 pb-2 relative">
         {/* Summary Cards */}
         <div className="grid grid-cols-2 gap-1.5 mb-2">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             className={cn(
-              "p-1.5 sm:p-2 rounded-lg text-center",
-              isDarkMode ? "bg-gray-700/50" : "bg-primary/10"
+              "p-1.5 sm:p-2 rounded-xl text-center shadow-lg border transition-all hover:scale-[1.02]",
+              isDarkMode 
+                ? "bg-gradient-to-br from-blue-500/20 to-blue-500/5 border-blue-500/20" 
+                : "bg-gradient-to-br from-blue-500/10 to-blue-50 border-blue-100"
             )}
           >
             <div className={cn(
-              "text-[9px] sm:text-[10px]",
-              isDarkMode ? "text-gray-300" : "text-muted-foreground"
+              "text-[9px] sm:text-[10px] font-medium",
+              isDarkMode ? "text-blue-300" : "text-blue-600"
             )}>
               Leads Hoje
             </div>
@@ -124,7 +140,7 @@ export default function TVFunnelChart({ isDarkMode }: TVFunnelChartProps) {
               animate={{ scale: 1 }}
               className={cn(
                 "text-lg sm:text-xl font-bold",
-                isDarkMode ? "text-white" : "text-primary"
+                isDarkMode ? "text-white" : "text-blue-600"
               )}
             >
               {totalLeads}
@@ -135,13 +151,15 @@ export default function TVFunnelChart({ isDarkMode }: TVFunnelChartProps) {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
             className={cn(
-              "p-1.5 sm:p-2 rounded-lg text-center",
-              isDarkMode ? "bg-gray-700/50" : "bg-green-500/10"
+              "p-1.5 sm:p-2 rounded-xl text-center shadow-lg border transition-all hover:scale-[1.02]",
+              isDarkMode 
+                ? "bg-gradient-to-br from-green-500/20 to-green-500/5 border-green-500/20" 
+                : "bg-gradient-to-br from-green-500/10 to-green-50 border-green-100"
             )}
           >
             <div className={cn(
-              "text-[9px] sm:text-[10px]",
-              isDarkMode ? "text-gray-300" : "text-muted-foreground"
+              "text-[9px] sm:text-[10px] font-medium",
+              isDarkMode ? "text-green-300" : "text-green-600"
             )}>
               Valor Total
             </div>
@@ -183,27 +201,27 @@ export default function TVFunnelChart({ isDarkMode }: TVFunnelChartProps) {
                         initial={{ width: 0 }}
                         animate={{ width: `${widthPercent}%` }}
                         transition={{ duration: 0.4, delay: index * 0.08 }}
-                        className="h-6 sm:h-7 rounded flex items-center justify-between px-2"
+                        className="h-6 sm:h-7 rounded-lg flex items-center justify-between px-2 shadow-md"
                         style={{ 
-                          background: `linear-gradient(90deg, ${stage.color}dd, ${stage.color}88)`,
+                          background: `linear-gradient(90deg, ${stage.color}ee, ${stage.color}aa)`,
                         }}
                       >
-                        <span className="text-[10px] sm:text-xs font-medium text-white truncate max-w-[60%]">
+                        <span className="text-[10px] sm:text-xs font-medium text-white truncate max-w-[60%] drop-shadow-sm">
                           {stage.name}
                         </span>
                         <motion.span
                           key={stage.count}
                           initial={{ scale: 0.8 }}
                           animate={{ scale: 1 }}
-                          className="text-xs sm:text-sm font-bold text-white"
+                          className="text-xs sm:text-sm font-bold text-white drop-shadow-sm"
                         >
                           {stage.count}
                         </motion.span>
                       </motion.div>
                     </div>
                     <div className={cn(
-                      "text-[10px] sm:text-xs font-medium w-14 sm:w-16 text-right",
-                      isDarkMode ? "text-gray-300" : "text-muted-foreground"
+                      "text-[10px] sm:text-xs font-semibold w-14 sm:w-16 text-right",
+                      isDarkMode ? "text-gray-300" : "text-gray-600"
                     )}>
                       {formatCurrency(stage.value)}
                     </div>

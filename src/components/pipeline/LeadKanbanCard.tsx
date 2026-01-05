@@ -1,49 +1,63 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format, formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Mail, Phone, Building, DollarSign, Calendar, Edit, Plus, Globe, Tag, Check, Clock, MessageCircle, CheckCircle2 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { MoreVertical, MessageCircle, Eye, Tag } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import EditLeadDialog from '../leads/EditLeadDialog';
-import CreateTaskFromLeadDialog from '../tasks/CreateTaskFromLeadDialog';
-import LeadAssigneeSelector from '../leads/LeadAssigneeSelector';
-import PipelineTagSelector from './PipelineTagSelector';
+import { AvatarInitials } from '@/components/ui/avatar-initials';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useLeadTagRelations } from '@/hooks/useLeadTags';
 import { getLeadDisplayName } from '@/lib/leadUtils';
-import { isBrazilianMobile } from '@/lib/phone';
 
 interface LeadKanbanCardProps {
   lead: any;
-  hasWhatsApp?: boolean;
   isSelected?: boolean;
   onSelect?: (leadId: string, selected: boolean) => void;
   selectionMode?: boolean;
 }
+
+const pipelineTagColors: Record<string, string> = {
+  aberto: '#3b82f6',
+  ganho: '#22c55e',
+  perdido: '#ef4444',
+};
+
+const pipelineTagLabels: Record<string, string> = {
+  aberto: 'Aberto',
+  ganho: 'Pago',
+  perdido: 'Perdido',
+};
+
 export default function LeadKanbanCard({
   lead,
-  hasWhatsApp = false,
   isSelected = false,
   onSelect,
   selectionMode = false
 }: LeadKanbanCardProps) {
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const navigate = useNavigate();
   const {
     data: leadTagRelations = []
   } = useLeadTagRelations(lead.id);
 
   // Filtrar tags válidas sem duplicatas
-  const validTags = leadTagRelations.filter(relation => relation && relation.lead_tags).map(relation => relation.lead_tags).filter((tag, index, self) => tag && self.findIndex(t => t && t.id === tag.id) === index);
+  const validTags = leadTagRelations
+    .filter(relation => relation && relation.lead_tags)
+    .map(relation => relation.lead_tags)
+    .filter((tag, index, self) => tag && self.findIndex(t => t && t.id === tag.id) === index);
+
   const handleCardClick = (event: React.MouseEvent) => {
     const target = event.target as HTMLElement;
     
     // Se estiver em modo de seleção, apenas selecionar/deselecionar
     if (selectionMode && onSelect) {
-      // Verificar se não é um checkbox ou botão
       if (!target.closest('input[type="checkbox"]') && !target.closest('button')) {
         onSelect(lead.id, !isSelected);
         return;
@@ -54,168 +68,111 @@ export default function LeadKanbanCard({
     if (target.tagName === 'BUTTON' || target.closest('button')) {
       return;
     }
-
-    // Verificar se é o seletor de assignee
-    if (target.closest('[data-assignee-selector]')) {
-      return;
-    }
     
     // Se não estiver em modo de seleção, navegar normalmente
     if (!selectionMode) {
       navigate(`/leads/${lead.id}`);
     }
   };
-  const handleButtonClick = (e: React.MouseEvent, action: () => void) => {
-    e.stopPropagation();
-    action();
-  };
-  return <>
-      <Card className={`mb-3 hover:shadow-md transition-shadow bg-white cursor-pointer ${isSelected ? 'ring-2 ring-purple-500 bg-purple-50' : ''}`} onClick={handleCardClick}>
-        <CardHeader className="pb-2">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                {selectionMode && (
-                  <Checkbox
-                    checked={isSelected}
-                    onCheckedChange={(checked) => onSelect?.(lead.id, checked as boolean)}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                )}
-                <CardTitle className="text-sm font-semibold text-gray-900">{getLeadDisplayName(lead)}</CardTitle>
-              </div>
-              
-              {/* Dono do Lead - posicionado logo após o nome */}
-              <div className="mb-2" data-assignee-selector>
-                <LeadAssigneeSelector leadId={lead.id} currentAssignee={lead.assigned_to} />
-              </div>
 
-              {lead.utm_source && <div className="text-xs text-gray-500 mb-2">
-                  <Globe className="h-3 w-3 inline mr-1" />
-                  {lead.utm_source}
-                </div>}
+  const pipelineTag = lead.pipeline_tag || 'aberto';
 
-              {/* Badge de status WhatsApp */}
-              {lead.phone && (
-                <div className="flex items-center gap-1 mt-1">
-                  {isBrazilianMobile(lead.phone) ? (
-                    hasWhatsApp ? (
-                      <Badge variant="default" className="bg-green-600 text-white text-[10px] px-1.5 py-0.5 h-4">
-                        <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
-                        WhatsApp
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="border-orange-500 text-orange-700 text-[10px] px-1.5 py-0.5 h-4">
-                        <Phone className="h-2.5 w-2.5 mr-0.5" />
-                        Sem WhatsApp
-                      </Badge>
-                    )
-                  ) : (
-                    <Badge variant="outline" className="border-blue-500 text-blue-700 text-[10px] px-1.5 py-0.5 h-4">
-                      <Phone className="h-2.5 w-2.5 mr-0.5" />
-                      Fixo
-                    </Badge>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="flex items-center gap-1">
-              {/* Botão Falar - Condicional baseado em WhatsApp */}
-              {lead.phone && isBrazilianMobile(lead.phone) && hasWhatsApp && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={e => handleButtonClick(e, () => {
-                    navigate('/atendimento', { state: { leadId: lead.id, phone: lead.phone } });
-                  })} 
-                  className="h-6 px-2 bg-green-100 hover:bg-green-200 text-green-700"
-                  title="Falar com o lead no WhatsApp"
-                >
-                  <MessageCircle className="h-3 w-3 mr-1" />
-                  <span className="text-xs">Falar</span>
-                </Button>
-              )}
-            </div>
+  return (
+    <Card 
+      className={`mb-2 hover:shadow-sm transition-shadow bg-white cursor-pointer ${isSelected ? 'ring-2 ring-purple-500 bg-purple-50' : ''}`} 
+      onClick={handleCardClick}
+    >
+      <CardContent className="p-3">
+        <div className="flex items-center gap-3">
+          {/* Checkbox de seleção */}
+          {selectionMode && (
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={(checked) => onSelect?.(lead.id, checked as boolean)}
+              onClick={(e) => e.stopPropagation()}
+            />
+          )}
+          
+          {/* Avatar com iniciais */}
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
+            <AvatarInitials name={getLeadDisplayName(lead)} />
           </div>
           
-          {/* Pipeline Tag */}
-          <div className="mb-2">
-            <PipelineTagSelector leadId={lead.id} currentTag={lead.pipeline_tag} />
-          </div>
-        </CardHeader>
-
-        <CardContent className="pt-0 space-y-2">
-          <div className="space-y-1 text-xs">
-            {lead.email && <div className="flex items-center gap-1 text-gray-600">
-                <Mail className="h-3 w-3" />
-                <span className="truncate">{lead.email}</span>
-              </div>}
-
-            {lead.phone && <div className="flex items-center gap-1 text-gray-600">
-                <Phone className="h-3 w-3" />
-                <span>{lead.phone}</span>
-              </div>}
-
-            {lead.company && <div className="flex items-center gap-0 text-gray-600">
-                <Building className="h-3 w-3" />
-                <span className="truncate">{lead.company}</span>
-              </div>}
-
-            {lead.value && <div className="flex items-center gap-1 text-green-600">
-                <DollarSign className="h-3 w-3" />
-                <span className="font-medium">R$ {lead.value.toLocaleString('pt-BR', {
-                minimumFractionDigits: 2
-              })}</span>
-              </div>}
-
-            <div className="flex items-center gap-1 text-gray-400">
-              <Calendar className="h-3 w-3" />
-              <span>
-                {format(new Date(lead.created_at), "dd/MM 'às' HH:mm", {
-                locale: ptBR
-              })}
+          {/* Conteúdo principal */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-medium text-sm text-gray-900 truncate">
+                {getLeadDisplayName(lead)}
               </span>
+              
+              {/* Menu discreto */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-6 w-6 p-0 opacity-40 hover:opacity-100 flex-shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => navigate(`/leads/${lead.id}`)}>
+                    <Eye className="h-4 w-4 mr-2" />
+                    Ver detalhes
+                  </DropdownMenuItem>
+                  {lead.phone && (
+                    <DropdownMenuItem 
+                      onClick={() => navigate('/atendimento', { state: { leadId: lead.id, phone: lead.phone } })}
+                    >
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Falar no WhatsApp
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-
-            {/* Tempo na etapa atual */}
-            {lead.pipeline_stage_updated_at && (
-              <div className="flex items-center gap-1 text-blue-600 text-xs">
-                <Clock className="h-3 w-3" />
-                <span>
-                  {formatDistanceToNow(new Date(lead.pipeline_stage_updated_at), {
-                    locale: ptBR,
-                    addSuffix: true
-                  }).replace('há ', '').replace('cerca de ', '').replace('menos de ', '~')} nesta etapa
+            
+            {/* Tags na linha de baixo */}
+            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+              {/* Tag de status do pipeline (aberto/ganho/perdido) */}
+              <Badge 
+                variant="secondary" 
+                className="text-[10px] px-1.5 py-0 h-5"
+                style={{
+                  backgroundColor: pipelineTagColors[pipelineTag] + '20',
+                  color: pipelineTagColors[pipelineTag]
+                }}
+              >
+                {pipelineTagLabels[pipelineTag] || 'Aberto'}
+              </Badge>
+              
+              {/* Primeira tag atribuída */}
+              {validTags[0] && (
+                <Badge 
+                  variant="outline" 
+                  className="text-[10px] px-1.5 py-0 h-5 truncate max-w-[100px]"
+                  style={{ borderColor: validTags[0].color, color: validTags[0].color }}
+                >
+                  <Tag className="h-2.5 w-2.5 mr-0.5" />
+                  {validTags[0].name}
+                </Badge>
+              )}
+              
+              {/* Tempo na etapa (discreto) */}
+              {lead.pipeline_stage_updated_at && (
+                <span className="text-[10px] text-gray-400 ml-auto">
+                  {formatDistanceToNow(new Date(lead.pipeline_stage_updated_at), { 
+                    locale: ptBR, 
+                    addSuffix: false 
+                  }).replace('cerca de ', '~').replace('menos de ', '~')}
                 </span>
-              </div>
-            )}
-
-            {/* Tags do Lead - abaixo da data */}
-            {validTags && validTags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {validTags.slice(0, 2).map(tag => (
-                  <Badge key={tag.id} variant="secondary" className="text-[11px] px-1.5 py-0.5 h-4" style={{
-                    backgroundColor: tag.color + '15',
-                    color: tag.color,
-                    borderColor: tag.color
-                  }}>
-                    <Tag className="h-2.5 w-2.5 mr-0.5" />
-                    {tag.name}
-                  </Badge>
-                ))}
-                {validTags.length > 2 && (
-                  <Badge variant="outline" className="text-[11px] px-1.5 py-0.5 h-4">
-                    +{validTags.length - 2}
-                  </Badge>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </CardContent>
-      </Card>
-
-      <EditLeadDialog lead={lead} open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} />
-
-      <CreateTaskFromLeadDialog lead={lead} open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen} />
-    </>;
+        </div>
+      </CardContent>
+    </Card>
+  );
 }

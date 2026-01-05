@@ -1732,6 +1732,7 @@ export type Database = {
       meta_lead_forms: {
         Row: {
           created_at: string
+          field_mapping: Json | null
           fields_schema: Json
           form_name: string
           id: string
@@ -1741,10 +1742,12 @@ export type Database = {
           meta_form_id: string
           page_id: string
           page_name: string
+          selected_tag_ids: string[] | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          field_mapping?: Json | null
           fields_schema?: Json
           form_name: string
           id?: string
@@ -1754,10 +1757,12 @@ export type Database = {
           meta_form_id: string
           page_id: string
           page_name: string
+          selected_tag_ids?: string[] | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          field_mapping?: Json | null
           fields_schema?: Json
           form_name?: string
           id?: string
@@ -1767,6 +1772,7 @@ export type Database = {
           meta_form_id?: string
           page_id?: string
           page_name?: string
+          selected_tag_ids?: string[] | null
           updated_at?: string
         }
         Relationships: []

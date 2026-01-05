@@ -14,12 +14,15 @@ serve(async (req) => {
   }
 
   try {
-    // Parse request body to check for force_refresh parameter
+    // Parse request body to check for force_refresh and workspace_id parameters
     let forceRefresh = false;
+    let requestedWorkspaceId: string | null = null;
+    
     try {
       if (req.method === 'POST') {
         const body = await req.json();
         forceRefresh = body?.force_refresh === true;
+        requestedWorkspaceId = body?.workspace_id || null;
       }
     } catch (e) {
       // If no body or invalid JSON, continue without force refresh
@@ -27,6 +30,7 @@ serve(async (req) => {
     }
 
     console.log('Force refresh requested:', forceRefresh);
+    console.log('Requested workspace ID:', requestedWorkspaceId);
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -69,9 +73,31 @@ serve(async (req) => {
       });
     }
 
-    // Use the first workspace for now (later we can add workspace selection in frontend)
-    const workspaceId = workspaceMembers[0].workspace_id;
-    console.log('Workspace ID:', workspaceId);
+    // Determine which workspace to use
+    // Known superadmin workspace ID to filter out
+    const superadminWorkspaceId = 'a0000000-0000-0000-0000-000000000001';
+    let workspaceId: string;
+
+    if (requestedWorkspaceId) {
+      // Validate that the user has access to the requested workspace
+      const hasAccess = workspaceMembers.some(m => m.workspace_id === requestedWorkspaceId);
+      if (!hasAccess) {
+        console.error('User does not have access to workspace:', requestedWorkspaceId);
+        return new Response(JSON.stringify({ error: 'Access denied to workspace' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      workspaceId = requestedWorkspaceId;
+    } else {
+      // Filter out superadmin workspace and use the first regular workspace
+      const regularWorkspaces = workspaceMembers.filter(m => m.workspace_id !== superadminWorkspaceId);
+      workspaceId = regularWorkspaces.length > 0 
+        ? regularWorkspaces[0].workspace_id 
+        : workspaceMembers[0].workspace_id;
+    }
+    
+    console.log('Using workspace ID:', workspaceId);
 
     // Check for cached insights first (skip if force refresh)
     if (!forceRefresh) {

@@ -222,8 +222,19 @@ export default function MetaFormSettings({ form, integrationTagIds, onUpdate }: 
         {fieldsSchema.length > 0 ? (
           <div className="space-y-2">
             {fieldsSchema.map((field, index) => {
-              const fieldName = typeof field === 'object' ? field.name : String(field);
-              const currentMapping = fieldMapping[fieldName] || fieldMapping[fieldName.toLowerCase()] || '';
+              // Handle different field formats safely
+              let fieldName = '';
+              if (typeof field === 'string') {
+                fieldName = field;
+              } else if (field && typeof field === 'object' && 'name' in field) {
+                fieldName = String(field.name || '');
+              }
+              
+              // Skip empty field names
+              if (!fieldName) return null;
+              
+              const fieldNameLower = fieldName.toLowerCase();
+              const currentMapping = fieldMapping[fieldName] || fieldMapping[fieldNameLower] || '';
               
               return (
                 <div key={index} className="flex items-center gap-3 p-2 border rounded bg-muted/30">
@@ -234,7 +245,7 @@ export default function MetaFormSettings({ form, integrationTagIds, onUpdate }: 
                   <div className="w-40">
                     <Select 
                       value={currentMapping || '_auto'}
-                      onValueChange={(value) => handleFieldMappingChange(fieldName.toLowerCase(), value === '_auto' ? '' : value)}
+                      onValueChange={(value) => handleFieldMappingChange(fieldNameLower, value === '_auto' ? '' : value)}
                     >
                       <SelectTrigger className="h-8 text-sm">
                         <SelectValue placeholder="Automático" />

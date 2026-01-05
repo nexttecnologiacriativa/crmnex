@@ -130,26 +130,48 @@ export default function PipelineKanban({
       }
       
       // Buscar fotos do WhatsApp separadamente (não há FK formal)
+      // Buscar por lead_id E por telefone como fallback
       const leadIds = (data || []).map(l => l.id);
-      const { data: conversations } = await supabase
+      const leadPhones = (data || []).map(l => l.phone).filter(Boolean) as string[];
+
+      // Query por lead_id
+      const { data: conversationsByLeadId } = await supabase
         .from('whatsapp_conversations')
-        .select('lead_id, profile_picture_url')
+        .select('lead_id, phone_number, profile_picture_url')
         .in('lead_id', leadIds)
         .not('profile_picture_url', 'is', null);
 
+      // Query por telefone (fallback para leads sem lead_id vinculado)
+      const { data: conversationsByPhone } = leadPhones.length > 0 
+        ? await supabase
+            .from('whatsapp_conversations')
+            .select('lead_id, phone_number, profile_picture_url')
+            .in('phone_number', leadPhones)
+            .not('profile_picture_url', 'is', null)
+        : { data: [] };
+
       // Criar mapa de fotos por lead_id
       const photoMap: Record<string, string> = {};
-      (conversations || []).forEach(c => {
+      (conversationsByLeadId || []).forEach(c => {
         if (c.lead_id && c.profile_picture_url) {
           photoMap[c.lead_id] = c.profile_picture_url;
         }
       });
+
+      // Criar mapa de telefone para foto (fallback)
+      const phonePhotoMap: Record<string, string> = {};
+      (conversationsByPhone || []).forEach(c => {
+        if (c.phone_number && c.profile_picture_url) {
+          phonePhotoMap[c.phone_number] = c.profile_picture_url;
+        }
+      });
       
       // Usar o stage_id da relação específica deste pipeline e adicionar foto do WhatsApp
+      // Priorizar lead_id, fallback para telefone
       return (data || []).map(lead => ({
         ...lead,
         stage_id: lead.lead_pipeline_relations?.[0]?.stage_id || lead.stage_id,
-        profile_picture_url: photoMap[lead.id] || null
+        profile_picture_url: photoMap[lead.id] || (lead.phone ? phonePhotoMap[lead.phone] : null) || null
       }));
     },
     enabled: !!selectedPipelineId && !!workspace?.id

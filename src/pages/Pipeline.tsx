@@ -9,7 +9,8 @@ import { useEnsureDefaultWorkspace } from '@/hooks/useWorkspace';
 import { useWorkspaceSettings } from '@/hooks/useWorkspaceSettings';
 import { useTeamManagement } from '@/hooks/useTeamManagement';
 import { Button } from '@/components/ui/button';
-import { LayoutGrid, List, CheckSquare, Square } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { LayoutGrid, List, CheckSquare, Square, Search } from 'lucide-react';
 
 export default function Pipeline() {
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
@@ -17,6 +18,15 @@ export default function Pipeline() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [filters, setFilters] = useState<PipelineFiltersState>(defaultFilters);
+  const [quickSearch, setQuickSearch] = useState('');
+
+  // Debounce para busca rápida
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setFilters(prev => ({ ...prev, search: quickSearch }));
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [quickSearch]);
   
   const { members = [] } = useTeamManagement();
 
@@ -117,6 +127,15 @@ export default function Pipeline() {
               selectedPipelineId={selectedPipelineId}
               onPipelineChange={setSelectedPipelineId}
             />
+            <div className="relative flex-1 max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar lead..."
+                value={quickSearch}
+                onChange={(e) => setQuickSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
             <ActiveFilterBadges
               filters={filters}
               members={members}

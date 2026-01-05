@@ -26,6 +26,10 @@ interface PipelineKanbanProps {
     source: string;
     assignee: string;
   };
+  selectionMode?: boolean;
+  selectedLeads?: string[];
+  onSelectionChange?: (leads: string[]) => void;
+  onSelectionModeChange?: (mode: boolean) => void;
 }
 
 // Função para mapear nome da etapa para status válido
@@ -57,13 +61,15 @@ const getStatusFromStageName = (stageName: string): "new" | "contacted" | "quali
 
 export default function PipelineKanban({
   selectedPipelineId,
-  filters
+  filters,
+  selectionMode = false,
+  selectedLeads = [],
+  onSelectionChange,
+  onSelectionModeChange
 }: PipelineKanbanProps) {
   const [isCreateStageOpen, setIsCreateStageOpen] = useState(false);
   const [isCreateLeadOpen, setIsCreateLeadOpen] = useState(false);
   const [editingStage, setEditingStage] = useState<any>(null);
-  const [selectionMode, setSelectionMode] = useState(false);
-  const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [leadsWhatsAppStatus, setLeadsWhatsAppStatus] = useState<Record<string, boolean>>({});
   
   const { workspace } = useEnsureDefaultWorkspace();
@@ -356,34 +362,29 @@ export default function PipelineKanban({
     setIsCreateLeadOpen(true);
   };
 
-  const toggleSelectionMode = () => {
-    setSelectionMode(!selectionMode);
-    setSelectedLeads([]);
-  };
-
   const handleLeadSelect = (leadId: string, selected: boolean) => {
+    if (!onSelectionChange) return;
     if (selected) {
-      setSelectedLeads(prev => [...prev, leadId]);
+      onSelectionChange([...selectedLeads, leadId]);
     } else {
-      setSelectedLeads(prev => prev.filter(id => id !== leadId));
+      onSelectionChange(selectedLeads.filter(id => id !== leadId));
     }
   };
 
   const clearSelection = () => {
-    setSelectedLeads([]);
-    setSelectionMode(false);
+    onSelectionChange?.([]);
+    onSelectionModeChange?.(false);
   };
 
   const selectAllLeadsInStage = (stageLeads: any[]) => {
+    if (!onSelectionChange) return;
     const stageLeadIds = stageLeads.map(lead => lead.id);
     const allSelected = stageLeadIds.every(id => selectedLeads.includes(id));
     
     if (allSelected) {
-      // Deselecionar todos desta etapa
-      setSelectedLeads(prev => prev.filter(id => !stageLeadIds.includes(id)));
+      onSelectionChange(selectedLeads.filter(id => !stageLeadIds.includes(id)));
     } else {
-      // Selecionar todos desta etapa
-      setSelectedLeads(prev => [...new Set([...prev, ...stageLeadIds])]);
+      onSelectionChange([...new Set([...selectedLeads, ...stageLeadIds])]);
     }
   };
 
@@ -408,24 +409,6 @@ export default function PipelineKanban({
         </div>
       )}
 
-      {/* Barra de controles */}
-      <div className="flex justify-between items-center mb-4 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <Button
-            variant={selectionMode ? "default" : "outline"}
-            onClick={toggleSelectionMode}
-            size="sm"
-          >
-            {selectionMode ? <CheckSquare className="h-4 w-4 mr-2" /> : <Square className="h-4 w-4 mr-2" />}
-            {selectionMode ? 'Sair da Seleção' : 'Seleção Múltipla'}
-          </Button>
-          {selectionMode && selectedLeads.length > 0 && (
-            <span className="text-sm text-gray-600">
-              {selectedLeads.length} leads selecionados
-            </span>
-          )}
-        </div>
-      </div>
 
       <div className="flex-1 overflow-hidden flex flex-col">
         {/* Barra de scroll horizontal no TOPO */}

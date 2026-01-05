@@ -8,11 +8,13 @@ import { usePipelines } from '@/hooks/usePipeline';
 import { useEnsureDefaultWorkspace } from '@/hooks/useWorkspace';
 import { useWorkspaceSettings } from '@/hooks/useWorkspaceSettings';
 import { Button } from '@/components/ui/button';
-import { LayoutGrid, List } from 'lucide-react';
+import { LayoutGrid, List, CheckSquare, Square } from 'lucide-react';
 
 export default function Pipeline() {
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [filters, setFilters] = useState({
     search: '',
     priority: '',
@@ -75,6 +77,24 @@ export default function Pipeline() {
               Pipeline
             </h1>
             <div className="flex items-center gap-2">
+              {viewMode === 'kanban' && (
+                <Button
+                  variant={selectionMode ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setSelectionMode(!selectionMode);
+                    setSelectedLeads([]);
+                  }}
+                >
+                  {selectionMode ? <CheckSquare className="h-4 w-4 mr-2" /> : <Square className="h-4 w-4 mr-2" />}
+                  {selectionMode ? 'Sair da Seleção' : 'Seleção Múltipla'}
+                  {selectionMode && selectedLeads.length > 0 && (
+                    <span className="ml-2 bg-white/20 px-1.5 py-0.5 rounded text-xs">
+                      {selectedLeads.length}
+                    </span>
+                  )}
+                </Button>
+              )}
               <Button
                 variant={viewMode === 'kanban' ? 'default' : 'outline'}
                 size="sm"
@@ -103,6 +123,10 @@ export default function Pipeline() {
             <PipelineKanban 
               selectedPipelineId={selectedPipelineId}
               filters={filters}
+              selectionMode={selectionMode}
+              selectedLeads={selectedLeads}
+              onSelectionChange={setSelectedLeads}
+              onSelectionModeChange={setSelectionMode}
             />
           ) : (
             <PipelineListView 

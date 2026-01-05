@@ -1,12 +1,13 @@
-
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PipelineKanban from '@/components/pipeline/PipelineKanban';
 import PipelineListView from '@/components/pipeline/PipelineListView';
 import PipelineSelector from '@/components/pipeline/PipelineSelector';
+import { PipelineFilters, ActiveFilterBadges, defaultFilters, PipelineFiltersState } from '@/components/pipeline/PipelineFilters';
 import { usePipelines } from '@/hooks/usePipeline';
 import { useEnsureDefaultWorkspace } from '@/hooks/useWorkspace';
 import { useWorkspaceSettings } from '@/hooks/useWorkspaceSettings';
+import { useTeamManagement } from '@/hooks/useTeamManagement';
 import { Button } from '@/components/ui/button';
 import { LayoutGrid, List, CheckSquare, Square } from 'lucide-react';
 
@@ -15,12 +16,9 @@ export default function Pipeline() {
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
-  const [filters, setFilters] = useState({
-    search: '',
-    priority: '',
-    source: '',
-    assignee: ''
-  });
+  const [filters, setFilters] = useState<PipelineFiltersState>(defaultFilters);
+  
+  const { members = [] } = useTeamManagement();
 
   const { workspace, isLoading: workspaceLoading } = useEnsureDefaultWorkspace();
   const { data: pipelines = [] } = usePipelines(workspace?.id);
@@ -77,6 +75,7 @@ export default function Pipeline() {
               Pipeline
             </h1>
             <div className="flex items-center gap-2">
+              <PipelineFilters filters={filters} onFiltersChange={setFilters} />
               {viewMode === 'kanban' && (
                 <Button
                   variant={selectionMode ? "default" : "outline"}
@@ -113,10 +112,25 @@ export default function Pipeline() {
               </Button>
             </div>
           </div>
-          <PipelineSelector 
-            selectedPipelineId={selectedPipelineId}
-            onPipelineChange={setSelectedPipelineId}
-          />
+          <div className="flex items-center gap-4">
+            <PipelineSelector 
+              selectedPipelineId={selectedPipelineId}
+              onPipelineChange={setSelectedPipelineId}
+            />
+            <ActiveFilterBadges
+              filters={filters}
+              members={members}
+              onRemoveFilter={(key) => {
+                if (key === 'tags') {
+                  setFilters(prev => ({ ...prev, tags: [] }));
+                } else if (key === 'hasValue') {
+                  setFilters(prev => ({ ...prev, hasValue: null }));
+                } else {
+                  setFilters(prev => ({ ...prev, [key]: '' }));
+                }
+              }}
+            />
+          </div>
         </div>
         <div className="flex-1 overflow-hidden">
           {viewMode === 'kanban' ? (

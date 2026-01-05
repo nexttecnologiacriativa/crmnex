@@ -9,7 +9,7 @@ import CreatePipelineStageDialog from './CreatePipelineStageDialog';
 import EditPipelineStageDialog from './EditPipelineStageDialog';
 import CreateLeadDialog from '../leads/CreateLeadDialog';
 import BulkActionsPanel from './BulkActionsPanel';
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useEnsureDefaultWorkspace } from '@/hooks/useWorkspace';
 import { useDeletePipelineStage, useReorderPipelineStages } from '@/hooks/usePipeline';
@@ -149,6 +149,32 @@ export default function PipelineKanban({
     leads: leads || [],
     leadsPerPage: 20 
   });
+
+  // Refs para sincronização do scroll horizontal
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const contentScrollRef = useRef<HTMLDivElement>(null);
+
+  // Calcular largura do conteúdo para a barra de scroll do topo
+  const scrollContentWidth = useMemo(() => {
+    const stageCount = stages?.length || 0;
+    const stageWidth = 320; // w-80 = 20rem = 320px
+    const gap = 24; // gap-6 = 1.5rem = 24px
+    const extraButtonWidth = 320; // Botão "Nova Etapa"
+    return (stageCount * stageWidth) + ((stageCount) * gap) + extraButtonWidth + 48; // padding extra
+  }, [stages?.length]);
+
+  // Sincronizar scroll da barra do topo com o conteúdo
+  const handleTopScroll = useCallback(() => {
+    if (topScrollRef.current && contentScrollRef.current) {
+      contentScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
+    }
+  }, []);
+
+  const handleContentScroll = useCallback(() => {
+    if (topScrollRef.current && contentScrollRef.current) {
+      topScrollRef.current.scrollLeft = contentScrollRef.current.scrollLeft;
+    }
+  }, []);
 
   // Validar WhatsApp para todos os leads com celular
   useEffect(() => {
@@ -402,8 +428,22 @@ export default function PipelineKanban({
       </div>
 
       <div className="flex-1 overflow-hidden flex flex-col">
-        <ScrollArea className="h-full flex flex-col">
-          <ScrollBar orientation="horizontal" className="flex opacity-100 h-3 bg-blue-100 hover:bg-blue-200 rounded-lg mb-2 cursor-grab active:cursor-grabbing" />
+        {/* Barra de scroll horizontal no TOPO */}
+        <div 
+          ref={topScrollRef}
+          onScroll={handleTopScroll}
+          className="overflow-x-auto overflow-y-hidden h-4 min-h-[16px] bg-blue-100 hover:bg-blue-200 rounded-lg mb-2 cursor-grab active:cursor-grabbing scrollbar-thin scrollbar-thumb-blue-400 scrollbar-track-blue-100"
+          style={{ scrollbarWidth: 'thin' }}
+        >
+          <div style={{ width: scrollContentWidth, height: 1 }} />
+        </div>
+        
+        {/* Conteúdo do Kanban */}
+        <div 
+          ref={contentScrollRef}
+          onScroll={handleContentScroll}
+          className="flex-1 overflow-x-auto overflow-y-hidden"
+        >
           <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable droppableId="stages" direction="horizontal" type="stage">
               {provided => <div ref={provided.innerRef} {...provided.droppableProps} className="flex gap-6 h-full pb-4">
@@ -526,7 +566,7 @@ export default function PipelineKanban({
             </div>}
           </Droppable>
         </DragDropContext>
-      </ScrollArea>
+        </div>
       </div>
 
       <CreatePipelineStageDialog open={isCreateStageOpen} onOpenChange={setIsCreateStageOpen} pipelineId={selectedPipelineId} nextPosition={stages?.length || 0} />

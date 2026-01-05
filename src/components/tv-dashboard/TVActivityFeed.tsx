@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Activity } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
@@ -69,43 +70,55 @@ export default function TVActivityFeed({ isDarkMode = true }: TVActivityFeedProp
 
   const getActivityColor = (type: string) => {
     const colors: Record<string, string> = {
-      'lead_created': 'bg-[hsl(87,57%,51%)]',
-      'stage_change': 'bg-[hsl(209,100%,22%)]',
-      'task_completed': 'bg-[hsl(87,57%,40%)]',
-      'whatsapp_message': 'bg-[hsl(87,50%,35%)]',
-      'sale_closed': 'bg-[hsl(209,90%,35%)]',
+      'lead_created': 'bg-green-500',
+      'stage_change': 'bg-blue-500',
+      'task_completed': 'bg-emerald-500',
+      'whatsapp_message': 'bg-green-600',
+      'sale_closed': 'bg-amber-500',
     };
-    return colors[type] || 'bg-[hsl(209,80%,30%)]';
+    return colors[type] || 'bg-gray-500';
   };
 
   return (
     <Card className={cn(
-      "h-full glass-morphism border-2 border-white/20 overflow-hidden",
-      isDarkMode 
-        ? "bg-gradient-to-br from-[hsl(209,100%,22%)]/80 to-[hsl(209,80%,15%)]/80"
-        : "bg-white/90 backdrop-blur-sm"
+      "h-full border-0 shadow-xl rounded-2xl overflow-hidden relative transition-all duration-300 hover:shadow-2xl",
+      isDarkMode ? "bg-gray-800/90" : "bg-white"
     )}>
-      <CardHeader className="pb-3">
+      {/* Decorative Elements */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
+      <div className="absolute bottom-0 left-0 w-24 h-24 bg-amber-500/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-xl" />
+
+      <CardHeader className={cn(
+        "pb-3 border-b relative",
+        isDarkMode 
+          ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent border-gray-700/50"
+          : "bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-gray-100"
+      )}>
         <CardTitle className={cn(
           "flex items-center gap-2 text-lg",
-          isDarkMode ? "text-white" : "text-[hsl(209,100%,22%)]"
+          isDarkMode ? "text-white" : "text-gray-800"
         )}>
-          <motion.span
-            animate={{ 
-              scale: [1, 1.2, 1],
-              rotate: [0, 5, -5, 0]
-            }}
-            transition={{ 
-              duration: 1,
-              repeat: Infinity,
-              repeatDelay: 2
-            }}
-          >
-            ⚡
-          </motion.span>
+          <div className={cn(
+            "w-8 h-8 rounded-lg flex items-center justify-center",
+            isDarkMode ? "bg-amber-500/20" : "bg-amber-500/10"
+          )}>
+            <motion.span
+              animate={{ 
+                scale: [1, 1.2, 1],
+                rotate: [0, 5, -5, 0]
+              }}
+              transition={{ 
+                duration: 1,
+                repeat: Infinity,
+                repeatDelay: 2
+              }}
+            >
+              <Activity className="h-4 w-4 text-amber-500" />
+            </motion.span>
+          </div>
           Atividades em Tempo Real
           <motion.span
-            className="inline-block w-2 h-2 bg-[hsl(87,57%,51%)] rounded-full ml-2"
+            className="inline-block w-2 h-2 bg-green-500 rounded-full ml-2"
             animate={{ 
               scale: [1, 1.5, 1],
               opacity: [1, 0.5, 1]
@@ -118,8 +131,8 @@ export default function TVActivityFeed({ isDarkMode = true }: TVActivityFeedProp
           />
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[calc(100%-80px)] pr-2">
+      <CardContent className="pt-3 relative">
+        <ScrollArea className="h-[calc(100%-20px)] pr-2">
           <div className="space-y-2">
             {activities.slice(0, visibleCount).map((activity, index) => (
               <motion.div
@@ -136,17 +149,22 @@ export default function TVActivityFeed({ isDarkMode = true }: TVActivityFeedProp
                   scale: 1.02,
                   boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
                 }}
-                className="p-3 rounded-lg bg-white/10 hover:bg-white/20 transition-all cursor-pointer border border-white/20"
+                className={cn(
+                  "p-3 rounded-xl transition-all cursor-pointer border shadow-sm",
+                  isDarkMode 
+                    ? "bg-gray-700/50 hover:bg-gray-700/70 border-gray-600/30" 
+                    : "bg-gray-50 hover:bg-gray-100 border-gray-100"
+                )}
               >
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0">
                     <motion.div 
-                      className={`w-8 h-8 rounded-full ${getActivityColor(activity.activity_type)} flex items-center justify-center text-white`}
+                      className={`w-8 h-8 rounded-lg ${getActivityColor(activity.activity_type)} flex items-center justify-center text-white shadow-md`}
                       animate={{ 
                         scale: [1, 1.1, 1],
                         boxShadow: [
                           '0 0 0px rgba(0,0,0,0)',
-                          '0 0 10px rgba(255,255,255,0.5)',
+                          '0 0 10px rgba(255,255,255,0.3)',
                           '0 0 0px rgba(0,0,0,0)'
                         ]
                       }}
@@ -162,12 +180,12 @@ export default function TVActivityFeed({ isDarkMode = true }: TVActivityFeedProp
                   <div className="flex-1 min-w-0">
                     <p className={cn(
                       "font-semibold text-sm",
-                      isDarkMode ? "text-white" : "text-[hsl(209,100%,22%)]"
+                      isDarkMode ? "text-white" : "text-gray-800"
                     )}>{activity.title}</p>
                     {activity.leads && (
                       <p className={cn(
                         "text-xs font-medium truncate",
-                        isDarkMode ? "text-[hsl(87,57%,51%)]" : "text-[hsl(87,57%,40%)]"
+                        isDarkMode ? "text-amber-400" : "text-amber-600"
                       )}>
                         Lead: {activity.leads.name}
                       </p>
@@ -175,13 +193,19 @@ export default function TVActivityFeed({ isDarkMode = true }: TVActivityFeedProp
                     {activity.description && (
                       <p className={cn(
                         "text-xs mt-1 line-clamp-1",
-                        isDarkMode ? "text-white/70" : "text-[hsl(209,100%,22%)]/70"
+                        isDarkMode ? "text-gray-400" : "text-gray-500"
                       )}>
                         {activity.description}
                       </p>
                     )}
                     <div className="flex items-center gap-2 mt-2">
-                      <Badge variant="outline" className="text-xs">
+                      <Badge 
+                        variant="outline" 
+                        className={cn(
+                          "text-xs",
+                          isDarkMode ? "border-gray-600 text-gray-300" : "border-gray-200"
+                        )}
+                      >
                         {formatDistanceToNow(new Date(activity.created_at), {
                           addSuffix: true,
                           locale: ptBR,

@@ -86,16 +86,38 @@ export default function TVDashboard() {
       {/* Content */}
       <div className="relative z-10 h-screen flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between mb-3 p-3 rounded-lg bg-white/60 backdrop-blur-sm shadow-sm">
-          <div className="flex items-center gap-3">
-            <img src="/nexcrm-logo.png" alt="Logo" className="h-10" />
-            <h1 className="text-2xl font-bold text-[hsl(209,100%,22%)]">Dashboard TV</h1>
+        <div className={cn(
+          "flex items-center justify-between mb-3 p-4 rounded-2xl border-0 shadow-xl relative overflow-hidden transition-all duration-300",
+          isDarkMode 
+            ? "bg-gray-800/90" 
+            : "bg-white"
+        )}>
+          {/* Decorative Elements */}
+          <div className="absolute top-0 right-0 w-40 h-40 bg-primary/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-primary/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-xl" />
+          
+          <div className="flex items-center gap-3 relative">
+            <div className={cn(
+              "p-2 rounded-xl",
+              isDarkMode ? "bg-white/10" : "bg-primary/5"
+            )}>
+              <img src="/nexcrm-logo.png" alt="Logo" className="h-8" />
+            </div>
+            <h1 className={cn(
+              "text-2xl font-bold",
+              isDarkMode ? "text-white" : "text-gray-800"
+            )}>Dashboard TV</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 relative">
             <Button
               variant="outline"
               onClick={openCRM}
-              className="gap-2 bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
+              className={cn(
+                "gap-2 border-0 shadow-md transition-all hover:scale-105",
+                isDarkMode 
+                  ? "bg-gray-700/80 text-white hover:bg-gray-600" 
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              )}
               size="sm"
             >
               <ExternalLink className="h-4 w-4" />
@@ -105,7 +127,12 @@ export default function TVDashboard() {
               variant="outline"
               size="sm"
               onClick={() => setIsDarkMode(!isDarkMode)}
-              className="bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
+              className={cn(
+                "border-0 shadow-md transition-all hover:scale-105",
+                isDarkMode 
+                  ? "bg-gray-700/80 text-white hover:bg-gray-600" 
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              )}
             >
               {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
@@ -113,7 +140,12 @@ export default function TVDashboard() {
               variant="outline"
               size="sm"
               onClick={() => setShowSettings(!showSettings)}
-              className="bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
+              className={cn(
+                "border-0 shadow-md transition-all hover:scale-105",
+                isDarkMode 
+                  ? "bg-gray-700/80 text-white hover:bg-gray-600" 
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              )}
             >
               <Settings className="h-4 w-4" />
             </Button>
@@ -121,7 +153,12 @@ export default function TVDashboard() {
               variant="outline"
               size="sm"
               onClick={toggleFullscreen}
-              className="bg-white/80 border-[hsl(209,100%,22%)]/20 text-[hsl(209,100%,22%)] hover:bg-white"
+              className={cn(
+                "border-0 shadow-md transition-all hover:scale-105",
+                isDarkMode 
+                  ? "bg-gray-700/80 text-white hover:bg-gray-600" 
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              )}
             >
               {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
             </Button>

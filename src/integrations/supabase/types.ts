@@ -2308,18 +2308,21 @@ export type Database = {
           created_at: string | null
           id: string
           instance_id: string
+          receive_new_contacts: boolean | null
           user_id: string
         }
         Insert: {
           created_at?: string | null
           id?: string
           instance_id: string
+          receive_new_contacts?: boolean | null
           user_id: string
         }
         Update: {
           created_at?: string | null
           id?: string
           instance_id?: string
+          receive_new_contacts?: boolean | null
           user_id?: string
         }
         Relationships: [
@@ -2328,6 +2331,54 @@ export type Database = {
             columns: ["instance_id"]
             isOneToOne: false
             referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_workspace_settings: {
+        Row: {
+          can_see_all_leads: boolean | null
+          can_see_unassigned_leads: boolean | null
+          created_at: string | null
+          default_whatsapp_instance_id: string | null
+          id: string
+          updated_at: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          can_see_all_leads?: boolean | null
+          can_see_unassigned_leads?: boolean | null
+          created_at?: string | null
+          default_whatsapp_instance_id?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          can_see_all_leads?: boolean | null
+          can_see_unassigned_leads?: boolean | null
+          created_at?: string | null
+          default_whatsapp_instance_id?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_workspace_settings_default_whatsapp_instance_id_fkey"
+            columns: ["default_whatsapp_instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_workspace_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -2880,8 +2931,11 @@ export type Database = {
       workspace_settings: {
         Row: {
           ai_insights_pipeline_ids: string[] | null
+          auto_create_lead_from_whatsapp: boolean | null
           created_at: string
           default_pipeline_id: string | null
+          default_whatsapp_pipeline_id: string | null
+          default_whatsapp_stage_id: string | null
           id: string
           n8n_webhook_url: string | null
           updated_at: string
@@ -2889,8 +2943,11 @@ export type Database = {
         }
         Insert: {
           ai_insights_pipeline_ids?: string[] | null
+          auto_create_lead_from_whatsapp?: boolean | null
           created_at?: string
           default_pipeline_id?: string | null
+          default_whatsapp_pipeline_id?: string | null
+          default_whatsapp_stage_id?: string | null
           id?: string
           n8n_webhook_url?: string | null
           updated_at?: string
@@ -2898,8 +2955,11 @@ export type Database = {
         }
         Update: {
           ai_insights_pipeline_ids?: string[] | null
+          auto_create_lead_from_whatsapp?: boolean | null
           created_at?: string
           default_pipeline_id?: string | null
+          default_whatsapp_pipeline_id?: string | null
+          default_whatsapp_stage_id?: string | null
           id?: string
           n8n_webhook_url?: string | null
           updated_at?: string
@@ -2911,6 +2971,20 @@ export type Database = {
             columns: ["default_pipeline_id"]
             isOneToOne: false
             referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_settings_default_whatsapp_pipeline_id_fkey"
+            columns: ["default_whatsapp_pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_settings_default_whatsapp_stage_id_fkey"
+            columns: ["default_whatsapp_stage_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
             referencedColumns: ["id"]
           },
           {

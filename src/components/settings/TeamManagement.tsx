@@ -1,9 +1,10 @@
-
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Loader2 } from 'lucide-react';
+import { Users, Loader2, Settings2 } from 'lucide-react';
 import { useTeamManagement } from '@/hooks/useTeamManagement';
 import InviteTeamMember from './InviteTeamMember';
 import MembersTable from './MembersTable';
+import UserPermissionsManager from './UserPermissionsManager';
 import { toast } from 'sonner';
 
 export default function TeamManagement() {
@@ -19,7 +20,17 @@ export default function TeamManagement() {
     currentUserRole,
   } = useTeamManagement();
 
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editingUserName, setEditingUserName] = useState('');
+  const [editingUserRole, setEditingUserRole] = useState('');
+
   const isAllowedToManage = currentUserRole === 'admin';
+
+  const handleOpenPermissions = (userId: string, userName: string, role: string) => {
+    setEditingUserId(userId);
+    setEditingUserName(userName);
+    setEditingUserRole(role);
+  };
 
   if (!currentWorkspace) {
     return (
@@ -83,10 +94,22 @@ export default function TeamManagement() {
               currentUserId={user?.id}
               onRemoveMember={isAllowedToManage ? removeMember : () => toast.error('Apenas administradores podem remover membros.')}
               onUpdateRole={isAllowedToManage ? updateRole : () => toast.error('Apenas administradores podem alterar permissões.')}
+              onConfigurePermissions={isAllowedToManage ? handleOpenPermissions : undefined}
             />
           </>
         )}
       </CardContent>
+
+      {/* Modal de configuração de permissões */}
+      {editingUserId && (
+        <UserPermissionsManager
+          open={!!editingUserId}
+          onClose={() => setEditingUserId(null)}
+          userId={editingUserId}
+          userName={editingUserName}
+          userRole={editingUserRole}
+        />
+      )}
     </Card>
   );
 }

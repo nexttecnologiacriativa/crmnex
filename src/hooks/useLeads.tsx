@@ -98,13 +98,40 @@ export function useLeads() {
   const { user } = useAuth();
   
   return useQuery({
-    queryKey: ['leads', currentWorkspace?.id],
+    queryKey: ['leads', currentWorkspace?.id, user?.id],
     queryFn: async () => {
-      if (!currentWorkspace?.id) {
+      if (!currentWorkspace?.id || !user?.id) {
         return [];
       }
 
-      const { data: workspaceLeads, error: workspaceError } = await supabase
+      // Buscar configurações do usuário para verificar permissões
+      const { data: membership } = await supabase
+        .from('workspace_members')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('workspace_id', currentWorkspace.id)
+        .maybeSingle();
+
+      const isAdmin = membership?.role === 'admin';
+
+      // Se não for admin, buscar configurações específicas do usuário
+      let canSeeAllLeads = isAdmin;
+      let canSeeUnassignedLeads = true;
+
+      if (!isAdmin) {
+        const { data: userSettings } = await supabase
+          .from('user_workspace_settings')
+          .select('can_see_all_leads, can_see_unassigned_leads')
+          .eq('user_id', user.id)
+          .eq('workspace_id', currentWorkspace.id)
+          .maybeSingle();
+
+        canSeeAllLeads = userSettings?.can_see_all_leads || false;
+        canSeeUnassignedLeads = userSettings?.can_see_unassigned_leads !== false;
+      }
+
+      // Construir query base
+      let query = supabase
         .from('leads')
         .select(`
           *,
@@ -129,6 +156,19 @@ export function useLeads() {
         .eq('workspace_id', currentWorkspace.id)
         .order('created_at', { ascending: false })
         .limit(10000);
+
+      // Aplicar filtro de visibilidade se usuário não pode ver todos
+      if (!canSeeAllLeads) {
+        if (canSeeUnassignedLeads) {
+          // Pode ver leads atribuídos a ele OU sem atribuição
+          query = query.or(`assigned_to.eq.${user.id},assigned_to.is.null`);
+        } else {
+          // Só pode ver leads atribuídos a ele
+          query = query.eq('assigned_to', user.id);
+        }
+      }
+
+      const { data: workspaceLeads, error: workspaceError } = await query;
       
       if (workspaceError) {
         throw workspaceError;

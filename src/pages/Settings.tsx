@@ -7,6 +7,7 @@ import TeamManagement from '@/components/settings/TeamManagement';
 import TagManager from '@/components/settings/TagManager';
 import WhatsAppSettings from '@/components/settings/WhatsAppSettings';
 import WhatsAppEvolutionSettings from '@/components/settings/WhatsAppEvolutionSettings';
+import WhatsAppAutoLeadSettings from '@/components/settings/WhatsAppAutoLeadSettings';
 import UtmManager from '@/components/settings/UtmManager';
 import AISettings from '@/components/settings/AISettings';
 import WebhooksManager from '@/components/webhooks/WebhooksManager';
@@ -46,6 +47,8 @@ export default function Settings() {
         );
       case 'team':
         return <TeamManagement />;
+      case 'permissions':
+        return <WhatsAppAutoLeadSettings currentUserRole={currentUserRole} />;
       case 'fields':
         return <CustomFieldsManager currentUserRole={currentUserRole} />;
       case 'tags':
@@ -74,6 +77,7 @@ export default function Settings() {
       profile: 'Perfil',
       workspace: 'Workspace',
       team: 'Equipe',
+      permissions: 'Permissões e Automação',
       fields: 'Campos Customizados',
       tags: 'Tags',
       utms: 'UTMs',

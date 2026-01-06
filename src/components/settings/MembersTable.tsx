@@ -1,9 +1,8 @@
-
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Settings2 } from 'lucide-react';
 
 interface WorkspaceMember {
   id: string;
@@ -22,13 +21,15 @@ interface MembersTableProps {
   currentUserId?: string;
   onRemoveMember: (memberId: string, memberUserId: string) => void;
   onUpdateRole: (memberId: string, newRole: string) => void;
+  onConfigurePermissions?: (userId: string, userName: string, role: string) => void;
 }
 
 export default function MembersTable({ 
   members, 
   currentUserId, 
   onRemoveMember, 
-  onUpdateRole 
+  onUpdateRole,
+  onConfigurePermissions
 }: MembersTableProps) {
   console.log('MembersTable - Rendering with members:', members);
   console.log('MembersTable - currentUserId:', currentUserId);
@@ -171,15 +172,31 @@ export default function MembersTable({
                   {new Date(member.joined_at).toLocaleDateString('pt-BR')}
                 </TableCell>
                 <TableCell>
-                  {canRemoveMember(member) && (
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => onRemoveMember(member.id, member.user_id)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  )}
+                  <div className="flex gap-1">
+                    {onConfigurePermissions && currentUserRole === 'admin' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onConfigurePermissions(
+                          member.user_id, 
+                          member.profiles?.full_name || 'Usuário',
+                          member.role
+                        )}
+                        title="Configurar permissões"
+                      >
+                        <Settings2 className="h-3 w-3" />
+                      </Button>
+                    )}
+                    {canRemoveMember(member) && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => onRemoveMember(member.id, member.user_id)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             );

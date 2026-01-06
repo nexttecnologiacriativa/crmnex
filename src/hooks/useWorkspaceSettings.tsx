@@ -9,6 +9,9 @@ export interface WorkspaceSettings {
   default_pipeline_id: string | null;
   n8n_webhook_url: string | null;
   ai_insights_pipeline_ids: string[] | null;
+  auto_create_lead_from_whatsapp: boolean | null;
+  default_whatsapp_pipeline_id: string | null;
+  default_whatsapp_stage_id: string | null;
   created_at: string;
   updated_at: string;
 }

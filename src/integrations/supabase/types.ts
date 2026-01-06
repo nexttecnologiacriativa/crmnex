@@ -2337,6 +2337,7 @@ export type Database = {
       }
       user_workspace_settings: {
         Row: {
+          allowed_sections: string[] | null
           can_see_all_leads: boolean | null
           can_see_unassigned_leads: boolean | null
           created_at: string | null
@@ -2347,6 +2348,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          allowed_sections?: string[] | null
           can_see_all_leads?: boolean | null
           can_see_unassigned_leads?: boolean | null
           created_at?: string | null
@@ -2357,6 +2359,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          allowed_sections?: string[] | null
           can_see_all_leads?: boolean | null
           can_see_unassigned_leads?: boolean | null
           created_at?: string | null
@@ -2534,6 +2537,74 @@ export type Database = {
             foreignKeyName: "whatsapp_evolution_configs_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_instance_settings: {
+        Row: {
+          assigned_to: string | null
+          auto_create_lead: boolean | null
+          auto_tag_id: string | null
+          created_at: string | null
+          default_pipeline_id: string | null
+          default_stage_id: string | null
+          id: string
+          instance_id: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          auto_create_lead?: boolean | null
+          auto_tag_id?: string | null
+          created_at?: string | null
+          default_pipeline_id?: string | null
+          default_stage_id?: string | null
+          id?: string
+          instance_id: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          auto_create_lead?: boolean | null
+          auto_tag_id?: string | null
+          created_at?: string | null
+          default_pipeline_id?: string | null
+          default_stage_id?: string | null
+          id?: string
+          instance_id?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_instance_settings_auto_tag_id_fkey"
+            columns: ["auto_tag_id"]
+            isOneToOne: false
+            referencedRelation: "lead_tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_instance_settings_default_pipeline_id_fkey"
+            columns: ["default_pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_instance_settings_default_stage_id_fkey"
+            columns: ["default_stage_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_instance_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },

@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Eye, MessageSquare, Star } from 'lucide-react';
+import { Loader2, Eye, MessageSquare, Star, Layout } from 'lucide-react';
 import { useUserSettings, useUpdateUserSettings } from '@/hooks/useUserWorkspaceSettings';
 import { useAllWorkspaceInstances, useInstanceUsers, useManageInstanceUsers } from '@/hooks/useWhatsAppInstance';
 import { toast } from 'sonner';
@@ -19,6 +19,24 @@ interface UserPermissionsManagerProps {
   userName: string;
   userRole: string;
 }
+
+const ALL_SECTIONS = [
+  { id: 'dashboard', label: 'Dashboard', group: 'menu' },
+  { id: 'leads', label: 'Leads', group: 'menu' },
+  { id: 'pipeline', label: 'Pipeline', group: 'menu' },
+  { id: 'atendimento', label: 'Atendimento', group: 'menu' },
+  { id: 'tasks', label: 'Tarefas', group: 'menu' },
+  { id: 'jobs', label: 'Jobs', group: 'menu' },
+  { id: 'reports', label: 'Relatórios', group: 'menu' },
+  { id: 'settings', label: 'Configurações', group: 'menu' },
+  { id: 'marketing', label: 'Marketing', group: 'performance' },
+  { id: 'automation', label: 'Automação', group: 'performance' },
+  { id: 'outbound', label: 'Outbound', group: 'performance' },
+  { id: 'tv-dashboard', label: 'Dashboard TV', group: 'performance' },
+  { id: 'debriefing', label: 'Debriefing', group: 'performance' },
+];
+
+const DEFAULT_SECTIONS = ALL_SECTIONS.map(s => s.id);
 
 export default function UserPermissionsManager({
   open,
@@ -37,13 +55,14 @@ export default function UserPermissionsManager({
   const [canSeeUnassignedLeads, setCanSeeUnassignedLeads] = useState(true);
   const [defaultInstanceId, setDefaultInstanceId] = useState<string | null>(null);
   const [selectedInstances, setSelectedInstances] = useState<string[]>([]);
-  const [receiveContactsInstances, setReceiveContactsInstances] = useState<string[]>([]);
+  const [allowedSections, setAllowedSections] = useState<string[]>(DEFAULT_SECTIONS);
   
   useEffect(() => {
     if (settings) {
       setCanSeeAllLeads(settings.can_see_all_leads || false);
       setCanSeeUnassignedLeads(settings.can_see_unassigned_leads !== false);
       setDefaultInstanceId(settings.default_whatsapp_instance_id);
+      setAllowedSections(settings.allowed_sections || DEFAULT_SECTIONS);
     }
   }, [settings]);
   
@@ -59,6 +78,7 @@ export default function UserPermissionsManager({
         can_see_all_leads: canSeeAllLeads,
         can_see_unassigned_leads: canSeeUnassignedLeads,
         default_whatsapp_instance_id: defaultInstanceId,
+        allowed_sections: allowedSections,
       });
       
       // Atualizar acesso às instâncias
@@ -90,7 +110,18 @@ export default function UserPermissionsManager({
     );
   };
 
+  const toggleSection = (sectionId: string) => {
+    setAllowedSections(prev => 
+      prev.includes(sectionId)
+        ? prev.filter(id => id !== sectionId)
+        : [...prev, sectionId]
+    );
+  };
+
   const isAdmin = userRole === 'admin';
+
+  const menuSections = ALL_SECTIONS.filter(s => s.group === 'menu');
+  const performanceSections = ALL_SECTIONS.filter(s => s.group === 'performance');
 
   if (isLoadingSettings) {
     return (
@@ -117,6 +148,67 @@ export default function UserPermissionsManager({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Acesso a Seções */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Layout className="h-4 w-4" />
+                Seções com Acesso
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isAdmin ? (
+                <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
+                  Administradores têm acesso total a todas as seções automaticamente.
+                </p>
+              ) : (
+                <>
+                  <div className="space-y-3">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wide">Menu Principal</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {menuSections.map((section) => (
+                        <div key={section.id} className="flex items-center gap-2">
+                          <Checkbox
+                            id={`section-${section.id}`}
+                            checked={allowedSections.includes(section.id)}
+                            onCheckedChange={() => toggleSection(section.id)}
+                          />
+                          <label 
+                            htmlFor={`section-${section.id}`}
+                            className="text-sm cursor-pointer"
+                          >
+                            {section.label}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wide">Performance</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {performanceSections.map((section) => (
+                        <div key={section.id} className="flex items-center gap-2">
+                          <Checkbox
+                            id={`section-${section.id}`}
+                            checked={allowedSections.includes(section.id)}
+                            onCheckedChange={() => toggleSection(section.id)}
+                          />
+                          <label 
+                            htmlFor={`section-${section.id}`}
+                            className="text-sm cursor-pointer"
+                          >
+                            {section.label}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Acesso a Leads */}
           <Card>
             <CardHeader className="pb-3">
@@ -189,7 +281,7 @@ export default function UserPermissionsManager({
                 <>
                   <div className="space-y-2">
                     <Label>Instâncias com acesso</Label>
-                    <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                    <div className="space-y-2">
                       {instances.map((instance) => (
                         <div 
                           key={instance.id} 

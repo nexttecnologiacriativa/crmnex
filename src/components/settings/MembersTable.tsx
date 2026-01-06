@@ -113,7 +113,8 @@ export default function MembersTable({
     <div>
       <h4 className="font-medium mb-4">Membros do Workspace ({members.length})</h4>
       
-      <Table>
+      <div className="border rounded-md">
+        <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Nome Completo</TableHead>
@@ -203,6 +204,7 @@ export default function MembersTable({
           })}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }

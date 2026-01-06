@@ -3,6 +3,8 @@ import { Home, Users, BarChart3, CheckSquare, Workflow, Settings, LogOut, Kanban
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { useCurrentUserSettings } from '@/hooks/useUserWorkspaceSettings';
+import { useWorkspace } from '@/hooks/useWorkspace';
 import {
   Sidebar,
   SidebarContent,
@@ -19,6 +21,8 @@ import {
   SidebarGroupContent,
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
 const navigationGroups = [
   {
@@ -64,9 +68,44 @@ function getInitials(name: string | null | undefined): string {
 export default function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signOut, profile } = useAuth();
+  const { signOut, profile, user } = useAuth();
   const { isMobile, setOpenMobile, state, toggleSidebar } = useSidebar();
   const isCollapsed = state === 'collapsed';
+  const { currentWorkspace } = useWorkspace();
+  const { data: userSettings } = useCurrentUserSettings();
+  
+  // Check if current user is admin
+  const { data: isAdmin } = useQuery({
+    queryKey: ['user-is-admin', currentWorkspace?.id, user?.id],
+    queryFn: async () => {
+      if (!currentWorkspace?.id || !user?.id) return false;
+      const { data } = await supabase
+        .from('workspace_members')
+        .select('role')
+        .eq('workspace_id', currentWorkspace.id)
+        .eq('user_id', user.id)
+        .single();
+      return data?.role === 'admin';
+    },
+    enabled: !!currentWorkspace?.id && !!user?.id,
+  });
+
+  const allowedSections = userSettings?.allowed_sections || [];
+  
+  // Filter navigation based on permissions (admins see everything)
+  const getFilteredNavigationGroups = () => {
+    if (isAdmin) return navigationGroups;
+    
+    return navigationGroups.map(group => ({
+      ...group,
+      items: group.items.filter(item => {
+        const sectionId = item.href.replace('/', '').replace('-', '-');
+        return allowedSections.includes(sectionId);
+      }),
+    })).filter(group => group.items.length > 0);
+  };
+
+  const filteredNavigationGroups = getFilteredNavigationGroups();
 
   const handleSignOut = async () => {
     console.log('Sidebar: Starting logout process...');
@@ -147,7 +186,7 @@ export default function AppSidebar() {
 
       {/* Conteúdo do Menu */}
       <SidebarContent className="px-3 py-4 sidebar-scroll-dark flex-1 overflow-y-auto">
-        {navigationGroups.map((group) => (
+        {filteredNavigationGroups.map((group) => (
           <SidebarGroup key={group.label}>
             {!isCollapsed && (
               <SidebarGroupLabel className="text-xs font-semibold text-white/50 uppercase tracking-wider px-3 mb-2">

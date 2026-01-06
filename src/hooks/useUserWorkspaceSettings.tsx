@@ -11,6 +11,7 @@ export interface UserWorkspaceSettings {
   can_see_all_leads: boolean;
   can_see_unassigned_leads: boolean;
   default_whatsapp_instance_id: string | null;
+  allowed_sections: string[] | null;
   created_at: string;
   updated_at: string;
 }

@@ -47,7 +47,7 @@ export default function Settings() {
         );
       case 'team':
         return <TeamManagement />;
-      case 'permissions':
+      case 'leads-whatsapp':
         return <WhatsAppAutoLeadSettings currentUserRole={currentUserRole} />;
       case 'fields':
         return <CustomFieldsManager currentUserRole={currentUserRole} />;
@@ -77,7 +77,7 @@ export default function Settings() {
       profile: 'Perfil',
       workspace: 'Workspace',
       team: 'Equipe',
-      permissions: 'Permissões e Automação',
+      'leads-whatsapp': 'Leads WhatsApp',
       fields: 'Campos Customizados',
       tags: 'Tags',
       utms: 'UTMs',

@@ -294,15 +294,15 @@ export default function WhatsAppAutoLeadSettings({ currentUserRole }: WhatsAppAu
                         Atribuir para
                       </Label>
                       <Select 
-                        value={assignedTo || ''} 
-                        onValueChange={(v) => setAssignedTo(v || null)}
+                        value={assignedTo || 'none'} 
+                        onValueChange={(v) => setAssignedTo(v === 'none' ? null : v)}
                         disabled={!isAllowedToEdit}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione um usuário (opcional)" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Não atribuir automaticamente</SelectItem>
+                          <SelectItem value="none">Não atribuir automaticamente</SelectItem>
                           {members.map((member) => (
                             <SelectItem key={member.user_id} value={member.user_id}>
                               {member.profiles?.full_name || member.profiles?.email || 'Usuário'}
@@ -322,15 +322,15 @@ export default function WhatsAppAutoLeadSettings({ currentUserRole }: WhatsAppAu
                         Tag automática
                       </Label>
                       <Select 
-                        value={autoTagId || ''} 
-                        onValueChange={(v) => setAutoTagId(v || null)}
+                        value={autoTagId || 'none'} 
+                        onValueChange={(v) => setAutoTagId(v === 'none' ? null : v)}
                         disabled={!isAllowedToEdit}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione uma tag (opcional)" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Nenhuma tag</SelectItem>
+                          <SelectItem value="none">Nenhuma tag</SelectItem>
                           {tags.map((tag) => (
                             <SelectItem key={tag.id} value={tag.id}>
                               <div className="flex items-center gap-2">

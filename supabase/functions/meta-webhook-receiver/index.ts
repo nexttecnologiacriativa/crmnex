@@ -216,6 +216,8 @@ Deno.serve(async (req) => {
                   .single();
 
                 // Call meta-lead-processor to handle the lead
+                console.log(`📤 Calling meta-lead-processor for leadgen_id: ${leadgenId}`)
+                
                 const processorResponse = await supabase.functions.invoke('meta-lead-processor', {
                   body: {
                     integration_id: integrationId,
@@ -226,9 +228,31 @@ Deno.serve(async (req) => {
                   }
                 })
 
+                // Enhanced logging for debugging
+                console.log('📥 Processor response:', {
+                  data: processorResponse.data,
+                  error: processorResponse.error,
+                  hasData: !!processorResponse.data,
+                  hasError: !!processorResponse.error
+                })
+
+                // Extract detailed error from response data if present
+                let detailedErrorMessage: string | null = null
+                if (processorResponse.error || processorResponse.data?.error) {
+                  const errorData = processorResponse.data as Record<string, unknown> | null
+                  detailedErrorMessage = String(
+                    errorData?.message || 
+                    errorData?.error ||
+                    (errorData?.graph_error as Record<string, unknown>)?.message ||
+                    processorResponse.error?.message ||
+                    'Unknown error'
+                  )
+                  console.error('❌ Processor error details:', detailedErrorMessage, 'Full data:', JSON.stringify(processorResponse.data))
+                }
+
                 // Determine the status and extract error message
                 const logStatus = determineLogStatus(processorResponse)
-                const errorMessage = logStatus !== 'success' ? extractErrorMessage(processorResponse) : null
+                const errorMessage = detailedErrorMessage || (logStatus !== 'success' ? extractErrorMessage(processorResponse) : null)
 
                 if (logStatus === 'test_ignored') {
                   console.log(`⚠️ Test webhook ignored: ${leadgenId}`)

@@ -17,8 +17,9 @@ import { useWorkspace } from '@/hooks/useWorkspace';
 import MetaSetupInstructions from './MetaSetupInstructions';
 import MetaWebhookLogs from './MetaWebhookLogs';
 import MetaFormSettings from './MetaFormSettings';
-import { Trash2, RefreshCw, ExternalLink, Facebook, AlertCircle, CheckCircle2, HelpCircle, Copy, Download, Loader2 } from 'lucide-react';
+import { Trash2, RefreshCw, ExternalLink, Facebook, AlertCircle, CheckCircle2, HelpCircle, Copy, Download, Loader2, RotateCcw, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface MetaIntegrationsSettingsProps {
   currentUserRole?: 'admin' | 'manager' | 'user';
@@ -31,6 +32,8 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
   const [showInstructions, setShowInstructions] = useState(false);
   const [selectedIntegrationId, setSelectedIntegrationId] = useState<string | null>(null);
   const [fetchingLeads, setFetchingLeads] = useState<string | null>(null);
+  const [reprocessingLeads, setReprocessingLeads] = useState<string | null>(null);
+  const [reauthenticating, setReauthenticating] = useState<string | null>(null);
   
   const { data: integrations = [], isLoading, refetch } = useMetaIntegrations();
   const { data: pipelines = [] } = usePipelines(currentWorkspace?.id);
@@ -253,6 +256,149 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
     }
   };
 
+  // Calculate token age in days
+  const getTokenAgeDays = (updatedAt: string) => {
+    const updated = new Date(updatedAt);
+    const now = new Date();
+    return Math.floor((now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24));
+  };
+
+  // Check if token might be expired (over 60 days)
+  const isTokenPossiblyExpired = (updatedAt: string) => {
+    return getTokenAgeDays(updatedAt) > 60;
+  };
+
+  // Handle reauthentication (restart OAuth flow)
+  const handleReauthenticate = async (integrationId: string, metaAppId: string) => {
+    setReauthenticating(integrationId);
+    
+    try {
+      // Get integration details for app secret
+      const { data: integration } = await supabase
+        .from('meta_integrations')
+        .select('app_secret, webhook_verify_token')
+        .eq('id', integrationId)
+        .single();
+      
+      if (!integration) {
+        toast({
+          title: "Erro",
+          description: "Integração não encontrada",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Build new OAuth URL
+      const redirectUri = `https://mqotdnvwyjhyiqzbefpm.supabase.co/functions/v1/meta-oauth-callback`;
+      const scope = 'leads_retrieval,pages_show_list,pages_read_engagement,pages_manage_ads';
+      
+      const oauthUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${encodeURIComponent(metaAppId)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(integrationId)}&scope=${encodeURIComponent(scope)}`;
+
+      // Open OAuth URL in a new window
+      const oauthWindow = window.open(
+        oauthUrl,
+        'meta-oauth-reauth',
+        'width=600,height=700,scrollbars=yes,resizable=yes'
+      );
+
+      // Monitor OAuth completion
+      const checkClosed = setInterval(() => {
+        if (oauthWindow?.closed) {
+          clearInterval(checkClosed);
+          setReauthenticating(null);
+          refetch();
+          toast({
+            title: "Reautenticação iniciada",
+            description: "Verifique se a integração foi reconectada com sucesso"
+          });
+        }
+      }, 1000);
+    } catch (error) {
+      console.error('Error reauthenticating:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao iniciar reautenticação",
+        variant: "destructive"
+      });
+      setReauthenticating(null);
+    }
+  };
+
+  // Reprocess failed leads
+  const handleReprocessFailedLeads = async (integrationId: string) => {
+    setReprocessingLeads(integrationId);
+    
+    try {
+      // Get failed logs from last 7 days
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      const { data: failedLogs, error: logsError } = await supabase
+        .from('meta_webhook_logs')
+        .select('id, leadgen_id, form_id, page_id')
+        .eq('integration_id', integrationId)
+        .eq('status', 'error')
+        .gte('created_at', sevenDaysAgo.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (logsError) {
+        throw logsError;
+      }
+
+      if (!failedLogs || failedLogs.length === 0) {
+        toast({
+          title: "Nenhum lead com erro",
+          description: "Não há leads com erro nos últimos 7 dias para reprocessar"
+        });
+        return;
+      }
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const log of failedLogs) {
+        try {
+          const { error } = await supabase.functions.invoke('meta-lead-processor', {
+            body: {
+              integration_id: integrationId,
+              leadgen_id: log.leadgen_id,
+              form_id: log.form_id,
+              page_id: log.page_id,
+              log_id: log.id
+            }
+          });
+
+          if (!error) {
+            successCount++;
+          } else {
+            errorCount++;
+          }
+        } catch {
+          errorCount++;
+        }
+      }
+
+      toast({
+        title: "Reprocessamento concluído",
+        description: `${successCount} lead(s) processado(s) com sucesso, ${errorCount} erro(s)`
+      });
+      
+      // Refresh to update logs
+      refetch();
+    } catch (error) {
+      console.error('Error reprocessing:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao reprocessar leads",
+        variant: "destructive"
+      });
+    } finally {
+      setReprocessingLeads(null);
+    }
+  };
+
   if (isLoading) {
     return <div className="flex justify-center py-8">Carregando integrações...</div>;
   }
@@ -468,10 +614,28 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
                   
                   <div className="flex items-center space-x-2">
                     {integration.is_active && integration.access_token !== 'pending' ? (
-                      <Badge className="bg-green-100 text-green-800">
-                        <CheckCircle2 className="w-3 h-3 mr-1" />
-                        Conectado
-                      </Badge>
+                      <>
+                        <Badge className="bg-green-100 text-green-800">
+                          <CheckCircle2 className="w-3 h-3 mr-1" />
+                          Conectado
+                        </Badge>
+                        {isTokenPossiblyExpired(integration.updated_at) && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="destructive" className="cursor-help">
+                                  <Clock className="w-3 h-3 mr-1" />
+                                  Token: {getTokenAgeDays(integration.updated_at)}d
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>O token pode estar expirado ({getTokenAgeDays(integration.updated_at)} dias).</p>
+                                <p>Clique em "Reautenticar" para renovar.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </>
                     ) : integration.access_token === 'pending' ? (
                       <Badge variant="secondary">
                         <AlertCircle className="w-3 h-3 mr-1" />
@@ -485,28 +649,78 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
                     
                     {canEdit && (
                       <div className="flex space-x-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleFetchMissingLeads(integration.id)}
-                          disabled={fetchingLeads === integration.id}
-                          title="Buscar leads perdidos"
-                        >
-                          {fetchingLeads === integration.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Download className="w-4 h-4" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleSyncForms(integration.id)}
-                          disabled={syncForms.isPending}
-                          title="Sincronizar formulários"
-                        >
-                          <RefreshCw className={`w-4 h-4 ${syncForms.isPending ? 'animate-spin' : ''}`} />
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleReauthenticate(integration.id, integration.meta_app_id)}
+                                disabled={reauthenticating === integration.id}
+                              >
+                                {reauthenticating === integration.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <RotateCcw className="w-4 h-4" />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Reautenticar (renovar token)</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleReprocessFailedLeads(integration.id)}
+                                disabled={reprocessingLeads === integration.id}
+                              >
+                                {reprocessingLeads === integration.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="w-4 h-4 text-orange-500" />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Reprocessar leads com erro</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleFetchMissingLeads(integration.id)}
+                                disabled={fetchingLeads === integration.id}
+                              >
+                                {fetchingLeads === integration.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Download className="w-4 h-4" />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Buscar leads perdidos</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleSyncForms(integration.id)}
+                                disabled={syncForms.isPending}
+                              >
+                                <RefreshCw className={`w-4 h-4 ${syncForms.isPending ? 'animate-spin' : ''}`} />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Sincronizar formulários</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <Button
                           variant="ghost"
                           size="sm"

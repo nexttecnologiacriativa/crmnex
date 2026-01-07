@@ -160,35 +160,51 @@ Deno.serve(async (req) => {
       .single()
 
     if (!existingForm) {
-      // Fetch form details from Meta API
-      const formResponse = await fetch(
-        `https://graph.facebook.com/v18.0/${form_id}?fields=name,page_id&access_token=${integration.access_token}`
-      )
-
-      if (formResponse.ok) {
-        const formData = await formResponse.json()
-        
-        // Get page name
-        const pageResponse = await fetch(
-          `https://graph.facebook.com/v18.0/${page_id}?fields=name&access_token=${integration.access_token}`
+      // Try to fetch form details from Meta API
+      let formName = `Formulário ${form_id}`
+      let pageName = 'Página Desconhecida'
+      
+      try {
+        const formResponse = await fetch(
+          `https://graph.facebook.com/v18.0/${form_id}?fields=name,page_id&access_token=${integration.access_token}`
         )
-        
-        const pageData = pageResponse.ok ? await pageResponse.json() : { name: 'Unknown Page' }
 
-        await supabase
-          .from('meta_lead_forms')
-          .insert({
-            integration_id: integration_id,
-            meta_form_id: form_id,
-            form_name: formData.name || 'Unknown Form',
-            page_id: page_id,
-            page_name: pageData.name || 'Unknown Page',
-            fields_schema: leadData.field_data || [],
-            selected_tag_ids: [],
-            field_mapping: {}
-          })
-        
-        console.log('✅ Form registered:', formData.name)
+        if (formResponse.ok) {
+          const formData = await formResponse.json()
+          formName = formData.name || formName
+          
+          // Get page name
+          const pageResponse = await fetch(
+            `https://graph.facebook.com/v18.0/${page_id}?fields=name&access_token=${integration.access_token}`
+          )
+          
+          if (pageResponse.ok) {
+            const pageData = await pageResponse.json()
+            pageName = pageData.name || pageName
+          }
+        }
+      } catch (e) {
+        console.warn('⚠️ Could not fetch form/page details from Meta API, using defaults')
+      }
+
+      // Always create the form record (even if API fetch failed)
+      const { error: insertError } = await supabase
+        .from('meta_lead_forms')
+        .insert({
+          integration_id: integration_id,
+          meta_form_id: form_id,
+          form_name: formName,
+          page_id: page_id,
+          page_name: pageName,
+          fields_schema: leadData.field_data || [],
+          selected_tag_ids: [],
+          field_mapping: {}
+        })
+      
+      if (insertError) {
+        console.warn('⚠️ Error inserting form:', insertError)
+      } else {
+        console.log('✅ Form registered:', formName)
       }
     }
 

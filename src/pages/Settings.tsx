@@ -4,6 +4,7 @@ import CustomFieldsManager from '@/components/leads/CustomFieldsManager';
 import UserProfileSettings from '@/components/settings/UserProfileSettings';
 import WorkspaceSettings from '@/components/settings/WorkspaceSettings';
 import TeamManagement from '@/components/settings/TeamManagement';
+import LeadDistributionSettings from '@/components/settings/LeadDistributionSettings';
 import TagManager from '@/components/settings/TagManager';
 import WhatsAppSettings from '@/components/settings/WhatsAppSettings';
 import WhatsAppEvolutionSettings from '@/components/settings/WhatsAppEvolutionSettings';
@@ -47,6 +48,8 @@ export default function Settings() {
         );
       case 'team':
         return <TeamManagement />;
+      case 'lead-distribution':
+        return <LeadDistributionSettings currentUserRole={currentUserRole} />;
       case 'leads-whatsapp':
         return <WhatsAppAutoLeadSettings currentUserRole={currentUserRole} />;
       case 'fields':
@@ -77,6 +80,7 @@ export default function Settings() {
       profile: 'Perfil',
       workspace: 'Workspace',
       team: 'Equipe',
+      'lead-distribution': 'Distribuição de Leads',
       'leads-whatsapp': 'Leads WhatsApp',
       fields: 'Campos Customizados',
       tags: 'Tags',

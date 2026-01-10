@@ -1,4 +1,4 @@
-import { User, Building2, Users, Settings2, Tag, Link2, MessageSquare, Webhook, Bot, Bell, Share2, Phone } from 'lucide-react';
+import { User, Building2, Users, Settings2, Tag, Link2, MessageSquare, Webhook, Bot, Bell, Share2, Phone, UserCog } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import AvatarUpload from './AvatarUpload';
@@ -7,6 +7,7 @@ export type SettingsSection =
   | 'profile'
   | 'workspace'
   | 'team'
+  | 'lead-distribution'
   | 'leads-whatsapp'
   | 'fields'
   | 'tags'
@@ -30,6 +31,7 @@ const menuGroups = [
       { id: 'profile' as const, label: 'Perfil', icon: User },
       { id: 'workspace' as const, label: 'Workspace', icon: Building2 },
       { id: 'team' as const, label: 'Equipe', icon: Users },
+      { id: 'lead-distribution' as const, label: 'Distribuição de Leads', icon: UserCog },
       { id: 'leads-whatsapp' as const, label: 'Leads WhatsApp', icon: Phone },
     ],
   },

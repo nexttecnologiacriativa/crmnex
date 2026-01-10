@@ -1276,6 +1276,194 @@ export type Database = {
           },
         ]
       }
+      lead_distribution_logs: {
+        Row: {
+          assigned_to: string | null
+          created_at: string | null
+          distribution_mode: string | null
+          id: string
+          lead_id: string
+          pipeline_id: string | null
+          reason: string | null
+          rule_id: string | null
+          source: string | null
+          workspace_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string | null
+          distribution_mode?: string | null
+          id?: string
+          lead_id: string
+          pipeline_id?: string | null
+          reason?: string | null
+          rule_id?: string | null
+          source?: string | null
+          workspace_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string | null
+          distribution_mode?: string | null
+          id?: string
+          lead_id?: string
+          pipeline_id?: string | null
+          reason?: string | null
+          rule_id?: string | null
+          source?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_distribution_logs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_distribution_logs_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "lead_distribution_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_distribution_logs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_distribution_members: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          last_assignment_at: string | null
+          leads_assigned_hour: number | null
+          leads_assigned_today: number | null
+          max_leads_per_day: number | null
+          max_leads_per_hour: number | null
+          max_open_leads: number | null
+          percentage: number | null
+          rule_id: string
+          user_id: string
+          weight: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_assignment_at?: string | null
+          leads_assigned_hour?: number | null
+          leads_assigned_today?: number | null
+          max_leads_per_day?: number | null
+          max_leads_per_hour?: number | null
+          max_open_leads?: number | null
+          percentage?: number | null
+          rule_id: string
+          user_id: string
+          weight?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_assignment_at?: string | null
+          leads_assigned_hour?: number | null
+          leads_assigned_today?: number | null
+          max_leads_per_day?: number | null
+          max_leads_per_hour?: number | null
+          max_open_leads?: number | null
+          percentage?: number | null
+          rule_id?: string
+          user_id?: string
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_distribution_members_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "lead_distribution_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_distribution_rules: {
+        Row: {
+          active_days: number[] | null
+          active_hours_end: string | null
+          active_hours_start: string | null
+          apply_to_pipelines: string[] | null
+          apply_to_sources: string[] | null
+          apply_to_tags: string[] | null
+          created_at: string | null
+          description: string | null
+          distribution_mode: string
+          exclude_tags: string[] | null
+          fixed_user_id: string | null
+          id: string
+          is_active: boolean | null
+          last_assigned_index: number | null
+          name: string
+          priority: number | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          active_days?: number[] | null
+          active_hours_end?: string | null
+          active_hours_start?: string | null
+          apply_to_pipelines?: string[] | null
+          apply_to_sources?: string[] | null
+          apply_to_tags?: string[] | null
+          created_at?: string | null
+          description?: string | null
+          distribution_mode?: string
+          exclude_tags?: string[] | null
+          fixed_user_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_assigned_index?: number | null
+          name: string
+          priority?: number | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          active_days?: number[] | null
+          active_hours_end?: string | null
+          active_hours_start?: string | null
+          apply_to_pipelines?: string[] | null
+          apply_to_sources?: string[] | null
+          apply_to_tags?: string[] | null
+          created_at?: string | null
+          description?: string | null
+          distribution_mode?: string
+          exclude_tags?: string[] | null
+          fixed_user_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_assigned_index?: number | null
+          name?: string
+          priority?: number | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_distribution_rules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_pipeline_relations: {
         Row: {
           created_at: string | null
@@ -3008,6 +3196,8 @@ export type Database = {
           default_whatsapp_pipeline_id: string | null
           default_whatsapp_stage_id: string | null
           id: string
+          lead_distribution_fallback_mode: string | null
+          lead_distribution_fallback_user: string | null
           n8n_webhook_url: string | null
           updated_at: string
           workspace_id: string
@@ -3020,6 +3210,8 @@ export type Database = {
           default_whatsapp_pipeline_id?: string | null
           default_whatsapp_stage_id?: string | null
           id?: string
+          lead_distribution_fallback_mode?: string | null
+          lead_distribution_fallback_user?: string | null
           n8n_webhook_url?: string | null
           updated_at?: string
           workspace_id: string
@@ -3032,6 +3224,8 @@ export type Database = {
           default_whatsapp_pipeline_id?: string | null
           default_whatsapp_stage_id?: string | null
           id?: string
+          lead_distribution_fallback_mode?: string | null
+          lead_distribution_fallback_user?: string | null
           n8n_webhook_url?: string | null
           updated_at?: string
           workspace_id?: string

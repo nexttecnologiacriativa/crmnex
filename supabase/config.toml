@@ -35,3 +35,9 @@ verify_jwt = false
 
 [functions.merge-leads]
 verify_jwt = false
+
+[functions.meta-leads-auto-sync]
+verify_jwt = false
+
+[functions.distribute-lead]
+verify_jwt = false

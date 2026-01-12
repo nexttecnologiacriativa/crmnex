@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { MoreVertical, MessageCircle, Eye, Tag } from 'lucide-react';
+import { MoreVertical, MessageCircle, Eye, Tag, User } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useLeadTagRelations } from '@/hooks/useLeadTags';
 import { getLeadDisplayName } from '@/lib/leadUtils';
+import { useTeamManagement } from '@/hooks/useTeamManagement';
 
 interface LeadKanbanCardProps {
   lead: any;
@@ -43,9 +44,16 @@ export default function LeadKanbanCard({
   selectionMode = false
 }: LeadKanbanCardProps) {
   const navigate = useNavigate();
+  const { members = [] } = useTeamManagement();
   const {
     data: leadTagRelations = []
   } = useLeadTagRelations(lead.id);
+
+  // Get assigned user name
+  const assignedUser = lead.assigned_to 
+    ? members.find(m => m.user_id === lead.assigned_to)
+    : null;
+  const assignedUserName = assignedUser?.profiles?.full_name || assignedUser?.profiles?.email?.split('@')[0];
 
   // Filtrar tags válidas sem duplicatas
   const validTags = leadTagRelations
@@ -186,6 +194,16 @@ export default function LeadKanbanCard({
                 </span>
               )}
             </div>
+
+            {/* Owner row */}
+            {assignedUserName && (
+              <div className="flex items-center gap-1 mt-1.5">
+                <User className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[10px] text-muted-foreground truncate">
+                  {assignedUserName}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </CardContent>

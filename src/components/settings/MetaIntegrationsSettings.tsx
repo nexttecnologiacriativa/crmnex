@@ -17,6 +17,7 @@ import { useWorkspace } from '@/hooks/useWorkspace';
 import MetaSetupInstructions from './MetaSetupInstructions';
 import MetaWebhookLogs from './MetaWebhookLogs';
 import MetaFormSettings from './MetaFormSettings';
+import MetaAutoSyncStatus from './MetaAutoSyncStatus';
 import { Trash2, RefreshCw, ExternalLink, Facebook, AlertCircle, CheckCircle2, HelpCircle, Copy, Download, Loader2, RotateCcw, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -573,6 +574,9 @@ export default function MetaIntegrationsSettings({ currentUserRole }: MetaIntegr
           </CardContent>
         </Card>
       )}
+
+      {/* Auto Sync Status Card */}
+      {integrations.length > 0 && <MetaAutoSyncStatus />}
 
       {/* Integrations List */}
       <div className="grid gap-4">

@@ -341,6 +341,32 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Call lead distribution
+    console.log('📤 Calling lead distribution...')
+    try {
+      const distResponse = await fetch(
+        `${Deno.env.get('SUPABASE_URL')}/functions/v1/distribute-lead`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+          },
+          body: JSON.stringify({
+            lead_id: newLead.id,
+            workspace_id: integration.workspace_id,
+            pipeline_id: integration.selected_pipeline_id,
+            source: 'Meta Lead Ads',
+            tags: tagsToApply
+          })
+        }
+      )
+      const distResult = await distResponse.json()
+      console.log('📤 Distribution result:', distResult)
+    } catch (distError) {
+      console.warn('⚠️ Distribution failed (non-blocking):', distError)
+    }
+
     const processingTime = Date.now() - startTime
     console.log(`✅ Lead created successfully: ${newLead.id} (${processingTime}ms)`)
 

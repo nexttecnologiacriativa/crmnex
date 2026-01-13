@@ -119,8 +119,10 @@ Deno.serve(async (req) => {
             // Fetch leads from the last SYNC_HOURS hours
             const sinceTimestamp = Math.floor(Date.now() / 1000) - (SYNC_HOURS * 60 * 60)
             
-            const leadsUrl = `https://graph.facebook.com/v18.0/${form.meta_form_id}/leads?` +
-              `fields=created_time,field_data,ad_id,adgroup_id,campaign_id,platform&` +
+            // Use only valid fields for leadgen endpoint
+            // Note: ad_id, adgroup_id, campaign_id, platform are NOT available via form/leads query
+            const leadsUrl = `https://graph.facebook.com/v24.0/${form.meta_form_id}/leads?` +
+              `fields=id,created_time,field_data&` +
               `filtering=[{"field":"time_created","operator":"GREATER_THAN","value":${sinceTimestamp}}]&` +
               `access_token=${integration.access_token}`
 

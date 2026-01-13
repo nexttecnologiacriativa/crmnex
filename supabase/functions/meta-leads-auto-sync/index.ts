@@ -306,27 +306,22 @@ Deno.serve(async (req) => {
                     .insert(tagInserts)
                 }
 
-                // Call lead distribution
+                // Call lead distribution using supabase.functions.invoke
                 try {
-                  const distResponse = await fetch(
-                    `${Deno.env.get('SUPABASE_URL')}/functions/v1/distribute-lead`,
-                    {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
-                      },
-                      body: JSON.stringify({
-                        lead_id: newLead.id,
-                        workspace_id: integration.workspace_id,
-                        pipeline_id: integration.selected_pipeline_id,
-                        source: 'Meta Lead Ads (Auto-Sync)',
-                        tags: tagsToApply
-                      })
+                  const { data: distResult, error: distError } = await supabase.functions.invoke('distribute-lead', {
+                    body: {
+                      lead_id: newLead.id,
+                      workspace_id: integration.workspace_id,
+                      pipeline_id: integration.selected_pipeline_id,
+                      source: 'meta', // Use normalized source that matches distribution rules
+                      tags: tagsToApply
                     }
-                  )
-                  const distResult = await distResponse.json()
-                  console.log('📤 Distribution result:', distResult)
+                  })
+                  if (distError) {
+                    console.warn('⚠️ Distribution invoke error:', distError)
+                  } else {
+                    console.log('📤 Distribution result:', distResult)
+                  }
                 } catch (distError) {
                   console.warn('⚠️ Distribution failed (non-blocking):', distError)
                 }

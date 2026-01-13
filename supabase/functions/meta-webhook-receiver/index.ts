@@ -216,6 +216,7 @@ Deno.serve(async (req) => {
                   .single();
 
                 // Call meta-lead-processor to handle the lead
+                // Pass ad_id and adgroup_id from webhook payload (not available via Graph API)
                 console.log(`📤 Calling meta-lead-processor for leadgen_id: ${leadgenId}`)
                 
                 const processorResponse = await supabase.functions.invoke('meta-lead-processor', {
@@ -224,6 +225,9 @@ Deno.serve(async (req) => {
                     leadgen_id: leadgenId,
                     form_id: formId,
                     page_id: pageId,
+                    ad_id: change.value.ad_id || null,
+                    adgroup_id: change.value.adgroup_id || null,
+                    campaign_id: change.value.campaign_id || null,
                     log_id: logEntry?.id
                   }
                 })

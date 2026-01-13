@@ -10,6 +10,9 @@ interface MetaLeadRequest {
   leadgen_id: string
   form_id: string
   page_id: string
+  ad_id?: string | null
+  adgroup_id?: string | null
+  campaign_id?: string | null
   log_id?: string
 }
 
@@ -48,8 +51,8 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { integration_id, leadgen_id, form_id, page_id, log_id } = await req.json() as MetaLeadRequest
-    console.log(`🎯 Processing lead ${leadgen_id} for integration ${integration_id}`)
+    const { integration_id, leadgen_id, form_id, page_id, ad_id, adgroup_id, campaign_id, log_id } = await req.json() as MetaLeadRequest
+    console.log(`🎯 Processing lead ${leadgen_id} for integration ${integration_id}`, { ad_id, adgroup_id, campaign_id })
 
     // Check if this is a test webhook with fake IDs
     if (isTestLeadgenId(leadgen_id)) {
@@ -95,9 +98,11 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Fetch lead data from Meta API with specific fields
-    const graphApiUrl = `https://graph.facebook.com/v18.0/${leadgen_id}?` + 
-      `fields=created_time,field_data,form_id,ad_id,adgroup_id,campaign_id,platform&` +
+    // Fetch lead data from Meta API with valid fields only
+    // Note: ad_id, adgroup_id, campaign_id, platform are NOT available via Graph API query
+    // They must come from the webhook payload
+    const graphApiUrl = `https://graph.facebook.com/v24.0/${leadgen_id}?` + 
+      `fields=id,created_time,field_data,form_id&` +
       `access_token=${integration.access_token}`
     
     console.log(`📡 Fetching lead from Graph API: ${leadgen_id}`)
@@ -166,7 +171,7 @@ Deno.serve(async (req) => {
       
       try {
         const formResponse = await fetch(
-          `https://graph.facebook.com/v18.0/${form_id}?fields=name,page_id&access_token=${integration.access_token}`
+          `https://graph.facebook.com/v24.0/${form_id}?fields=name,page_id&access_token=${integration.access_token}`
         )
 
         if (formResponse.ok) {
@@ -175,7 +180,7 @@ Deno.serve(async (req) => {
           
           // Get page name
           const pageResponse = await fetch(
-            `https://graph.facebook.com/v18.0/${page_id}?fields=name&access_token=${integration.access_token}`
+            `https://graph.facebook.com/v24.0/${page_id}?fields=name&access_token=${integration.access_token}`
           )
           
           if (pageResponse.ok) {
@@ -219,7 +224,10 @@ Deno.serve(async (req) => {
       utm_content: page_id,
       custom_fields: {
         meta_leadgen_id: leadgen_id,
-        meta_form_id: form_id
+        meta_form_id: form_id,
+        meta_ad_id: ad_id || null,
+        meta_adgroup_id: adgroup_id || null,
+        meta_campaign_id: campaign_id || null
       }
     }
 

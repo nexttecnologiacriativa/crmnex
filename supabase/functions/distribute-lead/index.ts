@@ -55,6 +55,9 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Normalize source for flexible matching
+    const normalizeSource = (s: string) => s?.toLowerCase().replace(/[\s_-]+/g, '').replace(/[()]/g, '') || '';
+
     // Find matching rule
     let matchingRule = null;
     const now = new Date();
@@ -62,15 +65,33 @@ Deno.serve(async (req) => {
     const currentMinute = now.getMinutes();
     const currentDay = now.getDay(); // 0 = Sunday
 
+    console.log('🔍 Looking for matching rule. Source:', source, '-> normalized:', normalizeSource(source || ''));
+
     for (const rule of rules) {
+      console.log(`📋 Checking rule: ${rule.name} (priority: ${rule.priority})`);
+      
       // Check pipeline filter
       if (rule.apply_to_pipelines?.length > 0 && pipeline_id) {
-        if (!rule.apply_to_pipelines.includes(pipeline_id)) continue;
+        if (!rule.apply_to_pipelines.includes(pipeline_id)) {
+          console.log(`  ❌ Pipeline ${pipeline_id} not in allowed pipelines`);
+          continue;
+        }
       }
 
-      // Check source filter
+      // Check source filter with normalized comparison
       if (rule.apply_to_sources?.length > 0 && source) {
-        if (!rule.apply_to_sources.includes(source)) continue;
+        const normalizedSource = normalizeSource(source);
+        const hasMatch = rule.apply_to_sources.some((ruleSource: string) => {
+          const normalizedRuleSource = normalizeSource(ruleSource);
+          // Check if either contains the other (flexible matching)
+          return normalizedSource.includes(normalizedRuleSource) || 
+                 normalizedRuleSource.includes(normalizedSource);
+        });
+        if (!hasMatch) {
+          console.log(`  ❌ Source "${source}" not matching allowed sources:`, rule.apply_to_sources);
+          continue;
+        }
+        console.log(`  ✅ Source "${source}" matches`);
       }
 
       // Check active days

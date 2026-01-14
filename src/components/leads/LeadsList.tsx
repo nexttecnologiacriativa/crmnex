@@ -1,16 +1,20 @@
 
-import { useState } from 'react';
-import { Plus, Users } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Users, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLeads } from '@/hooks/useLeads';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useDuplicateLeads } from '@/hooks/useMergeLeads';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import CreateLeadDialog from './CreateLeadDialog';
 import LeadsListView from './LeadsListView';
 import TagManager from './TagManager';
 import LeadsFilters from './LeadsFilters';
 import LeadsImportExport from './LeadsImportExport';
 import DuplicateLeadsManager from './DuplicateLeadsManager';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 export default function LeadsList() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -21,13 +25,41 @@ export default function LeadsList() {
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isDuplicatesOpen, setIsDuplicatesOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'mine' | 'all'>('mine');
   
+  const { user } = useAuth();
   const { data: duplicateGroups = [] } = useDuplicateLeads();
   const duplicateCount = duplicateGroups.reduce((acc, group) => acc + group.leads.length - 1, 0);
   
   console.log('LeadsList - Rendering component');
   
   const { currentWorkspace, isLoading: workspacesLoading, error: workspacesError } = useWorkspace();
+  console.log('LeadsList - Current workspace:', currentWorkspace);
+
+  // Check if user is admin
+  const { data: userRole } = useQuery({
+    queryKey: ['user-role', user?.id, currentWorkspace?.id],
+    queryFn: async () => {
+      if (!user?.id || !currentWorkspace?.id) return null;
+      const { data } = await supabase
+        .from('workspace_members')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('workspace_id', currentWorkspace.id)
+        .maybeSingle();
+      return data?.role || 'member';
+    },
+    enabled: !!user?.id && !!currentWorkspace?.id,
+  });
+
+  const isAdmin = userRole === 'admin';
+
+  // Non-admins always see only their leads
+  useEffect(() => {
+    if (!isAdmin && viewMode === 'all') {
+      setViewMode('mine');
+    }
+  }, [isAdmin, viewMode]);
   console.log('LeadsList - Current workspace:', currentWorkspace);
   
   const { data: leads = [], isLoading: leadsLoading, error: leadsError } = useLeads();
@@ -75,18 +107,36 @@ export default function LeadsList() {
                          lead.company?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesSource = !source || lead.source === source;
-    const matchesAssignee = !assignee || 
-      (assignee === 'unassigned' && !lead.assigned_to) ||
-      (assignee === 'me' && lead.assigned_to) ||
-      lead.assigned_to === assignee;
+    
+    // Fix the "me" filter - compare with actual user ID
+    let matchesAssignee = true;
+    if (assignee === 'unassigned') {
+      matchesAssignee = !lead.assigned_to;
+    } else if (assignee === 'me') {
+      matchesAssignee = lead.assigned_to === user?.id;
+    } else if (assignee) {
+      matchesAssignee = lead.assigned_to === assignee;
+    }
+    
     const matchesStatus = !status || lead.status === status;
     
     // Filtro por data
     const leadDate = new Date(lead.created_at);
     const matchesDateFrom = !dateFrom || leadDate >= dateFrom;
     const matchesDateTo = !dateTo || leadDate <= dateTo;
+
+    // Apply view mode filter (mine vs all)
+    let matchesViewMode = true;
+    if (viewMode === 'mine' && !isAdmin) {
+      // Non-admins always see only their leads (enforced by useLeads hook)
+      matchesViewMode = true;
+    } else if (viewMode === 'mine' && isAdmin) {
+      // Admins in "mine" mode see only their leads
+      matchesViewMode = lead.assigned_to === user?.id;
+    }
+    // viewMode === 'all' shows everything (only available for admins)
     
-    return matchesSearch && matchesSource && matchesAssignee && matchesStatus && matchesDateFrom && matchesDateTo;
+    return matchesSearch && matchesSource && matchesAssignee && matchesStatus && matchesDateFrom && matchesDateTo && matchesViewMode;
   }).sort((a, b) => {
     // Ordenar por updated_at decrescente (mais recente primeiro)
     return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
@@ -127,9 +177,28 @@ export default function LeadsList() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold text-nexcrm-green">
-          Leads
-        </h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-3xl font-bold text-nexcrm-green">
+            Leads
+          </h1>
+          {/* View mode toggle - only visible for admins */}
+          {isAdmin && (
+            <ToggleGroup 
+              type="single" 
+              value={viewMode} 
+              onValueChange={(value) => value && setViewMode(value as 'mine' | 'all')}
+              className="bg-muted p-1 rounded-lg"
+            >
+              <ToggleGroupItem value="mine" size="sm" className="text-xs px-3">
+                <Eye className="h-3 w-3 mr-1" />
+                Meus
+              </ToggleGroupItem>
+              <ToggleGroupItem value="all" size="sm" className="text-xs px-3">
+                Todos
+              </ToggleGroupItem>
+            </ToggleGroup>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <LeadsImportExport leads={filteredLeads} />
           <TagManager />

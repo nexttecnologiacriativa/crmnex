@@ -122,8 +122,8 @@ Deno.serve(async (req) => {
       console.log(`\n🔎 Checking form: ${form.form_name} (${form.meta_form_id})`)
 
       try {
-        // Fetch leads from Meta API
-        const leadsUrl = `https://graph.facebook.com/v18.0/${form.meta_form_id}/leads?` +
+        // Fetch leads from Meta API (updated to v24.0)
+        const leadsUrl = `https://graph.facebook.com/v24.0/${form.meta_form_id}/leads?` +
           `fields=id,created_time,field_data&` +
           `access_token=${integration.access_token}`
 
@@ -258,6 +258,20 @@ Deno.serve(async (req) => {
             continue
           }
 
+          // Create lead_pipeline_relations entry so lead appears in Kanban
+          const { error: relationError } = await supabase
+            .from('lead_pipeline_relations')
+            .upsert({
+              lead_id: newLead.id,
+              pipeline_id: integration.selected_pipeline_id,
+              stage_id: defaultStageId,
+              is_primary: true
+            }, { onConflict: 'lead_id,pipeline_id' })
+
+          if (relationError) {
+            console.warn('⚠️ Error creating pipeline relation:', relationError)
+          }
+
           // Apply tags
           const formTagIds = form.selected_tag_ids || []
           const tagsToApply = formTagIds.length > 0 ? formTagIds : (integration.selected_tag_ids || [])
@@ -269,6 +283,26 @@ Deno.serve(async (req) => {
             }))
 
             await supabase.from('lead_tag_relations').insert(tagInserts)
+          }
+
+          // Call lead distribution
+          try {
+            const { data: distResult, error: distError } = await supabase.functions.invoke('distribute-lead', {
+              body: {
+                lead_id: newLead.id,
+                workspace_id: integration.workspace_id,
+                pipeline_id: integration.selected_pipeline_id,
+                source: 'meta',
+                tags: tagsToApply
+              }
+            })
+            if (distError) {
+              console.warn('⚠️ Distribution invoke error:', distError)
+            } else {
+              console.log('📤 Distribution result:', distResult)
+            }
+          } catch (distError) {
+            console.warn('⚠️ Distribution failed (non-blocking):', distError)
           }
 
           summary.leads_created++

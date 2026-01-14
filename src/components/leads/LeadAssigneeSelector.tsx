@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { User, ChevronDown } from 'lucide-react';
 import { useUpdateLead } from '@/hooks/useLeads';
-import { useWorkspaces } from '@/hooks/useWorkspace';
+import { useWorkspace } from '@/hooks/useWorkspace';
 
 interface LeadAssigneeSelectorProps {
   leadId: string;
@@ -21,8 +21,7 @@ interface LeadAssigneeSelectorProps {
 export default function LeadAssigneeSelector({ leadId, currentAssignee }: LeadAssigneeSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const updateLead = useUpdateLead();
-  const { data: workspaces } = useWorkspaces();
-  const currentWorkspace = workspaces?.[0];
+  const { currentWorkspace } = useWorkspace();
 
   // Buscar membros do workspace atual
   const { data: workspaceMembers = [] } = useQuery({
@@ -53,15 +52,7 @@ export default function LeadAssigneeSelector({ leadId, currentAssignee }: LeadAs
     enabled: !!currentWorkspace?.id,
   });
 
-  // Atribuição automática para admin se não houver assignee
-  useEffect(() => {
-    if (!currentAssignee && workspaceMembers.length > 0) {
-      const adminMember = workspaceMembers.find(member => member.role === 'admin');
-      if (adminMember) {
-        handleAssigneeChange(adminMember.user_id);
-      }
-    }
-  }, [currentAssignee, workspaceMembers]);
+  // REMOVED: Auto-assignment to admin - this was causing unexpected behavior
 
   const currentAssigneeProfile = workspaceMembers.find(
     member => member.user_id === currentAssignee

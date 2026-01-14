@@ -290,6 +290,20 @@ Deno.serve(async (req) => {
                   continue
                 }
 
+                // Create lead_pipeline_relations entry so lead appears in Kanban
+                const { error: relationError } = await supabase
+                  .from('lead_pipeline_relations')
+                  .upsert({
+                    lead_id: newLead.id,
+                    pipeline_id: integration.selected_pipeline_id,
+                    stage_id: mappedData.stage_id,
+                    is_primary: true
+                  }, { onConflict: 'lead_id,pipeline_id' })
+
+                if (relationError) {
+                  console.warn('⚠️ Error creating pipeline relation:', relationError)
+                }
+
                 // Apply tags
                 const tagsToApply = form.selected_tag_ids?.length > 0 
                   ? form.selected_tag_ids 

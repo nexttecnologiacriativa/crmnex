@@ -25,12 +25,50 @@ Deno.serve(async (req) => {
     );
 
     const { lead_id, workspace_id, pipeline_id, source, tags }: DistributeLeadRequest = await req.json();
-    console.log('Distribute lead request:', { lead_id, workspace_id, pipeline_id, source });
+    console.log('📥 Distribute lead request:', { lead_id, workspace_id, pipeline_id, source, tags });
 
     if (!lead_id || !workspace_id) {
       return new Response(
         JSON.stringify({ error: 'lead_id and workspace_id are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Helper to log distribution attempts
+    const logDistribution = async (
+      ruleId: string | null,
+      assignedTo: string | null,
+      distributionMode: string | null,
+      reason: string
+    ) => {
+      console.log(`📝 Logging distribution: ${reason}`);
+      await supabase
+        .from('lead_distribution_logs')
+        .insert({
+          workspace_id,
+          lead_id,
+          rule_id: ruleId,
+          assigned_to: assignedTo,
+          source,
+          pipeline_id,
+          distribution_mode: distributionMode,
+          reason,
+        });
+    };
+
+    // Check if lead already has an assignee
+    const { data: existingLead } = await supabase
+      .from('leads')
+      .select('assigned_to')
+      .eq('id', lead_id)
+      .single();
+
+    if (existingLead?.assigned_to) {
+      console.log('⚠️ Lead already has an assignee:', existingLead.assigned_to);
+      await logDistribution(null, existingLead.assigned_to, null, 'lead_already_assigned');
+      return new Response(
+        JSON.stringify({ success: false, reason: 'lead_already_assigned', assigned_to: existingLead.assigned_to }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -43,12 +81,14 @@ Deno.serve(async (req) => {
       .order('priority', { ascending: false });
 
     if (rulesError) {
-      console.error('Error fetching rules:', rulesError);
+      console.error('❌ Error fetching rules:', rulesError);
+      await logDistribution(null, null, null, `error_fetching_rules: ${rulesError.message}`);
       throw rulesError;
     }
 
     if (!rules || rules.length === 0) {
-      console.log('No active distribution rules found');
+      console.log('⚠️ No active distribution rules found');
+      await logDistribution(null, null, null, 'no_rules');
       return new Response(
         JSON.stringify({ success: false, reason: 'no_rules' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -114,7 +154,8 @@ Deno.serve(async (req) => {
     }
 
     if (!matchingRule) {
-      console.log('No matching rule found');
+      console.log('⚠️ No matching rule found');
+      await logDistribution(null, null, null, 'no_matching_rule');
       return new Response(
         JSON.stringify({ success: false, reason: 'no_matching_rule' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -131,9 +172,10 @@ Deno.serve(async (req) => {
       .eq('is_active', true);
 
     if (membersError || !members || members.length === 0) {
-      console.log('No active members found for rule');
+      console.log('⚠️ No active members found for rule:', matchingRule.name);
+      await logDistribution(matchingRule.id, null, matchingRule.distribution_mode, 'no_members');
       return new Response(
-        JSON.stringify({ success: false, reason: 'no_members' }),
+        JSON.stringify({ success: false, reason: 'no_members', rule: matchingRule.name }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -165,9 +207,10 @@ Deno.serve(async (req) => {
     }
 
     if (availableMembers.length === 0) {
-      console.log('No available members (all at limit)');
+      console.log('⚠️ No available members (all at limit) for rule:', matchingRule.name);
+      await logDistribution(matchingRule.id, null, matchingRule.distribution_mode, 'all_members_at_limit');
       return new Response(
-        JSON.stringify({ success: false, reason: 'all_members_at_limit' }),
+        JSON.stringify({ success: false, reason: 'all_members_at_limit', rule: matchingRule.name }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -249,14 +292,15 @@ Deno.serve(async (req) => {
     }
 
     if (!selectedMember) {
-      console.log('Could not select member');
+      console.log('⚠️ Could not select member for rule:', matchingRule.name);
+      await logDistribution(matchingRule.id, null, matchingRule.distribution_mode, 'selection_failed');
       return new Response(
-        JSON.stringify({ success: false, reason: 'selection_failed' }),
+        JSON.stringify({ success: false, reason: 'selection_failed', rule: matchingRule.name }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Selected member:', selectedMember.user_id, reason);
+    console.log('✅ Selected member:', selectedMember.user_id, reason);
 
     // Update lead with assigned user
     const { error: updateError } = await supabase
@@ -265,7 +309,8 @@ Deno.serve(async (req) => {
       .eq('id', lead_id);
 
     if (updateError) {
-      console.error('Error updating lead:', updateError);
+      console.error('❌ Error updating lead:', updateError);
+      await logDistribution(matchingRule.id, null, matchingRule.distribution_mode, `update_error: ${updateError.message}`);
       throw updateError;
     }
 
@@ -279,19 +324,8 @@ Deno.serve(async (req) => {
       })
       .eq('id', selectedMember.id);
 
-    // Log distribution
-    await supabase
-      .from('lead_distribution_logs')
-      .insert({
-        workspace_id,
-        lead_id,
-        rule_id: matchingRule.id,
-        assigned_to: selectedMember.user_id,
-        source,
-        pipeline_id,
-        distribution_mode: matchingRule.distribution_mode,
-        reason,
-      });
+    // Log successful distribution
+    await logDistribution(matchingRule.id, selectedMember.user_id, matchingRule.distribution_mode, reason);
 
     return new Response(
       JSON.stringify({ 

@@ -471,7 +471,7 @@ serve(async (req) => {
         stage_id: targetStageId
       }
       
-      // Aplicar assigned_to se determinado
+      // Aplicar assigned_to se determinado (from pipeline default)
       if (assignedTo) {
         (newLeadData as any).assigned_to = assignedTo
       }
@@ -489,9 +489,46 @@ serve(async (req) => {
         throw error
       }
 
+      // Create lead_pipeline_relations entry so lead appears in Kanban
+      const { error: relationError } = await supabaseClient
+        .from('lead_pipeline_relations')
+        .upsert({
+          lead_id: newLead.id,
+          pipeline_id: targetPipelineId,
+          stage_id: targetStageId,
+          is_primary: true
+        }, { onConflict: 'lead_id,pipeline_id' })
+
+      if (relationError) {
+        console.warn('Error creating pipeline relation:', relationError)
+      }
+
       // Adicionar tags ao novo lead
       if (tagIds.length > 0) {
         await addTagsToLead(supabaseClient, newLead.id, tagIds);
+      }
+
+      // Call lead distribution if no default assignee was set
+      if (!assignedTo) {
+        console.log('📤 Calling lead distribution...')
+        try {
+          const { data: distResult, error: distError } = await supabaseClient.functions.invoke('distribute-lead', {
+            body: {
+              lead_id: newLead.id,
+              workspace_id: workspaceId,
+              pipeline_id: targetPipelineId,
+              source: 'webhook',
+              tags: tagIds
+            }
+          })
+          if (distError) {
+            console.warn('Distribution invoke error:', distError)
+          } else {
+            console.log('Distribution result:', distResult)
+          }
+        } catch (distError) {
+          console.warn('Distribution failed (non-blocking):', distError)
+        }
       }
 
       console.log('New lead created successfully with ID:', newLead.id)

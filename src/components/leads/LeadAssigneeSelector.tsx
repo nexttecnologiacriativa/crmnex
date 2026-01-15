@@ -16,9 +16,10 @@ import { useWorkspace } from '@/hooks/useWorkspace';
 interface LeadAssigneeSelectorProps {
   leadId: string;
   currentAssignee?: string | null;
+  compact?: boolean;
 }
 
-export default function LeadAssigneeSelector({ leadId, currentAssignee }: LeadAssigneeSelectorProps) {
+export default function LeadAssigneeSelector({ leadId, currentAssignee, compact = false }: LeadAssigneeSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const updateLead = useUpdateLead();
   const { currentWorkspace } = useWorkspace();
@@ -52,8 +53,6 @@ export default function LeadAssigneeSelector({ leadId, currentAssignee }: LeadAs
     enabled: !!currentWorkspace?.id,
   });
 
-  // REMOVED: Auto-assignment to admin - this was causing unexpected behavior
-
   const currentAssigneeProfile = workspaceMembers.find(
     member => member.user_id === currentAssignee
   )?.profiles;
@@ -70,23 +69,24 @@ export default function LeadAssigneeSelector({ leadId, currentAssignee }: LeadAs
     }
   };
 
-  return (
-    <div className="flex items-center gap-1 text-xs text-gray-500">
-      <span className="text-xs font-medium">Dono:</span>
+  // Compact mode for Kanban cards
+  if (compact) {
+    return (
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
           <Button 
             variant="ghost" 
             size="sm" 
-            className="h-6 text-xs px-2 hover:bg-gray-100"
+            className="h-5 text-[10px] px-1.5 py-0 hover:bg-muted/50 gap-1"
           >
-            <span className="truncate max-w-[80px]">
+            <User className="h-3 w-3 text-muted-foreground" />
+            <span className="truncate max-w-[80px] text-muted-foreground">
               {currentAssigneeProfile?.full_name || 'Não atribuído'}
             </span>
-            <ChevronDown className="h-3 w-3 ml-1" />
+            <ChevronDown className="h-2.5 w-2.5 text-muted-foreground" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-[180px]">
+        <DropdownMenuContent align="start" className="w-[180px] bg-popover">
           <DropdownMenuItem 
             onClick={() => handleAssigneeChange(null)}
             className="text-xs"
@@ -103,7 +103,50 @@ export default function LeadAssigneeSelector({ leadId, currentAssignee }: LeadAs
               <User className="h-3 w-3 mr-2" />
               <div className="flex flex-col">
                 <span>{member.profiles?.full_name}</span>
-                <span className="text-gray-500 text-xs">{member.profiles?.email}</span>
+                <span className="text-muted-foreground text-xs">{member.profiles?.email}</span>
+              </div>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
+  // Default full mode
+  return (
+    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+      <span className="text-xs font-medium">Dono:</span>
+      <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-6 text-xs px-2 hover:bg-muted"
+          >
+            <span className="truncate max-w-[80px]">
+              {currentAssigneeProfile?.full_name || 'Não atribuído'}
+            </span>
+            <ChevronDown className="h-3 w-3 ml-1" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-[180px] bg-popover">
+          <DropdownMenuItem 
+            onClick={() => handleAssigneeChange(null)}
+            className="text-xs"
+          >
+            <User className="h-3 w-3 mr-2" />
+            Sem atribuição
+          </DropdownMenuItem>
+          {workspaceMembers.map((member) => (
+            <DropdownMenuItem
+              key={member.user_id}
+              onClick={() => handleAssigneeChange(member.user_id)}
+              className="text-xs"
+            >
+              <User className="h-3 w-3 mr-2" />
+              <div className="flex flex-col">
+                <span>{member.profiles?.full_name}</span>
+                <span className="text-muted-foreground text-xs">{member.profiles?.email}</span>
               </div>
             </DropdownMenuItem>
           ))}

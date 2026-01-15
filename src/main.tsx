@@ -1,5 +1,5 @@
-
 import { createRoot } from 'react-dom/client'
+import { ThemeProvider } from 'next-themes'
 import App from './App.tsx'
 import './index.css'
 import { AuthProvider } from '@/hooks/useAuth'
@@ -19,9 +19,11 @@ const queryClient = new QueryClient({
 });
 
 createRoot(document.getElementById("root")!).render(
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <App />
-    </AuthProvider>
-  </QueryClientProvider>
+  <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </QueryClientProvider>
+  </ThemeProvider>
 );

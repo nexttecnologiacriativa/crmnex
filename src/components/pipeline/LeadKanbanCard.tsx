@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { MoreVertical, MessageCircle, Eye, Tag, User } from 'lucide-react';
+import { MoreVertical, MessageCircle, Eye, Tag } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,7 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useLeadTagRelations } from '@/hooks/useLeadTags';
 import { getLeadDisplayName } from '@/lib/leadUtils';
-import { useTeamManagement } from '@/hooks/useTeamManagement';
+import LeadAssigneeSelector from '@/components/leads/LeadAssigneeSelector';
 
 interface LeadKanbanCardProps {
   lead: any;
@@ -44,16 +43,9 @@ export default function LeadKanbanCard({
   selectionMode = false
 }: LeadKanbanCardProps) {
   const navigate = useNavigate();
-  const { members = [] } = useTeamManagement();
   const {
     data: leadTagRelations = []
   } = useLeadTagRelations(lead.id);
-
-  // Get assigned user name
-  const assignedUser = lead.assigned_to 
-    ? members.find(m => m.user_id === lead.assigned_to)
-    : null;
-  const assignedUserName = assignedUser?.profiles?.full_name || assignedUser?.profiles?.email?.split('@')[0];
 
   // Filtrar tags válidas sem duplicatas
   const validTags = leadTagRelations
@@ -87,7 +79,7 @@ export default function LeadKanbanCard({
 
   return (
     <Card 
-      className={`mb-2 hover:shadow-sm transition-shadow bg-white cursor-pointer ${isSelected ? 'ring-2 ring-purple-500 bg-purple-50' : ''}`} 
+      className={`mb-2 hover:shadow-sm transition-shadow bg-card cursor-pointer ${isSelected ? 'ring-2 ring-purple-500 bg-purple-50 dark:bg-purple-950' : ''}`} 
       onClick={handleCardClick}
     >
       <CardContent className="p-3">
@@ -116,7 +108,7 @@ export default function LeadKanbanCard({
             />
           ) : null}
           <div 
-            className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-xs font-medium flex-shrink-0"
+            className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground text-xs font-medium flex-shrink-0"
             style={{ display: lead.profile_picture_url ? 'none' : 'flex' }}
           >
             <AvatarInitials name={getLeadDisplayName(lead)} />
@@ -125,7 +117,7 @@ export default function LeadKanbanCard({
           {/* Conteúdo principal */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
-              <span className="font-medium text-sm text-gray-900 truncate">
+              <span className="font-medium text-sm text-foreground truncate">
                 {getLeadDisplayName(lead)}
               </span>
               
@@ -186,7 +178,7 @@ export default function LeadKanbanCard({
               
               {/* Tempo na etapa (discreto) */}
               {lead.pipeline_stage_updated_at && (
-                <span className="text-[10px] text-gray-400 ml-auto">
+                <span className="text-[10px] text-muted-foreground ml-auto">
                   {formatDistanceToNow(new Date(lead.pipeline_stage_updated_at), { 
                     locale: ptBR, 
                     addSuffix: false 
@@ -195,15 +187,14 @@ export default function LeadKanbanCard({
               )}
             </div>
 
-            {/* Owner row */}
-            {assignedUserName && (
-              <div className="flex items-center gap-1 mt-1.5">
-                <User className="h-3 w-3 text-muted-foreground" />
-                <span className="text-[10px] text-muted-foreground truncate">
-                  {assignedUserName}
-                </span>
-              </div>
-            )}
+            {/* Owner row with assignee selector */}
+            <div className="flex items-center gap-1 mt-1.5" onClick={(e) => e.stopPropagation()}>
+              <LeadAssigneeSelector 
+                leadId={lead.id} 
+                currentAssignee={lead.assigned_to}
+                compact
+              />
+            </div>
           </div>
         </div>
       </CardContent>

@@ -21,7 +21,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <SidebarProvider defaultOpen={false}>
-      <div className="min-h-screen bg-gradient-to-br from-nexcrm-blue/5 via-white to-nexcrm-green/5 flex w-full">
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 dark:from-background dark:via-background dark:to-background flex w-full">
         <AppSidebar />
         <SidebarInset className="flex-1 overflow-auto w-full flex flex-col">
           {/* Header mobile com botão hamburger */}

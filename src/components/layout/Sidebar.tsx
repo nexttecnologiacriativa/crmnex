@@ -1,6 +1,6 @@
-
-import { Home, Users, BarChart3, CheckSquare, Workflow, Settings, LogOut, Kanban, Megaphone, Search, Headphones, Tv, Bot, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Home, Users, BarChart3, CheckSquare, Workflow, Settings, LogOut, Kanban, Megaphone, Search, Headphones, Tv, Bot, ChevronLeft, ChevronRight, Moon, Sun } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useCurrentUserSettings } from '@/hooks/useUserWorkspaceSettings';
@@ -73,6 +73,11 @@ export default function AppSidebar() {
   const isCollapsed = state === 'collapsed';
   const { currentWorkspace } = useWorkspace();
   const { data: userSettings } = useCurrentUserSettings();
+  const { theme, setTheme } = useTheme();
+  
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
   
   // Check if current user is admin
   const { data: isAdmin } = useQuery({
@@ -234,9 +239,35 @@ export default function AppSidebar() {
         ))}
       </SidebarContent>
 
-      {/* Footer com Logout */}
+      {/* Footer com Theme Toggle e Logout */}
       <SidebarFooter className="px-3 pb-4">
         <SidebarSeparator className="bg-white/10 mb-3" />
+        
+        {/* Theme Toggle */}
+        <SidebarMenuButton
+          onClick={toggleTheme}
+          className={cn(
+            "w-full h-10 px-3 rounded-full mb-1",
+            "text-white/70 hover:text-yellow-400 hover:bg-white/10",
+            "transition-all duration-200 group",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 focus-visible:ring-offset-2",
+            isCollapsed ? "justify-center px-0" : "justify-start"
+          )}
+          tooltip={theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
+        >
+          {theme === 'dark' ? (
+            <Sun className="h-5 w-5 flex-shrink-0 transition-all duration-200 group-hover:scale-105" />
+          ) : (
+            <Moon className="h-5 w-5 flex-shrink-0 transition-all duration-200 group-hover:scale-105" />
+          )}
+          {!isCollapsed && (
+            <span className="font-medium text-sm ml-3">
+              {theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
+            </span>
+          )}
+        </SidebarMenuButton>
+        
+        {/* Logout */}
         <SidebarMenuButton
           onClick={handleSignOut}
           className={cn(

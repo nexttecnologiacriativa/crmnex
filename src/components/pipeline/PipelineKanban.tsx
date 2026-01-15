@@ -466,26 +466,26 @@ export default function PipelineKanban({
             
             return <Draggable key={stage.id} draggableId={stage.id} index={index} isDragDisabled={isMobile}>
                     {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} className={`flex-shrink-0 h-full group ${snapshot.isDragging ? 'rotate-2' : ''} ${isMobile ? 'w-[280px]' : 'w-80'}`}>
-                        <div className={`h-full bg-white border border-gray-200 rounded-lg shadow-sm flex flex-col`}>
-                          <div {...provided.dragHandleProps} className={`bg-gray-100 flex items-center justify-between rounded-t-lg cursor-move hover:bg-gray-200 transition-colors flex-shrink-0 ${isMobile ? 'p-3' : 'p-4'}`}>
+                        <div className={`h-full bg-card border border-border rounded-lg shadow-sm flex flex-col`}>
+                          <div {...provided.dragHandleProps} className={`bg-muted flex items-center justify-between rounded-t-lg cursor-move hover:bg-muted/80 transition-colors flex-shrink-0 ${isMobile ? 'p-3' : 'p-4'}`}>
                             <div className="flex items-center gap-2 flex-1 min-w-0">
-                              {!isMobile && <GripVertical className="h-4 w-4 text-gray-400 flex-shrink-0" />}
+                              {!isMobile && <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
                               <div className="w-3 h-3 rounded-full flex-shrink-0" style={{
                         backgroundColor: stage.color || '#6b7280'
                       }} />
                               <div className="flex-1 min-w-0">
-                                <h3 className={`font-semibold text-gray-900 relative overflow-hidden truncate ${isMobile ? 'text-xs' : 'text-sm'}`}>
+                                <h3 className={`font-semibold text-foreground relative overflow-hidden truncate ${isMobile ? 'text-xs' : 'text-sm'}`}>
                                   <span className="relative z-10 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent font-bold">
                                     {stage.name}
                                   </span>
                                 </h3>
-                                <div className={`text-gray-600 mt-0.5 ${isMobile ? 'text-[10px]' : 'text-xs'}`}>
+                                <div className={`text-muted-foreground mt-0.5 ${isMobile ? 'text-[10px]' : 'text-xs'}`}>
                                   R$ {stageLeads.reduce((sum, lead) => sum + Math.max(lead.value || 0, 0), 0).toLocaleString('pt-BR', {
                             minimumFractionDigits: 2
                           })}
                                 </div>
                               </div>
-                              <span className={`text-gray-500 bg-white px-2 py-0.5 rounded flex-shrink-0 ${isMobile ? 'text-xs' : 'text-sm'}`}>
+                              <span className={`text-muted-foreground bg-background px-2 py-0.5 rounded flex-shrink-0 ${isMobile ? 'text-xs' : 'text-sm'}`}>
                                 {visibleLeads.length}{stageLeads.length > visibleLeads.length && `/${stageLeads.length}`}
                               </span>
                             </div>
@@ -527,7 +527,7 @@ export default function PipelineKanban({
                           </div>
 
                           <Droppable droppableId={stage.id}>
-                            {(provided, snapshot) => <div ref={provided.innerRef} {...provided.droppableProps} className={`space-y-3 flex-1 overflow-y-auto ${snapshot.isDraggingOver ? 'bg-blue-50' : ''} ${isMobile ? 'p-3' : 'p-4'}`}>
+                            {(provided, snapshot) => <div ref={provided.innerRef} {...provided.droppableProps} className={`space-y-3 flex-1 overflow-y-auto ${snapshot.isDraggingOver ? 'bg-primary/10' : ''} ${isMobile ? 'p-3' : 'p-4'}`}>
                                 {visibleLeads.map((lead, index) => <Draggable key={lead.id} draggableId={lead.id} index={index} isDragDisabled={isMobile}>
                                      {provided => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
                                         <LeadKanbanCard 
@@ -545,7 +545,7 @@ export default function PipelineKanban({
                                       variant="ghost"
                                       size="sm"
                                       onClick={() => loadMoreLeads(stage.id)}
-                                      className="w-full text-gray-500 hover:text-gray-700 text-xs"
+                                      className="w-full text-muted-foreground hover:text-foreground text-xs"
                                     >
                                       <ChevronDown className="h-4 w-4 mr-1" />
                                       +{stageLeads.length - visibleLeads.length}
@@ -555,7 +555,7 @@ export default function PipelineKanban({
                                         variant="outline"
                                         size="sm"
                                         onClick={() => loadAllLeads(stage.id, stageLeads.length)}
-                                        className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
+                                        className="w-full text-primary hover:text-primary/90 hover:bg-primary/10 border-primary/30"
                                       >
                                         <List className="h-4 w-4 mr-2" />
                                         Ver todos ({stageLeads.length})
@@ -572,7 +572,7 @@ export default function PipelineKanban({
               {provided.placeholder}
 
               <div className={`flex-shrink-0 h-full flex items-start pt-4 ${isMobile ? 'w-[280px]' : 'w-80'}`}>
-                <Button variant="outline" className={`w-full h-12 md:h-16 text-gray-500 border-2 border-dashed border-gray-300 hover:border-gray-400 ${isMobile ? 'text-sm' : ''}`} onClick={() => setIsCreateStageOpen(true)}>
+                <Button variant="outline" className={`w-full h-12 md:h-16 text-muted-foreground border-2 border-dashed border-border hover:border-muted-foreground ${isMobile ? 'text-sm' : ''}`} onClick={() => setIsCreateStageOpen(true)}>
                   <Plus className="h-4 w-4 md:h-5 md:w-5 mr-2" />
                   {isMobile ? 'Nova' : 'Nova Etapa'}
                 </Button>
